@@ -1,0 +1,257 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Raleway', sans-serif;
+    background: linear-gradient(to bottom, #e9e4dc, #f7f1e7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: #ffffff;
+}
+
+.login-background {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(255, 249, 231, 0.03) 0%, transparent 20%),
+        radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.03) 0%, transparent 20%);
+}
+
+.login-container {
+    background: rgba(212, 194, 163, 0.2);
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    width: 380px;
+    text-align: center;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.login-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.login-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(to right, #d4af37, #f5e9c8, #d4af37);
+}
+
+/* Logo de diamante */
+.logo-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.diamond-logo {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #f5e9c8, #ad880b);
+    transform: rotate(45deg);
+    margin-right: 15px;
+    position: relative;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+.diamond-logo::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.3) 50%, transparent 60%);
+    transform: rotate(-45deg);
+}
+
+.logo-wrapper h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    color: #2d2d2d;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.slogan {
+    font-family: 'Raleway', sans-serif;
+    font-size: 16px;
+    color: #7a7a7a;
+    margin-bottom: 30px;
+    font-style: italic;
+    letter-spacing: 1px;
+}
+
+.subtitulo {
+    font-family: 'Raleway', sans-serif;
+    margin-bottom: 25px;
+    color: #5a5a5a;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.input-group {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    font-weight: 500;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 8px;
+    color: #5a5a5a;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #3b3939;
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.3s;
+    background: #fafafa;
+    color: #2d2d2d;
+    font-family: 'Raleway', sans-serif;
+}
+
+.input-group input:focus {
+    border: 1px solid #d4af37;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    background: #fff;
+}
+
+.input-group input::placeholder {
+    color: #a0a0a0;
+}
+
+.btn-login {
+    background: linear-gradient(to right, #d4af37, #f5e9c8);
+    color: #1a1a1a;
+    padding: 12px;
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: 'Raleway', sans-serif;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}
+
+.error {
+    color: #d84343;
+    margin-top: 15px;
+    font-size: 14px;
+    min-height: 20px;
+}
+
+/* Decoración adicional */
+.login-decoration {
+    position: absolute;
+    z-index: -1;
+}
+
+.decoration-1 {
+    top: -50px;
+    left: -50px;
+    width: 150px;
+    height: 150px;
+    border: 2px solid rgba(212, 175, 55, 0.1);
+    border-radius: 50%;
+}
+
+.decoration-2 {
+    bottom: -30px;
+    right: -30px;
+    width: 100px;
+    height: 100px;
+    border: 2px solid rgba(212, 175, 55, 0.1);
+    border-top: none;
+    border-right: none;
+}
+
+/* Efectos responsivos */
+@media (max-width: 480px) {
+    .login-container {
+        width: 90%;
+        padding: 30px 20px;
+    }
+    
+    .logo-wrapper h2 {
+        font-size: 24px;
+    }
+    
+    .diamond-logo {
+        width: 35px;
+        height: 35px;
+        margin-right: 12px;
+    }
+    
+    .login-decoration {
+        display: none;
+    }
+}
+
+/* Estilo para el enlace de olvidé contraseña */
+.forgot-password {
+    display: block;
+    margin-top: 20px;
+    color: #7a7a7a;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.forgot-password:hover {
+    color: #d4af37;
+}
+
+.forgot-password::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: #d4af37;
+    transition: width 0.3s ease;
+}
+
+.forgot-password:hover::after {
+    width: 100%;
+}
+
+/* Ajuste para el mensaje de error con el nuevo elemento */
+.error {
+    margin-bottom: 5px;
+}

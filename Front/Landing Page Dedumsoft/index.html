@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dedumsoft - Sistema de Gestión</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo-container">
+        <div class="logo-wrapper">
+            <div class="diamond-logo"></div>
+            <h2>Joyas Van</h2>
+        </div>
+        <div class="gold-bar"></div>
+    </div>
+    <a href="#" data-section="inicio" class="menu-item">
+        <span class="icon">🏠</span> Inicio
+    </a>
+
+    <!-- Inventario -->
+    <button class="dropdown-btn">
+        <span class="icon">💎</span> Inventario
+        <span class="arrow">▼</span>
+    </button>
+    <div class="dropdown-container">
+        <a href="#" data-section="equipos" class="submenu-item">
+            <span class="subicon"></span> Herramientas
+        </a>
+        <a href="#" data-section="material" class="submenu-item">
+            <span class="subicon"></span> Metales
+        </a>
+        <a href="#" data-section="consumibles" class="submenu-item">
+            <span class="subicon"></span> Piedras
+        </a>
+        <a href="#" data-section="categorias" class="submenu-item">
+            <span class="subicon"></span> Categorías
+        </a>
+        <a href="#" data-section="proveedores" class="submenu-item">
+            <span class="subicon"></span> Proveedores
+        </a>
+    </div>
+
+    <!-- Gestión -->
+    <button class="dropdown-btn">
+        <span class="icon">📊</span> Gestión
+        <span class="arrow">▼</span>
+    </button>
+    <div class="dropdown-container">
+        <a href="#" data-section="rol-actividad" class="submenu-item">
+            <span class="subicon"></span> Roles
+        </a>
+        <a href="#" data-section="asignacion-tareas" class="submenu-item">
+            <span class="subicon"></span> Tareas
+        </a>
+        <a href="#" data-section="agenda" class="submenu-item">
+            <span class="subicon"></span> Agenda
+        </a>
+    </div>
+
+    <!-- Administración -->
+    <button class="dropdown-btn">
+        <span class="icon">👥</span> Administración
+        <span class="arrow">▼</span>
+    </button>
+    <div class="dropdown-container">
+        <a href="#" data-section="usuarios" class="submenu-item">
+            <span class="subicon"></span> Usuarios
+        </a>
+        <a href="#" data-section="grupos" class="submenu-item">
+            <span class="subicon"></span> Grupos
+        </a>
+        <a href="#" data-section="perfiles" class="submenu-item">
+            <span class="subicon"></span> Perfiles
+        </a>
+        <a href="#" data-section="permisos" class="submenu-item">
+            <span class="subicon"></span> Permisos
+        </a>
+    </div>
+
+    <!-- Ajustes -->
+    <button class="dropdown-btn">
+        <span class="icon">⚙️</span> Ajustes
+        <span class="arrow">▼</span>
+    </button>
+    <div class="dropdown-container">
+        <a href="#" data-section="ajustes-general" class="submenu-item">
+            <span class="subicon"></span> General
+        </a>
+        <a href="#" data-section="ajustes-cuenta" class="submenu-item">
+            <span class="subicon"></span> Cuenta
+        </a>
+        <a href="#" data-section="ajustes-auth" class="submenu-item">
+            <span class="subicon"></span> Autenticación
+        </a>
+    </div>
+
+    <!-- Reportes -->
+    <button class="dropdown-btn">
+        <span class="icon">📈</span> Reportes
+        <span class="arrow">▼</span>
+    </button>
+    <div class="dropdown-container">
+        <a href="#" data-section="reporte-inventario" class="submenu-item">
+            <span class="subicon"></span> Inventario
+        </a>
+        <a href="#" data-section="reporte-ventas" class="submenu-item">
+            <span class="subicon"></span> Ventas
+        </a>
+        <a href="#" data-section="reporte-compras" class="submenu-item">
+            <span class="subicon"></span> Compras
+        </a>
+        <a href="#" data-section="reporte-usuarios" class="submenu-item">
+            <span class="subicon"></span> Usuarios
+        </a>
+    </div>
+
+    <!-- Soporte -->
+    <button class="dropdown-btn">
+        <span class="icon">❓</span> Soporte
+        <span class="arrow">▼</span>
+    </button>
+    <div class="dropdown-container">
+        <a href="#" data-section="ayuda" class="submenu-item">
+            <span class="subicon"></span> Ayuda
+        </a>
+        <a href="#" data-section="contacto-soporte" class="submenu-item">
+            <span class="subicon"></span> Contactar
+        </a>
+    </div>
+
+    <a href="#" data-section="acerca" class="menu-item">
+        <span class="icon">ℹ️</span> Acerca de
+    </a>
+    
+    <div class="user-panel">
+        <div class="user-avatar">A</div>
+        <div class="user-info">
+            <span class="user-name">Admin</span>
+            <span class="user-role">Administrador</span>
+        </div>
+    </div>
+</div>
+
+<!-- Contenedor principal -->
+<div class="main-content">
+    <div class="content-header">
+        <h1>Bienvenido a Joyas Van</h1>
+        <p>Lujo en Cada Detalle</p>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card gold">
+            <div class="card-icon">💎</div>
+            <h3>Inventario Actual</h3>
+            <p class="stat">0 items</p>
+            <div class="card-footer">
+                <span>0%</span>
+            </div>
+        </div>
+        
+        <div class="dashboard-card silver">
+            <div class="card-icon">💰</div>
+            <h3>Ventas del Mes</h3>
+            <p class="stat">$0</p>
+            <div class="card-footer">
+                <span>0% mes anterior</span>
+            </div>
+        </div>
+        
+        <div class="dashboard-card bronze">
+            <div class="card-icon">📈</div>
+            <h3>Órdenes Activas</h3>
+            <p class="stat">0</p>
+            <div class="card-footer">
+                <span>0 Refabricado</span>
+            </div>
+        </div>
+        
+        <div class="dashboard-card pearl">
+            <div class="card-icon">✅</div>
+            <h3>Ordenes Completadas</h3>
+            <p class="stat">0</p>
+            <div class="card-footer">
+                <span>en este mes</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="recent-section">
+        <h2>Actividad Reciente</h2>
+        <div class="activity-list">
+            <div class="activity-item">
+                <div class="activity-icon">➕</div>
+                <div class="activity-content">
+                    <p>No hay pedido registrados</p>
+                    <span class="activity-time">Hace 0 minutos</span>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-icon">📦</div>
+                <div class="activity-content">
+                    <p>Stock Actualizado</p>
+                    <span class="activity-time">Hace 0 minutos</span>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-icon">✅</div>
+                <div class="activity-content">
+                    <p>No Hay Pedido Completados</p>
+                    <span class="activity-time">Hace 0 minutos</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
