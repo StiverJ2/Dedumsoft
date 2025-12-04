@@ -121,7 +121,6 @@ CREATE TABLE productos (
 
 -- Tabla: recetas_produccion (BOM - Bill of Materials)
 CREATE TABLE recetas_produccion (
-    id SERIAL PRIMARY KEY,
     producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
     tipo_material VARCHAR(20) NOT NULL CHECK (tipo_material IN ('oro', 'insumo')),
     material_id INTEGER NOT NULL,
@@ -129,7 +128,7 @@ CREATE TABLE recetas_produccion (
     es_opcional BOOLEAN DEFAULT FALSE,
     notas TEXT,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(producto_id, tipo_material, material_id)
+    PRIMARY KEY (producto_id, tipo_material, material_id)
 );
 
 -- Tabla: ordenes_produccion
@@ -157,7 +156,7 @@ CREATE TABLE consumo_materiales (
     material_id INTEGER NOT NULL,
     cantidad_consumida DECIMAL(10,3) NOT NULL CHECK (cantidad_consumida > 0),
     costo_unitario DECIMAL(10,2),
-    costo_total DECIMAL(10,2),
+    --costo total, violación 3NF, se calcula al vuelo, no se almacena
     fecha_consumo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     usuario_id INTEGER
 );
@@ -177,7 +176,7 @@ CREATE TABLE creaciones_terminadas (
     peso_final_gramos DECIMAL(10,3) CHECK (peso_final_gramos > 0),
     costo_materiales DECIMAL(10,2) NOT NULL DEFAULT 0,
     costo_mano_obra DECIMAL(10,2) NOT NULL DEFAULT 0,
-    costo_total DECIMAL(10,2) NOT NULL DEFAULT 0,
+    --costo total, violación 3NF, se calcula al vuelo, no se almacena
     tiempo_real_horas DECIMAL(5,2),
     calidad VARCHAR(1) CHECK (calidad IN ('A', 'B', 'C')),
     observaciones TEXT,
@@ -193,25 +192,29 @@ CREATE TABLE creaciones_terminadas (
 );
 
 -- Tabla: estadisticas_produccion
-CREATE TABLE estadisticas_produccion (
-    id SERIAL PRIMARY KEY,
-    periodo VARCHAR(20) NOT NULL,
-    tipo_periodo VARCHAR(20) NOT NULL CHECK (tipo_periodo IN ('dia', 'semana', 'mes', 'trimestre', 'año')),
-    total_piezas INTEGER DEFAULT 0,
-    piezas_por_tipo JSONB,
-    total_oro_usado_gramos DECIMAL(10,3) DEFAULT 0,
-    costo_materiales_total DECIMAL(10,2) DEFAULT 0,
-    costo_mano_obra_total DECIMAL(10,2) DEFAULT 0,
-    horas_trabajadas DECIMAL(10,2) DEFAULT 0,
-    artesano_mas_productivo_id INTEGER REFERENCES artesanos(id) ON DELETE SET NULL,
-    producto_mas_fabricado_id INTEGER REFERENCES productos(id) ON DELETE SET NULL,
-    promedio_tiempo_fabricacion DECIMAL(5,2),
-    tasa_calidad_a_porcentaje DECIMAL(5,2),
-    total_vendido DECIMAL(10,2) DEFAULT 0,
-    utilidad_neta DECIMAL(10,2) DEFAULT 0,
-    fecha_calculo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(periodo, tipo_periodo)
-);
+
+-- no broders esto está super mal
+-- esta tabla es INCREIBLEMENTE redundante, no normalizada y viola multiples formas normales
+-- literalmente todos los campos se pueden calcular al vuelo con consultas SQL o funciones PL/pgSQL
+
+-- CREATE TABLE estadisticas_produccion (
+    -- id SERIAL PRIMARY KEY,
+    -- periodo VARCHAR(20) NOT NULL,
+    -- tipo_periodo VARCHAR(20) NOT NULL CHECK (tipo_periodo IN ('dia', 'semana', 'mes', 'trimestre', 'año')),
+    --total_piezas, violación 3NF, se calcula al vuelo con COUNT(id) de creaciones_terminadas
+    -- piezas_por_tipo JSONB, violación 1NF, si hay un campo JSONB lo mas probable es que se pueda representar como una tabla resultante
+    --total_oro_usado_gramos,violación 3NF, se calcula al vuelo con SUM desde consumo_materiales
+    --costo_materiales_total violación 3NF, se calcula al vuelo con SUM desde consumo_materiales
+    --costo_mano_obra_total violación 3NF, se calcula al vuelo con SUM desde creaciones_terminadas
+    --horas_trabajadas violación 3NF, se calcula al vuelo con SUM desde creaciones_terminadas
+    --artesano_mas_productivo_id violación 3NF, se calcula al vuelo con GROUP BY artesano_id
+    --producto_mas_fabricado_id violación 3NF, se calcula al vuelo con GROUP BY producto_id
+    --promedio_tiempo_fabricacion violación 3NF, se calcula al vuelo con AVG desde creaciones_terminadas
+    --tasa_calidad_a_porcentaje violación 3NF, se calcula al vuelo con calculos a partir de SELECT WHERE calidad='A'
+    --total_vendido violación 3NF, se calcula al vuelo con SUM desde creaciones_terminadas donde vendida=TRUE
+    --utilidad_neta violación 3NF, se calcula al vuelo con SUM(precio_venta_real - (costo_materiales + costo_mano_obra)) desde creaciones_terminadas donde vendida=TRUE
+    --fecha_calculo innecesario, puede ser retornado desde la consulta o fn PL/pgSQL
+-- );
 
 -- ============================================
 -- ÍNDICES PARA OPTIMIZACIÓN
@@ -241,25 +244,26 @@ CREATE INDEX idx_creaciones_artesano ON creaciones_terminadas(artesano_id);
 CREATE INDEX idx_creaciones_vendida ON creaciones_terminadas(vendida);
 
 -- Estadísticas
-CREATE INDEX idx_estadisticas_periodo ON estadisticas_produccion(periodo, tipo_periodo);
+-- CREATE INDEX idx_estadisticas_periodo ON estadisticas_produccion(periodo, tipo_periodo);
 
 -- ============================================
 -- TRIGGERS ÚTILES
 -- ============================================
 
 -- Trigger: Actualizar costo_total en creaciones_terminadas
-CREATE OR REPLACE FUNCTION actualizar_costo_total()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.costo_total = COALESCE(NEW.costo_materiales, 0) + COALESCE(NEW.costo_mano_obra, 0);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- NOTA: Comentado porque costo_total fue eliminado (violación 3NF, se calcula al vuelo)
+-- CREATE OR REPLACE FUNCTION actualizar_costo_total()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     NEW.costo_total = COALESCE(NEW.costo_materiales, 0) + COALESCE(NEW.costo_mano_obra, 0);
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_actualizar_costo_total
-BEFORE INSERT OR UPDATE ON creaciones_terminadas
-FOR EACH ROW
-EXECUTE FUNCTION actualizar_costo_total();
+-- CREATE TRIGGER trg_actualizar_costo_total
+-- BEFORE INSERT OR UPDATE ON creaciones_terminadas
+-- FOR EACH ROW
+-- EXECUTE FUNCTION actualizar_costo_total();
 
 -- Trigger: Registrar movimiento al consumir materiales
 CREATE OR REPLACE FUNCTION registrar_consumo_movimiento()
@@ -325,9 +329,9 @@ CREATE OR REPLACE VIEW v_creaciones_por_mes AS
 SELECT 
     TO_CHAR(fecha_terminado, 'YYYY-MM') AS mes,
     COUNT(*) AS total_piezas,
-    SUM(costo_total) AS costo_total,
+    SUM(costo_materiales + costo_mano_obra) AS costo_total,
     SUM(CASE WHEN vendida THEN precio_venta_real ELSE 0 END) AS total_vendido,
-    SUM(CASE WHEN vendida THEN (precio_venta_real - costo_total) ELSE 0 END) AS utilidad
+    SUM(CASE WHEN vendida THEN (precio_venta_real - (costo_materiales + costo_mano_obra)) ELSE 0 END) AS utilidad
 FROM creaciones_terminadas
 GROUP BY TO_CHAR(fecha_terminado, 'YYYY-MM')
 ORDER BY mes DESC;
@@ -357,7 +361,7 @@ COMMENT ON TABLE inventario_maquinaria IS 'Registro de maquinaria y equipos';
 COMMENT ON TABLE inventario_insumos IS 'Inventario de insumos (piedras, cadenas, etc.)';
 COMMENT ON TABLE ordenes_produccion IS 'Órdenes de fabricación de productos';
 COMMENT ON TABLE creaciones_terminadas IS 'Registro de piezas terminadas con costos y fechas';
-COMMENT ON TABLE estadisticas_produccion IS 'Estadísticas pre-calculadas por periodo';
+-- COMMENT ON TABLE estadisticas_produccion IS 'Estadísticas pre-calculadas por periodo';
 
 -- ============================================
 -- FIN DEL SCRIPT
