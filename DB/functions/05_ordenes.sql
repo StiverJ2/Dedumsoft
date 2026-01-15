@@ -31,9 +31,9 @@ BEGIN
     RETURN QUERY
     SELECT
         op.id,
-        op.codigo_orden,
+        op.codigo_orden::text,
         op.producto_id,
-        pr.nombre AS producto_nombre,
+        pr.nombre::text AS producto_nombre,
         op.cantidad,
         op.fecha_creacion,
         op.fecha_inicio,
@@ -41,8 +41,8 @@ BEGIN
         op.fecha_fin_real,
         op.artesano_id,
         a.nombre || ' ' || a.apellido AS artesano_nombre,
-        op.estado,
-        op.prioridad,
+        op.estado::text,
+        op.prioridad::text,
         op.observaciones
     FROM ordenes_produccion op
     INNER JOIN productos pr ON op.producto_id = pr.id

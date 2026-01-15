@@ -7,7 +7,9 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 require_login('login.php');
 
 try {
-    $stmt = $connLogic->prepare('SELECT * FROM fun_obtener_ordenes(:offset, :limit, :estado)');
+    $stmt = $connLogic->prepare(
+        'SELECT id, codigo_orden, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones FROM fun_obtener_ordenes(:offset, :limit, :estado)'
+    );
     $stmt->execute([':offset' => 0, ':limit' => 5, ':estado' => null]);
     $ordenes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

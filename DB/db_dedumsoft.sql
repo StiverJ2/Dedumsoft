@@ -191,10 +191,67 @@ INSERT INTO seguridad.seg_usuario (username, nombre, clave, rolid)
 VALUES (
     'admin',
     'Administrador',
-    '$argon2id$v=19$m=131072,t=4,p=2$QmNLRXRraUtjeU56bW15Uw$ZaFMxmGhCfqTH9oMFHKPznifmFXYjBi1LPR5dxlQ7UY',
+    '$argon2id$v=19$m=65536,t=4,p=1$MGQvRTBneVJhQlJFTGhmeg$V0Z6bsVV2cABUX7qo/joYRYmp0ovvxMNW0p3zFo32Aw',
     1
 )
+--Admin-2026
 ON CONFLICT (username) DO NOTHING;
+
+-- ============================================
+-- TABLAS DE USUARIOS (JOYERIA)
+-- ============================================
+
+CREATE TABLE users (
+    id_user SERIAL PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password_user VARCHAR(255) NOT NULL,
+    CHECK (
+        LENGTH(password_user) >= 8 AND
+        password_user ~ '[A-Z]' AND
+        password_user ~ '[a-z]' AND
+        password_user ~ '[0-9]' AND
+        password_user ~ '[^A-Za-z0-9]'
+    ),
+    nombre_user VARCHAR(200) NOT NULL,
+    email_user VARCHAR(150) NOT NULL,
+    estado_user VARCHAR(10) NOT NULL CHECK (estado_user IN ('Activo', 'Inactivo'))
+);
+
+CREATE TABLE roles (
+    id_role SERIAL PRIMARY KEY NOT NULL,
+    nombre VARCHAR(200) NOT NULL
+);
+
+CREATE TABLE user_roles (
+    id_user INTEGER NOT NULL PRIMARY KEY,
+    id_role INTEGER NOT NULL,
+    fecha_asignacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (id_user) REFERENCES users(id_user),
+    FOREIGN KEY (id_role) REFERENCES roles(id_role)
+);
+
+CREATE TABLE sesiones_usuario (
+    id_sesion SERIAL PRIMARY KEY NOT NULL,
+    id_user INTEGER NOT NULL,
+    fecha_inicio_seccion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_fin_seccion TIMESTAMP,
+    estado_seccion VARCHAR(9) DEFAULT 'Activa',
+    FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
+);
+
+CREATE TABLE log_auditoria (
+    id_evento SERIAL PRIMARY KEY NOT NULL,
+    id_user INTEGER,
+    id_sesion INTEGER,
+    accion VARCHAR(100) NOT NULL,
+    tabla_afectada VARCHAR(100) NOT NULL,
+    registro_afectado INTEGER,
+    descripcion VARCHAR(100),
+    fecha_evento TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    ip_origen VARCHAR(100) NOT NULL,
+    FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE SET NULL,
+    FOREIGN KEY (id_sesion) REFERENCES sesiones_usuario(id_sesion) ON DELETE SET NULL
+);
 
 -- ============================================
 -- TABLAS DE SOPORTE
@@ -318,6 +375,22 @@ CREATE TABLE movimientos_maquinaria (
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla: movimientos (historial general)
+CREATE TABLE movimientos (
+    id_movim SERIAL PRIMARY KEY,
+    tipo_inventario VARCHAR(20) NOT NULL CHECK (tipo_inventario IN ('oro', 'maquinaria', 'insumos')),
+    item_id INTEGER NOT NULL,
+    tipo_movim VARCHAR(20) NOT NULL CHECK (tipo_movim IN ('entrada', 'salida', 'ajuste', 'transferencia')),
+    cantidad_movim DECIMAL(10,3) NOT NULL,
+    motivo_movim VARCHAR(500),
+    ref_movim VARCHAR(100),
+    id_user INTEGER,
+    id_role INTEGER,
+    fecha_movim TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (id_user) REFERENCES seguridad.seg_usuario(id_usuario),
+    FOREIGN KEY (id_role) REFERENCES seguridad.seg_rol(id_rol)
+);
+
 -- ============================================
 -- MÓDULO DE PRODUCCIÓN
 -- ============================================
@@ -356,6 +429,27 @@ CREATE TABLE recetas_insumos (
     notas TEXT,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (producto_id, inventario_insumos_id)
+);
+
+-- Tabla: recetas_produccion (BOM - Bill of Materials)
+CREATE TABLE recetas_produccion (
+    id_receta_produccion SERIAL PRIMARY KEY NOT NULL,
+    tipo_material_recetas VARCHAR(20) NOT NULL CHECK (tipo_material_recetas IN ('oro', 'insumo')),
+    id_insumos INTEGER,
+    id_oro INTEGER,
+    id_productos INTEGER NOT NULL,
+    cantidad_requerida DECIMAL(10,3) NOT NULL CHECK (cantidad_requerida > 0),
+    es_opcional BOOLEAN DEFAULT FALSE,
+    notas VARCHAR(200),
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (id_insumos) REFERENCES inventario_insumos(id),
+    FOREIGN KEY (id_oro) REFERENCES inventario_oro(id),
+    FOREIGN KEY (id_productos) REFERENCES productos(id),
+    CONSTRAINT chk_recetas_produccion_material CHECK (
+        (tipo_material_recetas = 'oro' AND id_oro IS NOT NULL AND id_insumos IS NULL)
+        OR
+        (tipo_material_recetas = 'insumo' AND id_insumos IS NOT NULL AND id_oro IS NULL)
+    )
 );
 
 -- Tabla: ordenes_produccion
@@ -399,6 +493,27 @@ CREATE TABLE consumo_insumos (
     usuario_id INTEGER
 );
 
+-- Tabla: consumo_materiales
+CREATE TABLE consumo_materiales (
+    id_consumo SERIAL PRIMARY KEY NOT NULL,
+    id_orden_prod INTEGER NOT NULL,
+    tipo_material VARCHAR(20) NOT NULL CHECK (tipo_material IN ('oro', 'insumo')),
+    id_insumos INTEGER,
+    id_oro INTEGER,
+    cantidad_consumida DECIMAL(10,3) NOT NULL CHECK (cantidad_consumida > 0),
+    fecha_consumo TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    id_user INTEGER NOT NULL,
+    FOREIGN KEY (id_user) REFERENCES users(id_user),
+    FOREIGN KEY (id_orden_prod) REFERENCES ordenes_produccion(id),
+    FOREIGN KEY (id_insumos) REFERENCES inventario_insumos(id),
+    FOREIGN KEY (id_oro) REFERENCES inventario_oro(id),
+    CONSTRAINT chk_consumo_materiales_material CHECK (
+        (tipo_material = 'oro' AND id_oro IS NOT NULL AND id_insumos IS NULL)
+        OR
+        (tipo_material = 'insumo' AND id_insumos IS NOT NULL AND id_oro IS NULL)
+    )
+);
+
 -- ============================================
 -- MÓDULO DE CREACIONES Y ESTADÍSTICAS
 -- ============================================
@@ -427,6 +542,15 @@ CREATE TABLE creaciones_terminadas (
         (vendida = FALSE AND fecha_venta IS NULL AND precio_venta_real IS NULL) OR
         (vendida = TRUE AND fecha_venta IS NOT NULL AND precio_venta_real IS NOT NULL)
     )
+);
+
+CREATE TABLE retrabajos (
+    id_retrabajo SERIAL PRIMARY KEY NOT NULL,
+    id_terminados INTEGER NOT NULL,
+    motivo_retrabajo VARCHAR(50) NOT NULL,
+    fecha_retrabajo TIMESTAMP DEFAULT NOW() NOT NULL,
+    estado VARCHAR(10) CHECK (estado IN ('Pendiente', 'En proceso', 'Finalizado')) NOT NULL,
+    FOREIGN KEY (id_terminados) REFERENCES creaciones_terminadas(id)
 );
 
 

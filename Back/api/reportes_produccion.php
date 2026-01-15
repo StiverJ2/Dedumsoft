@@ -19,7 +19,9 @@ $desde = $_GET['desde'] ?? date('Y-m-01');
 $hasta = $_GET['hasta'] ?? date('Y-m-t');
 
 try {
-    $stmt = $connLogic->prepare('SELECT * FROM fun_reporte_produccion(:desde, :hasta)');
+    $stmt = $connLogic->prepare(
+        'SELECT codigo_orden, producto, cantidad, artesano, estado, fecha_inicio, fecha_fin_real FROM fun_reporte_produccion(:desde, :hasta)'
+    );
     $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

@@ -13,7 +13,9 @@ function login_user(PDO $connLogic, string $username, string $password): array
     }
 
     try {
-        $stmt = $connLogic->prepare('SELECT * FROM seguridad.fun_iniciar_sesion(:username)');
+        $stmt = $connLogic->prepare(
+            'SELECT codigo, mensaje, username, id_usuario, rolid, hash, nombre FROM seguridad.fun_iniciar_sesion(:username)'
+        );
         $stmt->execute([':username' => $username]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {

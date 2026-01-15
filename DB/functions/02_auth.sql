@@ -48,5 +48,8 @@ BEGIN
         w_usuario.rolid,
         w_usuario.clave,
         w_usuario.nombre;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Operacion de autenticacion no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;

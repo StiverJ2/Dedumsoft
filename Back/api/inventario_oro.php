@@ -20,7 +20,9 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $tipo = $_GET['tipo'] ?? null;
 
 try {
-    $stmt = $connLogic->prepare('SELECT * FROM fun_obtener_inventario_oro(:offset, :limit, :tipo)');
+    $stmt = $connLogic->prepare(
+        'SELECT id, tipo_oro, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, fecha_registro, valor_total, proveedor_nombre FROM fun_obtener_inventario_oro(:offset, :limit, :tipo)'
+    );
     $stmt->execute([':offset' => $offset, ':limit' => $limit, ':tipo' => $tipo]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

@@ -27,12 +27,12 @@ BEGIN
     RETURN QUERY
     SELECT
         p.id,
-        p.nombre,
-        p.tipo,
-        p.contacto,
-        p.telefono,
-        p.email,
-        p.direccion,
+        p.nombre::text,
+        p.tipo::text,
+        p.contacto::text,
+        p.telefono::text,
+        p.email::text,
+        p.direccion::text,
         p.activo,
         p.fecha_registro
     FROM proveedores p
@@ -41,5 +41,8 @@ BEGIN
     ORDER BY p.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Operacion de proveedores no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;

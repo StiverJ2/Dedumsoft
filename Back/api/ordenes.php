@@ -20,7 +20,9 @@ $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $estado = $_GET['estado'] ?? null;
 
 try {
-    $stmt = $connLogic->prepare('SELECT * FROM fun_obtener_ordenes(:offset, :limit, :estado)');
+    $stmt = $connLogic->prepare(
+        'SELECT id, codigo_orden, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones FROM fun_obtener_ordenes(:offset, :limit, :estado)'
+    );
     $stmt->execute([':offset' => $offset, ':limit' => $limit, ':estado' => $estado]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

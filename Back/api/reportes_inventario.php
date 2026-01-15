@@ -16,7 +16,9 @@ if (!require_api_auth()) {
 }
 
 try {
-    $stmt = $connLogic->prepare('SELECT * FROM fun_reporte_inventario()');
+    $stmt = $connLogic->prepare(
+        'SELECT tipo, item_id, nombre, cantidad, stock_minimo, proveedor FROM fun_reporte_inventario()'
+    );
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

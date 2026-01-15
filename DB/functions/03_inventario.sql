@@ -29,23 +29,26 @@ BEGIN
     RETURN QUERY
     SELECT
         io.id,
-        io.tipo_oro,
+        io.tipo_oro::text,
         io.peso_gramos,
         io.precio_gramo,
         io.proveedor_id,
         io.fecha_ingreso,
-        io.ubicacion,
+        io.ubicacion::text,
         io.pureza,
-        io.lote,
+        io.lote::text,
         io.fecha_registro,
         (io.peso_gramos * io.precio_gramo) AS valor_total,
-        p.nombre AS proveedor_nombre
+        p.nombre::text AS proveedor_nombre
     FROM inventario_oro io
     LEFT JOIN proveedores p ON io.proveedor_id = p.id
     WHERE (par_tipo IS NULL OR io.tipo_oro = par_tipo)
     ORDER BY io.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Operacion de inventario no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -75,17 +78,17 @@ BEGIN
     RETURN QUERY
     SELECT
         ii.id,
-        ii.nombre,
-        ii.categoria,
-        ii.descripcion,
+        ii.nombre::text,
+        ii.categoria::text,
+        ii.descripcion::text,
         ii.cantidad,
-        ii.unidad_medida,
+        ii.unidad_medida::text,
         ii.precio_unitario,
         ii.stock_minimo,
         ii.proveedor_id,
-        ii.ubicacion,
+        ii.ubicacion::text,
         ii.fecha_registro,
-        p.nombre AS proveedor_nombre
+        p.nombre::text AS proveedor_nombre
     FROM inventario_insumos ii
     LEFT JOIN proveedores p ON ii.proveedor_id = p.id
     WHERE (par_categoria IS NULL OR ii.categoria = par_categoria)
@@ -93,6 +96,9 @@ BEGIN
     ORDER BY ii.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Operacion de inventario no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -122,22 +128,25 @@ BEGIN
     RETURN QUERY
     SELECT
         im.id,
-        im.nombre,
-        im.tipo,
-        im.marca,
-        im.modelo,
-        im.numero_serie,
+        im.nombre::text,
+        im.tipo::text,
+        im.marca::text,
+        im.modelo::text,
+        im.numero_serie::text,
         im.fecha_compra,
         im.valor_compra,
-        im.estado,
+        im.estado::text,
         im.ultima_mantenimiento,
         im.proxima_mantenimiento,
-        im.ubicacion,
+        im.ubicacion::text,
         im.fecha_registro
     FROM inventario_maquinaria im
     WHERE (par_estado IS NULL OR im.estado = par_estado)
     ORDER BY im.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Operacion de inventario no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;

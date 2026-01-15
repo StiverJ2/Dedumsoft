@@ -16,7 +16,9 @@ if (!require_api_auth()) {
 }
 
 try {
-    $stmt = $connLogic->prepare('SELECT * FROM seguridad.fun_reporte_usuarios()');
+    $stmt = $connLogic->prepare(
+        'SELECT id_usuario, username, nombre, rol, activo, created_at FROM seguridad.fun_reporte_usuarios()'
+    );
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

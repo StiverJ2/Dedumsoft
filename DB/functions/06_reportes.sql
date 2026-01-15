@@ -22,11 +22,11 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        op.codigo_orden,
-        pr.nombre AS producto,
+        op.codigo_orden::text,
+        pr.nombre::text AS producto,
         op.cantidad,
         a.nombre || ' ' || a.apellido AS artesano,
-        op.estado,
+        op.estado::text,
         op.fecha_inicio,
         op.fecha_fin_real
     FROM ordenes_produccion op
@@ -34,6 +34,9 @@ BEGIN
     LEFT JOIN artesanos a ON op.artesano_id = a.id
     WHERE op.fecha_creacion::date BETWEEN par_desde AND par_hasta
     ORDER BY op.fecha_creacion DESC;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -53,7 +56,7 @@ BEGIN
     RETURN QUERY
     SELECT
         a.nombre || ' ' || a.apellido AS artesano,
-        COUNT(ct.id) AS piezas,
+        COUNT(ct.id)::int AS piezas,
         COALESCE(SUM(ct.tiempo_real_horas), 0) AS horas,
         COALESCE(AVG(ct.tiempo_real_horas), 0) AS promedio_horas
     FROM creaciones_terminadas ct
@@ -61,6 +64,9 @@ BEGIN
     WHERE ct.fecha_terminado::date BETWEEN par_desde AND par_hasta
     GROUP BY a.nombre, a.apellido
     ORDER BY piezas DESC;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -100,7 +106,7 @@ BEGIN
         SELECT
             'insumo'::text AS tipo_material,
             ci.inventario_insumos_id AS material_id,
-            ii.nombre AS material_nombre,
+            ii.nombre::text AS material_nombre,
             SUM(ci.cantidad_consumida) AS cantidad_total,
             SUM(ci.cantidad_consumida * COALESCE(ci.costo_unitario, 0)) AS costo_total
         FROM consumo_insumos ci
@@ -109,6 +115,9 @@ BEGIN
         GROUP BY ci.inventario_insumos_id, ii.nombre
     ) x
     ORDER BY x.cantidad_total DESC;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -128,14 +137,17 @@ BEGIN
     SELECT
         'insumo'::text AS tipo,
         ii.id AS item_id,
-        ii.nombre,
+        ii.nombre::text,
         ii.cantidad,
         ii.stock_minimo,
-        p.nombre AS proveedor
+        p.nombre::text AS proveedor
     FROM inventario_insumos ii
     LEFT JOIN proveedores p ON ii.proveedor_id = p.id
     WHERE ii.cantidad <= ii.stock_minimo
     ORDER BY ii.cantidad ASC;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -156,7 +168,7 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        ct.codigo_pieza,
+        ct.codigo_pieza::text,
         ct.producto_id,
         ct.fecha_venta,
         ct.precio_venta_real AS precio_venta,
@@ -166,6 +178,9 @@ BEGIN
     WHERE ct.vendida = TRUE
       AND ct.fecha_venta::date BETWEEN par_desde AND par_hasta
     ORDER BY ct.fecha_venta DESC;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -185,12 +200,12 @@ BEGIN
     SELECT
         x.tipo_inventario,
         SUM(x.cantidad_total) AS cantidad_total,
-        SUM(x.movimientos) AS movimientos
+        SUM(x.movimientos)::int AS movimientos
     FROM (
         SELECT
             'oro'::text AS tipo_inventario,
             SUM(mo.cantidad) AS cantidad_total,
-            COUNT(*) AS movimientos
+            COUNT(mo.id)::int AS movimientos
         FROM movimientos_oro mo
         WHERE mo.tipo_movimiento = 'entrada'
           AND mo.fecha::date BETWEEN par_desde AND par_hasta
@@ -198,7 +213,7 @@ BEGIN
         SELECT
             'insumos'::text AS tipo_inventario,
             SUM(mi.cantidad) AS cantidad_total,
-            COUNT(*) AS movimientos
+            COUNT(mi.id)::int AS movimientos
         FROM movimientos_insumos mi
         WHERE mi.tipo_movimiento = 'entrada'
           AND mi.fecha::date BETWEEN par_desde AND par_hasta
@@ -206,13 +221,16 @@ BEGIN
         SELECT
             'maquinaria'::text AS tipo_inventario,
             SUM(mm.cantidad) AS cantidad_total,
-            COUNT(*) AS movimientos
+            COUNT(mm.id)::int AS movimientos
         FROM movimientos_maquinaria mm
         WHERE mm.tipo_movimiento = 'entrada'
           AND mm.fecha::date BETWEEN par_desde AND par_hasta
     ) x
     GROUP BY x.tipo_inventario
     ORDER BY x.tipo_inventario;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -239,5 +257,8 @@ BEGIN
     FROM seguridad.seg_usuario u
     INNER JOIN seguridad.seg_rol r ON u.rolid = r.id_rol
     ORDER BY u.created_at DESC;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
