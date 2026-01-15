@@ -9,6 +9,194 @@ CREATE SCHEMA IF NOT EXISTS joyeria;
 SET search_path TO joyeria, public;
 
 -- ============================================
+-- ESQUEMA DE SEGURIDAD (MISMA BD, ESQUEMA SEPARADO)
+-- ============================================
+
+CREATE SCHEMA IF NOT EXISTS seguridad;
+
+-- Roles
+CREATE TABLE IF NOT EXISTS seguridad.seg_rol
+(
+    id_rol      serial PRIMARY KEY,
+    nombre      text NOT NULL,
+    comentario  text NOT NULL,
+    deleted_at  timestamp
+);
+
+-- Usuarios (auth local)
+CREATE TABLE IF NOT EXISTS seguridad.seg_usuario
+(
+    id_usuario  serial PRIMARY KEY,
+    username    text NOT NULL UNIQUE,
+    nombre      text NOT NULL,
+    clave       text NOT NULL,
+    rolid       integer NOT NULL,
+
+    created_at  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at  timestamp,
+
+    CONSTRAINT seg_usuario_rol_fk FOREIGN KEY (rolid)
+        REFERENCES seguridad.seg_rol (id_rol)
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+);
+
+-- Login / sesiones / tokens
+CREATE TABLE IF NOT EXISTS seguridad.seg_login
+(
+    id_login           serial PRIMARY KEY,
+    token              text NOT NULL,
+    refresh_token      text,
+    refresh_expira     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    estado_token       boolean NOT NULL DEFAULT TRUE,
+    timestamp_creacion timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    timestamp_expira   timestamp NOT NULL,
+    ip_origen          INET,
+    user_agent         text,
+    usuarioid          integer NOT NULL,
+
+    CONSTRAINT seg_login_usuario_fk FOREIGN KEY (usuarioid)
+        REFERENCES seguridad.seg_usuario (id_usuario)
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+);
+
+-- Menus / modulos
+CREATE TABLE IF NOT EXISTS seguridad.seg_menu
+(
+    id_menu    serial PRIMARY KEY,
+    nombre     text NOT NULL,
+    comentario text NOT NULL,
+    ruta       text NOT NULL,
+    deleted_at timestamp
+);
+
+-- Permisos por rol y menu
+CREATE TABLE IF NOT EXISTS seguridad.seg_menurol
+(
+    id_menu_rol serial PRIMARY KEY,
+    abrir       boolean NOT NULL,
+    guardar     boolean NOT NULL,
+    editar      boolean NOT NULL,
+    eliminar    boolean NOT NULL,
+    rolid       integer NOT NULL,
+    menuid      integer NOT NULL,
+
+    CONSTRAINT seg_menurol_rol_menu_unique UNIQUE (rolid, menuid),
+
+    CONSTRAINT seg_menurol_rol_fk FOREIGN KEY (rolid)
+        REFERENCES seguridad.seg_rol (id_rol)
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+
+    CONSTRAINT seg_menurol_menu_fk FOREIGN KEY (menuid)
+        REFERENCES seguridad.seg_menu (id_menu)
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+);
+
+-- Indices seguridad
+CREATE INDEX IF NOT EXISTS idx_seg_login_token 
+    ON seguridad.seg_login(token);
+
+CREATE INDEX IF NOT EXISTS idx_seg_login_refresh_token 
+    ON seguridad.seg_login(refresh_token);
+
+CREATE INDEX IF NOT EXISTS idx_seg_login_usuario 
+    ON seguridad.seg_login(usuarioid);
+
+CREATE INDEX IF NOT EXISTS idx_seg_login_activo_expira 
+    ON seguridad.seg_login(estado_token, timestamp_expira) 
+    WHERE estado_token = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_seg_usuario_username 
+    ON seguridad.seg_usuario(username);
+
+CREATE INDEX IF NOT EXISTS idx_seg_usuario_activo 
+    ON seguridad.seg_usuario(id_usuario) 
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_seg_rol_activo 
+    ON seguridad.seg_rol (id_rol) 
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_seg_menu_activo 
+    ON seguridad.seg_menu (id_menu) 
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_seg_menurol_rol 
+    ON seguridad.seg_menurol(rolid);
+
+-- ============================================
+-- SEED DE SEGURIDAD (DEDUMSOFT)
+-- ============================================
+
+INSERT INTO seguridad.seg_rol (id_rol, nombre, comentario) VALUES
+(1, 'ADMIN', 'Acceso total al sistema'),
+(2, 'OPERADOR', 'Operacion general sin administracion total'),
+(3, 'LECTURA', 'Solo lectura')
+ON CONFLICT (id_rol) DO UPDATE
+SET nombre = EXCLUDED.nombre, comentario = EXCLUDED.comentario;
+
+INSERT INTO seguridad.seg_menu (id_menu, nombre, comentario, ruta) VALUES
+(1, 'Dashboard', 'Panel general', '/dashboard'),
+(2, 'Inventario', 'Gestion de inventario', '/inventario'),
+(3, 'Produccion', 'Ordenes y control de produccion', '/produccion'),
+(4, 'Reportes', 'Reportes del sistema', '/reportes'),
+(5, 'Usuarios', 'Administracion de usuarios y roles', '/usuarios'),
+(6, 'Proveedores', 'Gestion de proveedores', '/proveedores'),
+(7, 'Configuracion', 'Preferencias y ajustes', '/configuracion')
+ON CONFLICT (id_menu) DO UPDATE
+SET nombre = EXCLUDED.nombre, comentario = EXCLUDED.comentario, ruta = EXCLUDED.ruta;
+
+-- ADMIN
+INSERT INTO seguridad.seg_menurol (abrir, guardar, editar, eliminar, rolid, menuid) VALUES
+(TRUE, TRUE, TRUE, TRUE, 1, 1),
+(TRUE, TRUE, TRUE, TRUE, 1, 2),
+(TRUE, TRUE, TRUE, TRUE, 1, 3),
+(TRUE, TRUE, TRUE, TRUE, 1, 4),
+(TRUE, TRUE, TRUE, TRUE, 1, 5),
+(TRUE, TRUE, TRUE, TRUE, 1, 6),
+(TRUE, TRUE, TRUE, TRUE, 1, 7)
+ON CONFLICT (rolid, menuid) DO UPDATE
+SET abrir = EXCLUDED.abrir, guardar = EXCLUDED.guardar, editar = EXCLUDED.editar, eliminar = EXCLUDED.eliminar;
+
+-- OPERADOR
+INSERT INTO seguridad.seg_menurol (abrir, guardar, editar, eliminar, rolid, menuid) VALUES
+(TRUE, FALSE, FALSE, FALSE, 2, 1),
+(TRUE, TRUE, TRUE, FALSE, 2, 2),
+(TRUE, TRUE, TRUE, FALSE, 2, 3),
+(TRUE, FALSE, FALSE, FALSE, 2, 4),
+(FALSE, FALSE, FALSE, FALSE, 2, 5),
+(TRUE, TRUE, TRUE, FALSE, 2, 6),
+(FALSE, FALSE, FALSE, FALSE, 2, 7)
+ON CONFLICT (rolid, menuid) DO UPDATE
+SET abrir = EXCLUDED.abrir, guardar = EXCLUDED.guardar, editar = EXCLUDED.editar, eliminar = EXCLUDED.eliminar;
+
+-- LECTURA
+INSERT INTO seguridad.seg_menurol (abrir, guardar, editar, eliminar, rolid, menuid) VALUES
+(TRUE, FALSE, FALSE, FALSE, 3, 1),
+(TRUE, FALSE, FALSE, FALSE, 3, 2),
+(TRUE, FALSE, FALSE, FALSE, 3, 3),
+(TRUE, FALSE, FALSE, FALSE, 3, 4),
+(FALSE, FALSE, FALSE, FALSE, 3, 5),
+(TRUE, FALSE, FALSE, FALSE, 3, 6),
+(FALSE, FALSE, FALSE, FALSE, 3, 7)
+ON CONFLICT (rolid, menuid) DO UPDATE
+SET abrir = EXCLUDED.abrir, guardar = EXCLUDED.guardar, editar = EXCLUDED.editar, eliminar = EXCLUDED.eliminar;
+
+-- Usuario de prueba
+INSERT INTO seguridad.seg_usuario (username, nombre, clave, rolid)
+VALUES (
+    'admin',
+    'Administrador',
+    '$argon2id$v=19$m=131072,t=4,p=2$QmNLRXRraUtjeU56bW15Uw$ZaFMxmGhCfqTH9oMFHKPznifmFXYjBi1LPR5dxlQ7UY',
+    1
+)
+ON CONFLICT (username) DO NOTHING;
+
+-- ============================================
 -- TABLAS DE SOPORTE
 -- ============================================
 
@@ -30,12 +218,18 @@ CREATE TABLE artesanos (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
-    especialidad VARCHAR(100),
     telefono VARCHAR(20),
     email VARCHAR(100),
     fecha_ingreso DATE NOT NULL,
     activo BOOLEAN DEFAULT TRUE,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla: artesano_especialidad
+CREATE TABLE artesano_especialidad (
+    id SERIAL PRIMARY KEY,
+    artesano_id INTEGER NOT NULL REFERENCES artesanos(id) ON DELETE CASCADE,
+    especialidad VARCHAR(100) NOT NULL
 );
 
 -- ============================================
@@ -88,11 +282,34 @@ CREATE TABLE inventario_insumos (
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: movimientos (historial de todos los inventarios)
-CREATE TABLE movimientos (
+-- Tabla: movimientos_oro
+CREATE TABLE movimientos_oro (
     id SERIAL PRIMARY KEY,
-    tipo_inventario VARCHAR(20) NOT NULL CHECK (tipo_inventario IN ('oro', 'maquinaria', 'insumos')),
-    item_id INTEGER NOT NULL,
+    inventario_oro_id INTEGER NOT NULL REFERENCES inventario_oro(id) ON DELETE RESTRICT,
+    tipo_movimiento VARCHAR(20) NOT NULL CHECK (tipo_movimiento IN ('entrada', 'salida', 'ajuste', 'transferencia')),
+    cantidad DECIMAL(10,3) NOT NULL,
+    motivo VARCHAR(500),
+    referencia VARCHAR(100),
+    usuario_id INTEGER,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla: movimientos_insumos
+CREATE TABLE movimientos_insumos (
+    id SERIAL PRIMARY KEY,
+    inventario_insumos_id INTEGER NOT NULL REFERENCES inventario_insumos(id) ON DELETE RESTRICT,
+    tipo_movimiento VARCHAR(20) NOT NULL CHECK (tipo_movimiento IN ('entrada', 'salida', 'ajuste', 'transferencia')),
+    cantidad DECIMAL(10,3) NOT NULL,
+    motivo VARCHAR(500),
+    referencia VARCHAR(100),
+    usuario_id INTEGER,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla: movimientos_maquinaria
+CREATE TABLE movimientos_maquinaria (
+    id SERIAL PRIMARY KEY,
+    inventario_maquinaria_id INTEGER NOT NULL REFERENCES inventario_maquinaria(id) ON DELETE RESTRICT,
     tipo_movimiento VARCHAR(20) NOT NULL CHECK (tipo_movimiento IN ('entrada', 'salida', 'ajuste', 'transferencia')),
     cantidad DECIMAL(10,3) NOT NULL,
     motivo VARCHAR(500),
@@ -119,16 +336,26 @@ CREATE TABLE productos (
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: recetas_produccion (BOM - Bill of Materials)
-CREATE TABLE recetas_produccion (
+-- Tabla: recetas_oro (BOM - Bill of Materials)
+CREATE TABLE recetas_oro (
     producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
-    tipo_material VARCHAR(20) NOT NULL CHECK (tipo_material IN ('oro', 'insumo')),
-    material_id INTEGER NOT NULL,
+    inventario_oro_id INTEGER NOT NULL REFERENCES inventario_oro(id) ON DELETE RESTRICT,
     cantidad_requerida DECIMAL(10,3) NOT NULL CHECK (cantidad_requerida > 0),
     es_opcional BOOLEAN DEFAULT FALSE,
     notas TEXT,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (producto_id, tipo_material, material_id)
+    PRIMARY KEY (producto_id, inventario_oro_id)
+);
+
+-- Tabla: recetas_insumos (BOM - Bill of Materials)
+CREATE TABLE recetas_insumos (
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    inventario_insumos_id INTEGER NOT NULL REFERENCES inventario_insumos(id) ON DELETE RESTRICT,
+    cantidad_requerida DECIMAL(10,3) NOT NULL CHECK (cantidad_requerida > 0),
+    es_opcional BOOLEAN DEFAULT FALSE,
+    notas TEXT,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (producto_id, inventario_insumos_id)
 );
 
 -- Tabla: ordenes_produccion
@@ -148,15 +375,26 @@ CREATE TABLE ordenes_produccion (
     creado_por INTEGER
 );
 
--- Tabla: consumo_materiales
-CREATE TABLE consumo_materiales (
+-- Tabla: consumo_oro
+CREATE TABLE consumo_oro (
     id SERIAL PRIMARY KEY,
     orden_produccion_id INTEGER NOT NULL REFERENCES ordenes_produccion(id) ON DELETE CASCADE,
-    tipo_material VARCHAR(20) NOT NULL CHECK (tipo_material IN ('oro', 'insumo')),
-    material_id INTEGER NOT NULL,
+    inventario_oro_id INTEGER NOT NULL REFERENCES inventario_oro(id) ON DELETE RESTRICT,
     cantidad_consumida DECIMAL(10,3) NOT NULL CHECK (cantidad_consumida > 0),
     costo_unitario DECIMAL(10,2),
-    --costo total, violación 3NF, se calcula al vuelo, no se almacena
+    --costo total, violacion 3NF, se calcula al vuelo, no se almacena
+    fecha_consumo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    usuario_id INTEGER
+);
+
+-- Tabla: consumo_insumos
+CREATE TABLE consumo_insumos (
+    id SERIAL PRIMARY KEY,
+    orden_produccion_id INTEGER NOT NULL REFERENCES ordenes_produccion(id) ON DELETE CASCADE,
+    inventario_insumos_id INTEGER NOT NULL REFERENCES inventario_insumos(id) ON DELETE RESTRICT,
+    cantidad_consumida DECIMAL(10,3) NOT NULL CHECK (cantidad_consumida > 0),
+    costo_unitario DECIMAL(10,2),
+    --costo total, violacion 3NF, se calcula al vuelo, no se almacena
     fecha_consumo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     usuario_id INTEGER
 );
@@ -191,30 +429,6 @@ CREATE TABLE creaciones_terminadas (
     )
 );
 
--- Tabla: estadisticas_produccion
-
--- no broders esto está super mal
--- esta tabla es INCREIBLEMENTE redundante, no normalizada y viola multiples formas normales
--- literalmente todos los campos se pueden calcular al vuelo con consultas SQL o funciones PL/pgSQL
-
--- CREATE TABLE estadisticas_produccion (
-    -- id SERIAL PRIMARY KEY,
-    -- periodo VARCHAR(20) NOT NULL,
-    -- tipo_periodo VARCHAR(20) NOT NULL CHECK (tipo_periodo IN ('dia', 'semana', 'mes', 'trimestre', 'año')),
-    --total_piezas, violación 3NF, se calcula al vuelo con COUNT(id) de creaciones_terminadas
-    -- piezas_por_tipo JSONB, violación 1NF, si hay un campo JSONB lo mas probable es que se pueda representar como una tabla resultante
-    --total_oro_usado_gramos,violación 3NF, se calcula al vuelo con SUM desde consumo_materiales
-    --costo_materiales_total violación 3NF, se calcula al vuelo con SUM desde consumo_materiales
-    --costo_mano_obra_total violación 3NF, se calcula al vuelo con SUM desde creaciones_terminadas
-    --horas_trabajadas violación 3NF, se calcula al vuelo con SUM desde creaciones_terminadas
-    --artesano_mas_productivo_id violación 3NF, se calcula al vuelo con GROUP BY artesano_id
-    --producto_mas_fabricado_id violación 3NF, se calcula al vuelo con GROUP BY producto_id
-    --promedio_tiempo_fabricacion violación 3NF, se calcula al vuelo con AVG desde creaciones_terminadas
-    --tasa_calidad_a_porcentaje violación 3NF, se calcula al vuelo con calculos a partir de SELECT WHERE calidad='A'
-    --total_vendido violación 3NF, se calcula al vuelo con SUM desde creaciones_terminadas donde vendida=TRUE
-    --utilidad_neta violación 3NF, se calcula al vuelo con SUM(precio_venta_real - (costo_materiales + costo_mano_obra)) desde creaciones_terminadas donde vendida=TRUE
-    --fecha_calculo innecesario, puede ser retornado desde la consulta o fn PL/pgSQL
--- );
 
 -- ============================================
 -- ÍNDICES PARA OPTIMIZACIÓN
@@ -228,14 +442,19 @@ CREATE INDEX idx_inventario_insumos_proveedor ON inventario_insumos(proveedor_id
 CREATE INDEX idx_inventario_maquinaria_estado ON inventario_maquinaria(estado);
 
 -- Movimientos
-CREATE INDEX idx_movimientos_tipo ON movimientos(tipo_inventario, item_id);
-CREATE INDEX idx_movimientos_fecha ON movimientos(fecha);
+CREATE INDEX idx_mov_oro_item ON movimientos_oro(inventario_oro_id);
+CREATE INDEX idx_mov_oro_fecha ON movimientos_oro(fecha);
+CREATE INDEX idx_mov_insumos_item ON movimientos_insumos(inventario_insumos_id);
+CREATE INDEX idx_mov_insumos_fecha ON movimientos_insumos(fecha);
+CREATE INDEX idx_mov_maquinaria_item ON movimientos_maquinaria(inventario_maquinaria_id);
+CREATE INDEX idx_mov_maquinaria_fecha ON movimientos_maquinaria(fecha);
 
 -- Producción
 CREATE INDEX idx_ordenes_estado ON ordenes_produccion(estado);
 CREATE INDEX idx_ordenes_artesano ON ordenes_produccion(artesano_id);
 CREATE INDEX idx_ordenes_fecha ON ordenes_produccion(fecha_creacion);
-CREATE INDEX idx_consumo_orden ON consumo_materiales(orden_produccion_id);
+CREATE INDEX idx_consumo_oro_orden ON consumo_oro(orden_produccion_id);
+CREATE INDEX idx_consumo_insumos_orden ON consumo_insumos(orden_produccion_id);
 
 -- Creaciones
 CREATE INDEX idx_creaciones_fecha ON creaciones_terminadas(fecha_terminado);
@@ -243,100 +462,14 @@ CREATE INDEX idx_creaciones_producto ON creaciones_terminadas(producto_id);
 CREATE INDEX idx_creaciones_artesano ON creaciones_terminadas(artesano_id);
 CREATE INDEX idx_creaciones_vendida ON creaciones_terminadas(vendida);
 
--- Estadísticas
--- CREATE INDEX idx_estadisticas_periodo ON estadisticas_produccion(periodo, tipo_periodo);
+-- Artesanos
+CREATE INDEX idx_artesano_especialidad_artesano ON artesano_especialidad(artesano_id);
+
 
 -- ============================================
--- TRIGGERS ÚTILES
--- ============================================
+-- TRIGGERS Y FUNCIONES PL/PGSQL
+-- (Ejecutar scripts en DB/functions/ despues de crear tablas)
 
--- Trigger: Actualizar costo_total en creaciones_terminadas
--- NOTA: Comentado porque costo_total fue eliminado (violación 3NF, se calcula al vuelo)
--- CREATE OR REPLACE FUNCTION actualizar_costo_total()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     NEW.costo_total = COALESCE(NEW.costo_materiales, 0) + COALESCE(NEW.costo_mano_obra, 0);
---     RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- CREATE TRIGGER trg_actualizar_costo_total
--- BEFORE INSERT OR UPDATE ON creaciones_terminadas
--- FOR EACH ROW
--- EXECUTE FUNCTION actualizar_costo_total();
-
--- Trigger: Registrar movimiento al consumir materiales
-CREATE OR REPLACE FUNCTION registrar_consumo_movimiento()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO movimientos (tipo_inventario, item_id, tipo_movimiento, cantidad, motivo, referencia, usuario_id)
-    VALUES (
-        NEW.tipo_material,
-        NEW.material_id,
-        'salida',
-        NEW.cantidad_consumida,
-        'Consumo en producción',
-        'OP-' || NEW.orden_produccion_id,
-        NEW.usuario_id
-    );
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_registrar_consumo
-AFTER INSERT ON consumo_materiales
-FOR EACH ROW
-EXECUTE FUNCTION registrar_consumo_movimiento();
-
--- ============================================
--- VISTAS ÚTILES
--- ============================================
-
--- Vista: Inventario de oro con valor total
-CREATE OR REPLACE VIEW v_inventario_oro_valorizado AS
-SELECT 
-    io.*,
-    (io.peso_gramos * io.precio_gramo) AS valor_total,
-    p.nombre AS proveedor_nombre
-FROM inventario_oro io
-LEFT JOIN proveedores p ON io.proveedor_id = p.id;
-
--- Vista: Stock bajo de insumos
-CREATE OR REPLACE VIEW v_insumos_stock_bajo AS
-SELECT 
-    ii.*,
-    p.nombre AS proveedor_nombre,
-    p.telefono AS proveedor_telefono
-FROM inventario_insumos ii
-LEFT JOIN proveedores p ON ii.proveedor_id = p.id
-WHERE ii.cantidad <= ii.stock_minimo;
-
--- Vista: Órdenes en proceso
-CREATE OR REPLACE VIEW v_ordenes_activas AS
-SELECT 
-    op.*,
-    pr.nombre AS producto_nombre,
-    pr.codigo_sku,
-    a.nombre || ' ' || a.apellido AS artesano_nombre,
-    EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - op.fecha_inicio))/3600 AS horas_transcurridas
-FROM ordenes_produccion op
-INNER JOIN productos pr ON op.producto_id = pr.id
-LEFT JOIN artesanos a ON op.artesano_id = a.id
-WHERE op.estado IN ('pendiente', 'en_proceso');
-
--- Vista: Resumen de creaciones por mes
-CREATE OR REPLACE VIEW v_creaciones_por_mes AS
-SELECT 
-    TO_CHAR(fecha_terminado, 'YYYY-MM') AS mes,
-    COUNT(*) AS total_piezas,
-    SUM(costo_materiales + costo_mano_obra) AS costo_total,
-    SUM(CASE WHEN vendida THEN precio_venta_real ELSE 0 END) AS total_vendido,
-    SUM(CASE WHEN vendida THEN (precio_venta_real - (costo_materiales + costo_mano_obra)) ELSE 0 END) AS utilidad
-FROM creaciones_terminadas
-GROUP BY TO_CHAR(fecha_terminado, 'YYYY-MM')
-ORDER BY mes DESC;
-
--- ============================================
 -- DATOS DE EJEMPLO (OPCIONAL)
 -- ============================================
 
@@ -347,10 +480,18 @@ INSERT INTO proveedores (nombre, tipo, contacto, telefono, email) VALUES
 ('Maquinaria Industrial', 'maquinaria', 'Carlos Rodríguez', '+57-302-9876543', 'info@maquinaria.com');
 
 -- Insertar algunos artesanos de ejemplo
-INSERT INTO artesanos (nombre, apellido, especialidad, telefono, fecha_ingreso) VALUES
-('Pedro', 'Martínez', 'Engaste y soldadura', '+57-310-1111111', '2020-01-15'),
-('Ana', 'López', 'Diseño y pulido', '+57-311-2222222', '2021-03-20'),
-('Luis', 'García', 'Fundición', '+57-312-3333333', '2019-06-10');
+INSERT INTO artesanos (nombre, apellido, telefono, fecha_ingreso) VALUES
+('Pedro', 'Martinez', '+57-310-1111111', '2020-01-15'),
+('Ana', 'Lopez', '+57-311-2222222', '2021-03-20'),
+('Luis', 'Garcia', '+57-312-3333333', '2019-06-10');
+
+INSERT INTO artesano_especialidad (artesano_id, especialidad)
+SELECT id, 'Engaste y soldadura' FROM artesanos WHERE nombre = 'Pedro' AND apellido = 'Martinez';
+INSERT INTO artesano_especialidad (artesano_id, especialidad)
+SELECT id, 'Diseno y pulido' FROM artesanos WHERE nombre = 'Ana' AND apellido = 'Lopez';
+INSERT INTO artesano_especialidad (artesano_id, especialidad)
+SELECT id, 'Fundicion' FROM artesanos WHERE nombre = 'Luis' AND apellido = 'Garcia';
+
 
 -- ============================================
 -- COMENTARIOS EN TABLAS

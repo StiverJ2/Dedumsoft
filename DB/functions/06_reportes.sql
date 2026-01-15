@@ -1,0 +1,243 @@
+-- ============================================
+-- FUNCIONES DE REPORTES
+-- ============================================
+
+SET search_path TO joyeria, seguridad, public;
+
+CREATE OR REPLACE FUNCTION fun_reporte_produccion(
+    par_desde date,
+    par_hasta date
+)
+RETURNS TABLE (
+    codigo_orden text,
+    producto text,
+    cantidad int,
+    artesano text,
+    estado text,
+    fecha_inicio timestamp,
+    fecha_fin_real timestamp
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        op.codigo_orden,
+        pr.nombre AS producto,
+        op.cantidad,
+        a.nombre || ' ' || a.apellido AS artesano,
+        op.estado,
+        op.fecha_inicio,
+        op.fecha_fin_real
+    FROM ordenes_produccion op
+    INNER JOIN productos pr ON op.producto_id = pr.id
+    LEFT JOIN artesanos a ON op.artesano_id = a.id
+    WHERE op.fecha_creacion::date BETWEEN par_desde AND par_hasta
+    ORDER BY op.fecha_creacion DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_reporte_eficiencia_artesanos(
+    par_desde date,
+    par_hasta date
+)
+RETURNS TABLE (
+    artesano text,
+    piezas int,
+    horas numeric,
+    promedio_horas numeric
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        a.nombre || ' ' || a.apellido AS artesano,
+        COUNT(ct.id) AS piezas,
+        COALESCE(SUM(ct.tiempo_real_horas), 0) AS horas,
+        COALESCE(AVG(ct.tiempo_real_horas), 0) AS promedio_horas
+    FROM creaciones_terminadas ct
+    LEFT JOIN artesanos a ON ct.artesano_id = a.id
+    WHERE ct.fecha_terminado::date BETWEEN par_desde AND par_hasta
+    GROUP BY a.nombre, a.apellido
+    ORDER BY piezas DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_reporte_uso_materiales(
+    par_desde date,
+    par_hasta date
+)
+RETURNS TABLE (
+    tipo_material text,
+    material_id int,
+    material_nombre text,
+    cantidad_total numeric,
+    costo_total numeric
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        x.tipo_material,
+        x.material_id,
+        x.material_nombre,
+        x.cantidad_total,
+        x.costo_total
+    FROM (
+        SELECT
+            'oro'::text AS tipo_material,
+            co.inventario_oro_id AS material_id,
+            ('Oro ' || io.tipo_oro)::text AS material_nombre,
+            SUM(co.cantidad_consumida) AS cantidad_total,
+            SUM(co.cantidad_consumida * COALESCE(co.costo_unitario, 0)) AS costo_total
+        FROM consumo_oro co
+        INNER JOIN inventario_oro io ON co.inventario_oro_id = io.id
+        WHERE co.fecha_consumo::date BETWEEN par_desde AND par_hasta
+        GROUP BY co.inventario_oro_id, io.tipo_oro
+        UNION ALL
+        SELECT
+            'insumo'::text AS tipo_material,
+            ci.inventario_insumos_id AS material_id,
+            ii.nombre AS material_nombre,
+            SUM(ci.cantidad_consumida) AS cantidad_total,
+            SUM(ci.cantidad_consumida * COALESCE(ci.costo_unitario, 0)) AS costo_total
+        FROM consumo_insumos ci
+        INNER JOIN inventario_insumos ii ON ci.inventario_insumos_id = ii.id
+        WHERE ci.fecha_consumo::date BETWEEN par_desde AND par_hasta
+        GROUP BY ci.inventario_insumos_id, ii.nombre
+    ) x
+    ORDER BY x.cantidad_total DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_reporte_inventario()
+RETURNS TABLE (
+    tipo text,
+    item_id int,
+    nombre text,
+    cantidad numeric,
+    stock_minimo numeric,
+    proveedor text
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        'insumo'::text AS tipo,
+        ii.id AS item_id,
+        ii.nombre,
+        ii.cantidad,
+        ii.stock_minimo,
+        p.nombre AS proveedor
+    FROM inventario_insumos ii
+    LEFT JOIN proveedores p ON ii.proveedor_id = p.id
+    WHERE ii.cantidad <= ii.stock_minimo
+    ORDER BY ii.cantidad ASC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_reporte_ventas(
+    par_desde date,
+    par_hasta date
+)
+RETURNS TABLE (
+    codigo_pieza text,
+    producto_id int,
+    fecha_venta timestamp,
+    precio_venta numeric,
+    costo_total numeric,
+    utilidad numeric
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        ct.codigo_pieza,
+        ct.producto_id,
+        ct.fecha_venta,
+        ct.precio_venta_real AS precio_venta,
+        (ct.costo_materiales + ct.costo_mano_obra) AS costo_total,
+        (ct.precio_venta_real - (ct.costo_materiales + ct.costo_mano_obra)) AS utilidad
+    FROM creaciones_terminadas ct
+    WHERE ct.vendida = TRUE
+      AND ct.fecha_venta::date BETWEEN par_desde AND par_hasta
+    ORDER BY ct.fecha_venta DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_reporte_compras(
+    par_desde date,
+    par_hasta date
+)
+RETURNS TABLE (
+    tipo_inventario text,
+    cantidad_total numeric,
+    movimientos int
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        x.tipo_inventario,
+        SUM(x.cantidad_total) AS cantidad_total,
+        SUM(x.movimientos) AS movimientos
+    FROM (
+        SELECT
+            'oro'::text AS tipo_inventario,
+            SUM(mo.cantidad) AS cantidad_total,
+            COUNT(*) AS movimientos
+        FROM movimientos_oro mo
+        WHERE mo.tipo_movimiento = 'entrada'
+          AND mo.fecha::date BETWEEN par_desde AND par_hasta
+        UNION ALL
+        SELECT
+            'insumos'::text AS tipo_inventario,
+            SUM(mi.cantidad) AS cantidad_total,
+            COUNT(*) AS movimientos
+        FROM movimientos_insumos mi
+        WHERE mi.tipo_movimiento = 'entrada'
+          AND mi.fecha::date BETWEEN par_desde AND par_hasta
+        UNION ALL
+        SELECT
+            'maquinaria'::text AS tipo_inventario,
+            SUM(mm.cantidad) AS cantidad_total,
+            COUNT(*) AS movimientos
+        FROM movimientos_maquinaria mm
+        WHERE mm.tipo_movimiento = 'entrada'
+          AND mm.fecha::date BETWEEN par_desde AND par_hasta
+    ) x
+    GROUP BY x.tipo_inventario
+    ORDER BY x.tipo_inventario;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION seguridad.fun_reporte_usuarios()
+RETURNS TABLE (
+    id_usuario int,
+    username text,
+    nombre text,
+    rol text,
+    activo boolean,
+    created_at timestamp
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        u.id_usuario,
+        u.username,
+        u.nombre,
+        r.nombre AS rol,
+        (u.deleted_at IS NULL) AS activo,
+        u.created_at
+    FROM seguridad.seg_usuario u
+    INNER JOIN seguridad.seg_rol r ON u.rolid = r.id_rol
+    ORDER BY u.created_at DESC;
+END;
+$$;
