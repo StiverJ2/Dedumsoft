@@ -25,6 +25,7 @@ try {
     $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
+    error_log('reportes_compras error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     http_response_code(500);
     echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
     exit;

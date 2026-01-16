@@ -1,0 +1,166 @@
+/* IE8 fallback styles: basic layout and readability */
+main, aside, header, footer, section, nav {
+    display: block;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f9f7f4;
+    color: #2d2d2d;
+}
+
+.ds-shell {
+    width: 100%;
+}
+
+.ds-sidebar {
+    float: left;
+    width: 220px;
+    background: #1a1a1a;
+    color: #d4c2a3;
+    min-height: 100%;
+}
+
+.ds-main {
+    margin-left: 220px;
+    padding: 20px;
+    background: #f9f7f4;
+}
+
+.ds-logo h2 {
+    color: #f5e9c8;
+}
+
+.ds-nav {
+    padding: 8px 12px;
+}
+
+.ds-nav-link {
+    display: block;
+    padding: 8px 10px;
+    color: #d4c2a3;
+    text-decoration: none;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.ds-icon-img,
+.ds-subicon-img {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.ds-nav-link.active {
+    background: #3b3225;
+    color: #f5e9c8;
+}
+
+.ds-nav-section {
+    font-weight: bold;
+    margin-top: 12px;
+    color: #f5e9c8;
+}
+
+.ds-user-panel,
+.ds-logout {
+    padding: 10px 12px;
+    border-top: 1px solid #2d2d2d;
+}
+
+.ds-logout .btn {
+    display: block;
+    width: 100%;
+    background: #d4af37;
+    color: #1a1a1a;
+    border: 1px solid #b59d5d;
+}
+
+.content {
+    padding: 0 0 20px;
+}
+
+.card {
+    background: #ffffff;
+    border: 1px solid #dcd6cc;
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+.dashboard-grid {
+    display: block;
+}
+
+.dashboard-card {
+    border: 1px solid #dcd6cc;
+    background: #ffffff;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.card-icon {
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.card-icon img {
+    width: 32px;
+    height: 32px;
+}
+
+.ds-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid #aaa;
+    background: #f0f0f0;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th,
+.table td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    font-size: 12px;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.form-control,
+.form-select,
+.ds-field {
+    border: 1px solid #aaa;
+    padding: 4px 6px;
+}
+
+.btn {
+    border: 1px solid #b59d5d;
+    background: #d4af37;
+    color: #1a1a1a;
+    padding: 4px 8px;
+}
+
+.d-flex {
+    display: block;
+}
+
+.login-container {
+    background: #ffffff;
+    border: 1px solid #d4af37;
+    box-shadow: none;
+    margin: 40px auto;
+}
+
+body.ds-login {
+    background: #f7f1e7;
+    text-align: center;
+}
+
+.login-background {
+    text-align: center;
+}

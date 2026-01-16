@@ -6,6 +6,91 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
 
+$legacy = dedumsoft_is_legacy_browser();
+$desde = $_GET['desde'] ?? date('Y-m-01');
+$hasta = $_GET['hasta'] ?? date('Y-m-t');
+$input_type = $legacy ? 'text' : 'date';
+
+$rep_produccion = [];
+$rep_inventario = [];
+$rep_eficiencia = [];
+$rep_materiales = [];
+$rep_ventas = [];
+$rep_compras = [];
+$rep_usuarios = [];
+
+if ($legacy) {
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT codigo_orden, producto, cantidad, artesano, estado FROM fun_reporte_produccion(:desde, :hasta)'
+        );
+        $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
+        $rep_produccion = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('reportes legacy produccion error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT tipo, item_id, nombre, cantidad, stock_minimo, proveedor FROM fun_reporte_inventario()'
+        );
+        $stmt->execute();
+        $rep_inventario = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('reportes legacy inventario error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT artesano, piezas, horas, promedio_horas FROM fun_reporte_eficiencia_artesanos(:desde, :hasta)'
+        );
+        $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
+        $rep_eficiencia = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('reportes legacy eficiencia error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT tipo_material, material_id, material_nombre, cantidad_total, costo_total FROM fun_reporte_uso_materiales(:desde, :hasta)'
+        );
+        $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
+        $rep_materiales = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('reportes legacy materiales error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT codigo_pieza, producto_id, fecha_venta, precio_venta, utilidad FROM fun_reporte_ventas(:desde, :hasta)'
+        );
+        $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
+        $rep_ventas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('reportes legacy ventas error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT tipo_inventario, cantidad_total, movimientos FROM fun_reporte_compras(:desde, :hasta)'
+        );
+        $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
+        $rep_compras = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('reportes legacy compras error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT id_usuario, username, nombre, rol, activo FROM seguridad.fun_reporte_usuarios()'
+        );
+        $stmt->execute();
+        $rep_usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('reportes legacy usuarios error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+}
+
 include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
@@ -17,17 +102,29 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card">
         <strong>Rango de fechas</strong>
+        <?php if ($legacy): ?>
+        <form method="get" action="reportes.php#rep-produccion-section" class="d-flex flex-wrap gap-2 align-items-end">
+        <?php else: ?>
         <div class="d-flex flex-wrap gap-2 align-items-end">
+        <?php endif; ?>
             <div>
                 <label class="form-label muted" for="desde">Desde</label>
-                <input type="date" id="desde" class="form-control form-control-sm ds-field">
+                <input type="<?php echo $input_type; ?>" id="desde" name="desde" class="form-control form-control-sm ds-field" value="<?php echo htmlspecialchars($desde); ?>">
             </div>
             <div>
                 <label class="form-label muted" for="hasta">Hasta</label>
-                <input type="date" id="hasta" class="form-control form-control-sm ds-field">
+                <input type="<?php echo $input_type; ?>" id="hasta" name="hasta" class="form-control form-control-sm ds-field" value="<?php echo htmlspecialchars($hasta); ?>">
             </div>
-            <button class="btn btn-sm" onclick="loadAllReports()">Actualizar</button>
+            <?php if ($legacy): ?>
+            <button class="btn btn-sm" type="submit">Actualizar</button>
+            <?php else: ?>
+            <button class="btn btn-sm" type="button" onclick="loadAllReports()">Actualizar</button>
+            <?php endif; ?>
+        <?php if ($legacy): ?>
+        </form>
+        <?php else: ?>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="card" id="rep-produccion-section">
@@ -43,7 +140,24 @@ include __DIR__ . '/partials/nav.php';
                     <th>Estado</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php if (empty($rep_produccion)): ?>
+                    <tr><td colspan="5">Sin datos para el rango seleccionado</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rep_produccion as $row): ?>
+                        <?php $estado_label = strtoupper(str_replace('_', ' ', (string)($row['estado'] ?? ''))); ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars((string)$row['codigo_orden']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['producto']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['cantidad']); ?></td>
+                            <td><?php echo htmlspecialchars((string)($row['artesano'] ?? '')); ?></td>
+                            <td><?php echo htmlspecialchars($estado_label); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
@@ -62,7 +176,24 @@ include __DIR__ . '/partials/nav.php';
                     <th>Proveedor</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php if (empty($rep_inventario)): ?>
+                    <tr><td colspan="6">Sin datos para el rango seleccionado</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rep_inventario as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars((string)$row['tipo']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['item_id']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['nombre']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['cantidad']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['stock_minimo']); ?></td>
+                            <td><?php echo htmlspecialchars((string)($row['proveedor'] ?? '')); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
@@ -79,7 +210,22 @@ include __DIR__ . '/partials/nav.php';
                     <th>Promedio</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php if (empty($rep_eficiencia)): ?>
+                    <tr><td colspan="4">Sin datos para el rango seleccionado</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rep_eficiencia as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars((string)($row['artesano'] ?? '')); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['piezas']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['horas']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['promedio_horas']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
@@ -97,7 +243,23 @@ include __DIR__ . '/partials/nav.php';
                     <th>Costo</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php if (empty($rep_materiales)): ?>
+                    <tr><td colspan="5">Sin datos para el rango seleccionado</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rep_materiales as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars((string)$row['tipo_material']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['material_id']); ?></td>
+                            <td><?php echo htmlspecialchars((string)($row['material_nombre'] ?? '')); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['cantidad_total']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['costo_total']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
@@ -115,7 +277,24 @@ include __DIR__ . '/partials/nav.php';
                     <th>Utilidad</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php if (empty($rep_ventas)): ?>
+                    <tr><td colspan="5">Sin datos para el rango seleccionado</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rep_ventas as $row): ?>
+                        <?php $fecha = $row['fecha_venta'] ? date('Y-m-d', strtotime((string)$row['fecha_venta'])) : ''; ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars((string)$row['codigo_pieza']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['producto_id']); ?></td>
+                            <td><?php echo htmlspecialchars($fecha); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['precio_venta']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['utilidad']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
@@ -131,7 +310,21 @@ include __DIR__ . '/partials/nav.php';
                     <th>Movimientos</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php if (empty($rep_compras)): ?>
+                    <tr><td colspan="3">Sin datos para el rango seleccionado</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rep_compras as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars((string)$row['tipo_inventario']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['cantidad_total']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['movimientos']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
@@ -149,12 +342,29 @@ include __DIR__ . '/partials/nav.php';
                     <th>Activo</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php if (empty($rep_usuarios)): ?>
+                    <tr><td colspan="5">Sin datos para el rango seleccionado</td></tr>
+                <?php else: ?>
+                    <?php foreach ($rep_usuarios as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars((string)$row['id_usuario']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['username']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['nombre']); ?></td>
+                            <td><?php echo htmlspecialchars((string)$row['rol']); ?></td>
+                            <td><?php echo !empty($row['activo']) ? 'Si' : 'No'; ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
 </div>
 
+<?php if (!$legacy): ?>
 <script>
 function getDateParams() {
     const desde = document.getElementById('desde').value;
@@ -252,4 +462,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAllReports();
 });
 </script>
+<?php endif; ?>
 <?php include __DIR__ . '/partials/footer.php'; ?>

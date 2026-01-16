@@ -8,6 +8,7 @@ if (!defined('DEDUMSOFT_APP')) {
 }
 
 const ENV = [
+    'PROD' => false,
     'DB_HOST' => 'localhost',
     'DB_PORT' => '5432',
     'DB_NAME' => 'db_dedumsoft',

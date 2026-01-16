@@ -153,6 +153,20 @@ body.ds-body {
     font-size: 14px;
 }
 
+.ds-icon-img,
+.ds-subicon-img {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.ds-nav-link > .ds-icon-img,
+.ds-nav-link > .ds-subicon-img {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
 .ds-nav-link:hover,
 .ds-nav-toggle:hover {
     background-color: rgba(212, 175, 55, 0.12);
@@ -460,6 +474,12 @@ body.ds-body {
 .card-icon {
     font-size: 32px;
     margin-bottom: 15px;
+}
+
+.card-icon img {
+    width: 32px;
+    height: 32px;
+    display: block;
 }
 
 .dashboard-card h3 {

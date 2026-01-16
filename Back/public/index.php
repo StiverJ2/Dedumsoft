@@ -6,6 +6,8 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
 
+$legacy = dedumsoft_is_legacy_browser();
+
 try {
     $stmt = $connLogic->prepare(
         'SELECT id, codigo_orden, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones FROM fun_obtener_ordenes(:offset, :limit, :estado)'
@@ -93,6 +95,10 @@ if (!function_exists('dedumsoft_format_status_badge')) {
         return '<span class="ds-badge ' . $class . '">' . htmlspecialchars($label) . '</span>';
     }
 }
+$icon_inventory = '<img src="assets/icons/fatcow/32/box.png" alt="Inventario">';
+$icon_sales = '<img src="assets/icons/fatcow/32/cash_stack.png" alt="Ventas">';
+$icon_orders = '<img src="assets/icons/fatcow/32/application_view_list.png" alt="Ordenes">';
+$icon_done = '<img src="assets/icons/fatcow/32/tick.png" alt="Completadas">';
 ?>
 <div class="content">
     <div class="content-header">
@@ -102,7 +108,7 @@ if (!function_exists('dedumsoft_format_status_badge')) {
 
     <div class="dashboard-grid">
         <div class="dashboard-card gold">
-            <div class="card-icon">&#x1F48E;</div>
+            <div class="card-icon"><?php echo $icon_inventory; ?></div>
             <h3>Inventario Actual</h3>
             <p class="stat"><?php echo number_format($inventario_total); ?> items</p>
             <div class="card-footer">
@@ -111,7 +117,7 @@ if (!function_exists('dedumsoft_format_status_badge')) {
         </div>
 
         <div class="dashboard-card silver">
-            <div class="card-icon">&#x1F4B0;</div>
+            <div class="card-icon"><?php echo $icon_sales; ?></div>
             <h3>Ventas del Mes</h3>
             <p class="stat">$<?php echo number_format($ventas_mes_total, 2); ?></p>
             <div class="card-footer">
@@ -120,7 +126,7 @@ if (!function_exists('dedumsoft_format_status_badge')) {
         </div>
 
         <div class="dashboard-card bronze">
-            <div class="card-icon">&#x1F4C8;</div>
+            <div class="card-icon"><?php echo $icon_orders; ?></div>
             <h3>Ordenes Activas</h3>
             <p class="stat"><?php echo (int)$ordenes_activas; ?></p>
             <div class="card-footer">
@@ -129,7 +135,7 @@ if (!function_exists('dedumsoft_format_status_badge')) {
         </div>
 
         <div class="dashboard-card pearl">
-            <div class="card-icon">&#x2705;</div>
+            <div class="card-icon"><?php echo $icon_done; ?></div>
             <h3>Ordenes Completadas</h3>
             <p class="stat"><?php echo (int)$ordenes_completadas_mes; ?></p>
             <div class="card-footer">

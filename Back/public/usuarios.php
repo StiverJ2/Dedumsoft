@@ -6,6 +6,21 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
 
+$legacy = dedumsoft_is_legacy_browser();
+$usuarios_rows = [];
+
+if ($legacy) {
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT id_usuario, username, nombre, rol, activo FROM seguridad.fun_reporte_usuarios()'
+        );
+        $stmt->execute();
+        $usuarios_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('usuarios legacy error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+}
+
 include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
@@ -28,12 +43,25 @@ include __DIR__ . '/partials/nav.php';
                     <th>Activo</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php foreach ($usuarios_rows as $row): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars((string)$row['id_usuario']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['username']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['nombre']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['rol']); ?></td>
+                        <td><?php echo !empty($row['activo']) ? 'Si' : 'No'; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
 </div>
 
+<?php if (!$legacy): ?>
 <script>
 async function loadUsuarios() {
     const res = await fetch('../api/reportes_usuarios.php');
@@ -51,4 +79,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadUsuarios();
 });
 </script>
+<?php endif; ?>
 <?php include __DIR__ . '/partials/footer.php'; ?>

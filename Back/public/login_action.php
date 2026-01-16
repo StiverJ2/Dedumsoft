@@ -2,7 +2,13 @@
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../connection/connectionLogic.php';
+require_once __DIR__ . '/../auth/session.php';
 require_once __DIR__ . '/../auth/login_service.php';
+
+if (!dedumsoft_validate_csrf($_POST['csrf_token'] ?? null)) {
+    header('Location: login.php?error=csrf');
+    exit;
+}
 
 $username = $_POST['username'] ?? '';
 $password = $_POST['password'] ?? '';

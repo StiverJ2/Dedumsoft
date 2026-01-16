@@ -23,6 +23,7 @@ if (!function_exists('dedumsoft_nav_active_section')) {
 }
 
 $current = basename($_SERVER['PHP_SELF'] ?? '');
+$legacy = dedumsoft_is_legacy_browser();
 $inv_open = in_array($current, ['inventario.php', 'proveedores.php'], true);
 $prod_open = in_array($current, ['produccion.php'], true);
 $rep_open = in_array($current, ['reportes.php'], true);
@@ -39,6 +40,7 @@ if ($rolid === 1) {
     $rol_label = 'Lectura';
 }
 ?>
+<?php if ($legacy): ?>
 <aside class="ds-sidebar">
     <div class="ds-logo">
         <div class="ds-logo-wrap">
@@ -50,77 +52,158 @@ if ($rolid === 1) {
 
     <div class="ds-nav">
         <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'index.php'); ?>" href="index.php">
-            <span class="ds-icon">&#x1F3E0;</span>
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/application_home.png" alt="">
+            Inicio
+        </a>
+
+        <div class="ds-nav-section">Inventario</div>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'insumos', 'insumos'); ?>" href="inventario.php?section=insumos#inv-insumos">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/box_front.png" alt="">
+            Insumos
+        </a>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'maquinaria', 'insumos'); ?>" href="inventario.php?section=maquinaria#inv-maquinaria">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/toolbox.png" alt="">
+            Maquinaria
+        </a>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'oro', 'insumos'); ?>" href="inventario.php?section=oro#inv-oro">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/diamond.png" alt="">
+            Oro
+        </a>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'proveedores.php'); ?>" href="proveedores.php">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/lorry.png" alt="">
+            Proveedores
+        </a>
+
+        <div class="ds-nav-section">Produccion</div>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'produccion.php'); ?>" href="produccion.php">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/application_view_list.png" alt="">
+            Ordenes
+        </a>
+
+        <div class="ds-nav-section">Reportes</div>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'produccion', 'produccion'); ?>" href="reportes.php?section=produccion#rep-produccion-section">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/chart_line.png" alt="">
+            Produccion
+        </a>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'ventas', 'produccion'); ?>" href="reportes.php?section=ventas#rep-ventas-section">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/card_money.png" alt="">
+            Ventas
+        </a>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'compras', 'produccion'); ?>" href="reportes.php?section=compras#rep-compras-section">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/cart.png" alt="">
+            Compras
+        </a>
+
+        <div class="ds-nav-section">Administracion</div>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'usuarios.php'); ?>" href="usuarios.php">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/user.png" alt="">
+            Usuarios
+        </a>
+
+        <div class="ds-nav-section">Ajustes</div>
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'configuracion.php'); ?>" href="configuracion.php">
+            <img class="ds-icon-img" src="assets/icons/fatcow/16/cog.png" alt="">
+            Configuracion
+        </a>
+    </div>
+
+    <div class="ds-user-panel">
+        <div class="ds-user-avatar"><?php echo htmlspecialchars($avatar); ?></div>
+        <div class="ds-user-info">
+            <div class="ds-user-name"><?php echo htmlspecialchars($nombre !== '' ? $nombre : 'Admin'); ?></div>
+            <div class="ds-user-role"><?php echo htmlspecialchars($rol_label); ?></div>
+        </div>
+    </div>
+
+    <form class="ds-logout" action="../auth/logout.php" method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(dedumsoft_csrf_token()); ?>">
+        <button type="submit" class="btn btn-sm">Salir</button>
+    </form>
+</aside>
+<main class="ds-main">
+<?php else: ?>
+<aside class="ds-sidebar">
+    <div class="ds-logo">
+        <div class="ds-logo-wrap">
+            <div class="diamond-logo"></div>
+            <h2>Joyas Van</h2>
+        </div>
+        <div class="gold-bar"></div>
+    </div>
+
+    <div class="ds-nav">
+        <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'index.php'); ?>" href="index.php">
+            <span class="ds-icon"><img class="ds-icon-img" src="assets/icons/fatcow/16/application_home.png" alt=""></span>
             <span class="ds-nav-label">Inicio</span>
         </a>
 
         <button class="ds-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#ds-inventario" aria-expanded="<?php echo $inv_open ? 'true' : 'false'; ?>" aria-controls="ds-inventario">
-            <span class="ds-icon">&#x1F48E;</span>
+            <span class="ds-icon"><img class="ds-icon-img" src="assets/icons/fatcow/16/box.png" alt=""></span>
             <span class="ds-nav-label">Inventario</span>
             <span class="ds-arrow">&#9660;</span>
         </button>
         <div id="ds-inventario" class="collapse ds-submenu <?php echo $inv_open ? 'show' : ''; ?>">
             <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'insumos', 'insumos'); ?>" href="inventario.php?section=insumos#inv-insumos">
-                <span class="ds-subicon">&#x1F9EA;</span> Insumos
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/box_front.png" alt=""></span> Insumos
             </a>
             <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'maquinaria', 'insumos'); ?>" href="inventario.php?section=maquinaria#inv-maquinaria">
-                <span class="ds-subicon">&#x1F529;</span> Maquinaria
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/toolbox.png" alt=""></span> Maquinaria
             </a>
             <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'oro', 'insumos'); ?>" href="inventario.php?section=oro#inv-oro">
-                <span class="ds-subicon">&#x1F48D;</span> Oro
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/diamond.png" alt=""></span> Oro
             </a>
             <a class="<?php echo dedumsoft_nav_active($current, 'proveedores.php'); ?>" href="proveedores.php">
-                <span class="ds-subicon">&#x1F9FE;</span> Proveedores
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/lorry.png" alt=""></span> Proveedores
             </a>
         </div>
 
         <button class="ds-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#ds-produccion" aria-expanded="<?php echo $prod_open ? 'true' : 'false'; ?>" aria-controls="ds-produccion">
-            <span class="ds-icon">&#x1F4E6;</span>
+            <span class="ds-icon"><img class="ds-icon-img" src="assets/icons/fatcow/16/factory.png" alt=""></span>
             <span class="ds-nav-label">Produccion</span>
             <span class="ds-arrow">&#9660;</span>
         </button>
         <div id="ds-produccion" class="collapse ds-submenu <?php echo $prod_open ? 'show' : ''; ?>">
             <a class="<?php echo dedumsoft_nav_active($current, 'produccion.php'); ?>" href="produccion.php">
-                <span class="ds-subicon">&#x1F9F0;</span> Ordenes
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/application_view_list.png" alt=""></span> Ordenes
             </a>
         </div>
 
         <button class="ds-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#ds-reportes" aria-expanded="<?php echo $rep_open ? 'true' : 'false'; ?>" aria-controls="ds-reportes">
-            <span class="ds-icon">&#x1F4C8;</span>
+            <span class="ds-icon"><img class="ds-icon-img" src="assets/icons/fatcow/16/chart_bar.png" alt=""></span>
             <span class="ds-nav-label">Reportes</span>
             <span class="ds-arrow">&#9660;</span>
         </button>
         <div id="ds-reportes" class="collapse ds-submenu <?php echo $rep_open ? 'show' : ''; ?>">
             <a class="<?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'produccion', 'produccion'); ?>" href="reportes.php?section=produccion#rep-produccion-section">
-                <span class="ds-subicon">&#x1F4CA;</span> Produccion
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/chart_line.png" alt=""></span> Produccion
             </a>
             <a class="<?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'ventas', 'produccion'); ?>" href="reportes.php?section=ventas#rep-ventas-section">
-                <span class="ds-subicon">&#x1F4B0;</span> Ventas
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/card_money.png" alt=""></span> Ventas
             </a>
             <a class="<?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'compras', 'produccion'); ?>" href="reportes.php?section=compras#rep-compras-section">
-                <span class="ds-subicon">&#x1F9FE;</span> Compras
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/cart.png" alt=""></span> Compras
             </a>
         </div>
 
         <button class="ds-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#ds-admin" aria-expanded="<?php echo $adm_open ? 'true' : 'false'; ?>" aria-controls="ds-admin">
-            <span class="ds-icon">&#x1F465;</span>
+            <span class="ds-icon"><img class="ds-icon-img" src="assets/icons/fatcow/16/group.png" alt=""></span>
             <span class="ds-nav-label">Administracion</span>
             <span class="ds-arrow">&#9660;</span>
         </button>
         <div id="ds-admin" class="collapse ds-submenu <?php echo $adm_open ? 'show' : ''; ?>">
             <a class="<?php echo dedumsoft_nav_active($current, 'usuarios.php'); ?>" href="usuarios.php">
-                <span class="ds-subicon">&#x1F464;</span> Usuarios
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/user.png" alt=""></span> Usuarios
             </a>
         </div>
 
         <button class="ds-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#ds-config" aria-expanded="<?php echo $cfg_open ? 'true' : 'false'; ?>" aria-controls="ds-config">
-            <span class="ds-icon">&#x2699;</span>
+            <span class="ds-icon"><img class="ds-icon-img" src="assets/icons/fatcow/16/cog.png" alt=""></span>
             <span class="ds-nav-label">Ajustes</span>
             <span class="ds-arrow">&#9660;</span>
         </button>
         <div id="ds-config" class="collapse ds-submenu <?php echo $cfg_open ? 'show' : ''; ?>">
             <a class="<?php echo dedumsoft_nav_active($current, 'configuracion.php'); ?>" href="configuracion.php">
-                <span class="ds-subicon">&#x1F6E0;</span> Configuracion
+                <span class="ds-subicon"><img class="ds-subicon-img" src="assets/icons/fatcow/16/cog.png" alt=""></span> Configuracion
             </a>
         </div>
     </div>
@@ -134,7 +217,9 @@ if ($rolid === 1) {
     </div>
 
     <form class="ds-logout" action="../auth/logout.php" method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(dedumsoft_csrf_token()); ?>">
         <button type="submit" class="btn btn-sm">Salir</button>
     </form>
 </aside>
 <main class="ds-main">
+<?php endif; ?>

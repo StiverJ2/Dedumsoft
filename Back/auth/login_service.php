@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../connection/guard.php';
 require_once __DIR__ . '/../env/env.php';
 require_once __DIR__ . '/jwt.php';
+require_once __DIR__ . '/session.php';
 
 function login_user(PDO $connLogic, string $username, string $password): array
 {
@@ -19,6 +20,7 @@ function login_user(PDO $connLogic, string $username, string $password): array
         $stmt->execute([':username' => $username]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
+        error_log('login_service select error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         return ['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.'];
     }
 
@@ -55,12 +57,12 @@ function login_user(PDO $connLogic, string $username, string $password): array
             ':usuarioid' => (int)$row['id_usuario']
         ]);
     } catch (PDOException $e) {
+        error_log('login_service insert error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         return ['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.'];
     }
 
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
-    }
+    dedumsoft_start_session();
+    session_regenerate_id(true);
     $_SESSION['jwt'] = $token;
     $_SESSION['user'] = [
         'id_usuario' => (int)$row['id_usuario'],
@@ -68,6 +70,7 @@ function login_user(PDO $connLogic, string $username, string $password): array
         'rolid' => (int)$row['rolid'],
         'nombre' => $row['nombre']
     ];
+    dedumsoft_rotate_csrf();
 
     return [
         'CODIGO' => 200,

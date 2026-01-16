@@ -6,6 +6,57 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
 
+$legacy = dedumsoft_is_legacy_browser();
+$oro_tipo = $_GET['oro_tipo'] ?? '';
+$insumo_categoria = $_GET['insumo_categoria'] ?? '';
+$insumo_stock_bajo = isset($_GET['insumo_stock_bajo']) && $_GET['insumo_stock_bajo'] !== '0';
+$maq_estado = $_GET['maq_estado'] ?? '';
+$oro_rows = [];
+$insumo_rows = [];
+$maq_rows = [];
+
+if ($legacy) {
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT id, tipo_oro, peso_gramos, precio_gramo, proveedor_nombre FROM fun_obtener_inventario_oro(:offset, :limit, :tipo)'
+        );
+        $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
+        $stmt->bindValue(':tipo', $oro_tipo !== '' ? $oro_tipo : null, $oro_tipo !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->execute();
+        $oro_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('inventario legacy oro error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT id, nombre, categoria, cantidad, proveedor_nombre FROM fun_obtener_inventario_insumos(:offset, :limit, :categoria, :stock_bajo)'
+        );
+        $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
+        $stmt->bindValue(':categoria', $insumo_categoria !== '' ? $insumo_categoria : null, $insumo_categoria !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':stock_bajo', $insumo_stock_bajo, PDO::PARAM_BOOL);
+        $stmt->execute();
+        $insumo_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('inventario legacy insumos error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+
+    try {
+        $stmt = $connLogic->prepare(
+            'SELECT id, nombre, tipo, estado, ubicacion FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado)'
+        );
+        $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
+        $stmt->bindValue(':estado', $maq_estado !== '' ? $maq_estado : null, $maq_estado !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->execute();
+        $maq_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('inventario legacy maquinaria error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    }
+}
+
 include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
@@ -17,20 +68,32 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="inv-oro">
         <strong>Inventario de oro</strong>
+        <?php if ($legacy): ?>
+        <form method="get" action="inventario.php#inv-oro" class="d-flex flex-wrap gap-2 align-items-end">
+        <?php else: ?>
         <div class="d-flex flex-wrap gap-2 align-items-end">
+        <?php endif; ?>
             <div>
                 <label class="form-label muted" for="oro-tipo">Tipo</label>
-                <select id="oro-tipo" class="form-select form-select-sm ds-field">
+                <select id="oro-tipo" name="oro_tipo" class="form-select form-select-sm ds-field">
                     <option value="">Todos</option>
-                    <option value="10k">10k</option>
-                    <option value="14k">14k</option>
-                    <option value="18k">18k</option>
-                    <option value="22k">22k</option>
-                    <option value="24k">24k</option>
+                    <option value="10k" <?php echo $oro_tipo === '10k' ? 'selected' : ''; ?>>10k</option>
+                    <option value="14k" <?php echo $oro_tipo === '14k' ? 'selected' : ''; ?>>14k</option>
+                    <option value="18k" <?php echo $oro_tipo === '18k' ? 'selected' : ''; ?>>18k</option>
+                    <option value="22k" <?php echo $oro_tipo === '22k' ? 'selected' : ''; ?>>22k</option>
+                    <option value="24k" <?php echo $oro_tipo === '24k' ? 'selected' : ''; ?>>24k</option>
                 </select>
             </div>
-            <button class="btn btn-sm" onclick="loadOro()">Actualizar</button>
+            <?php if ($legacy): ?>
+            <button class="btn btn-sm" type="submit">Actualizar</button>
+            <?php else: ?>
+            <button class="btn btn-sm" type="button" onclick="loadOro()">Actualizar</button>
+            <?php endif; ?>
+        <?php if ($legacy): ?>
+        </form>
+        <?php else: ?>
         </div>
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="oro-table" class="table table-sm">
             <thead>
@@ -42,24 +105,48 @@ include __DIR__ . '/partials/nav.php';
                     <th>Proveedor</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php foreach ($oro_rows as $row): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars((string)$row['id']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['tipo_oro']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['peso_gramos']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['precio_gramo']); ?></td>
+                        <td><?php echo htmlspecialchars((string)($row['proveedor_nombre'] ?? '')); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
 
     <div class="card" id="inv-insumos">
         <strong>Insumos</strong>
+        <?php if ($legacy): ?>
+        <form method="get" action="inventario.php#inv-insumos" class="d-flex flex-wrap gap-3 align-items-end">
+        <?php else: ?>
         <div class="d-flex flex-wrap gap-3 align-items-end">
+        <?php endif; ?>
             <div>
                 <label class="form-label muted" for="insumo-categoria">Categoria</label>
-                <input type="text" id="insumo-categoria" class="form-control form-control-sm ds-field" placeholder="categoria">
+                <input type="text" id="insumo-categoria" name="insumo_categoria" class="form-control form-control-sm ds-field" placeholder="categoria" value="<?php echo htmlspecialchars($insumo_categoria); ?>">
             </div>
             <div class="form-check">
-                <input class="form-check-input ds-field" type="checkbox" id="insumo-stock-bajo">
+                <input class="form-check-input ds-field" type="checkbox" id="insumo-stock-bajo" name="insumo_stock_bajo" value="1" <?php echo $insumo_stock_bajo ? 'checked' : ''; ?>>
                 <label class="form-check-label muted" for="insumo-stock-bajo">Solo stock bajo</label>
             </div>
-            <button class="btn btn-sm" onclick="loadInsumos()">Actualizar</button>
+            <?php if ($legacy): ?>
+            <button class="btn btn-sm" type="submit">Actualizar</button>
+            <?php else: ?>
+            <button class="btn btn-sm" type="button" onclick="loadInsumos()">Actualizar</button>
+            <?php endif; ?>
+        <?php if ($legacy): ?>
+        </form>
+        <?php else: ?>
         </div>
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="insumos-table" class="table table-sm">
             <thead>
@@ -71,26 +158,50 @@ include __DIR__ . '/partials/nav.php';
                     <th>Proveedor</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php foreach ($insumo_rows as $row): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars((string)$row['id']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['nombre']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['categoria']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['cantidad']); ?></td>
+                        <td><?php echo htmlspecialchars((string)($row['proveedor_nombre'] ?? '')); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
 
     <div class="card" id="inv-maquinaria">
         <strong>Maquinaria</strong>
+        <?php if ($legacy): ?>
+        <form method="get" action="inventario.php#inv-maquinaria" class="d-flex flex-wrap gap-2 align-items-end">
+        <?php else: ?>
         <div class="d-flex flex-wrap gap-2 align-items-end">
+        <?php endif; ?>
             <div>
                 <label class="form-label muted" for="maq-estado">Estado</label>
-                <select id="maq-estado" class="form-select form-select-sm ds-field">
+                <select id="maq-estado" name="maq_estado" class="form-select form-select-sm ds-field">
                     <option value="">Todos</option>
-                    <option value="operativa">Operativa</option>
-                    <option value="mantenimiento">Mantenimiento</option>
-                    <option value="averiada">Averiada</option>
-                    <option value="fuera_servicio">Fuera de servicio</option>
+                    <option value="operativa" <?php echo $maq_estado === 'operativa' ? 'selected' : ''; ?>>Operativa</option>
+                    <option value="mantenimiento" <?php echo $maq_estado === 'mantenimiento' ? 'selected' : ''; ?>>Mantenimiento</option>
+                    <option value="averiada" <?php echo $maq_estado === 'averiada' ? 'selected' : ''; ?>>Averiada</option>
+                    <option value="fuera_servicio" <?php echo $maq_estado === 'fuera_servicio' ? 'selected' : ''; ?>>Fuera de servicio</option>
                 </select>
             </div>
-            <button class="btn btn-sm" onclick="loadMaquinaria()">Actualizar</button>
+            <?php if ($legacy): ?>
+            <button class="btn btn-sm" type="submit">Actualizar</button>
+            <?php else: ?>
+            <button class="btn btn-sm" type="button" onclick="loadMaquinaria()">Actualizar</button>
+            <?php endif; ?>
+        <?php if ($legacy): ?>
+        </form>
+        <?php else: ?>
         </div>
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="maq-table" class="table table-sm">
             <thead>
@@ -102,12 +213,25 @@ include __DIR__ . '/partials/nav.php';
                     <th>Ubicacion</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            <?php if ($legacy): ?>
+                <?php foreach ($maq_rows as $row): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars((string)$row['id']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['nombre']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['tipo']); ?></td>
+                        <td><?php echo htmlspecialchars((string)$row['estado']); ?></td>
+                        <td><?php echo htmlspecialchars((string)($row['ubicacion'] ?? '')); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+            </tbody>
             </table>
         </div>
     </div>
 </div>
 
+<?php if (!$legacy): ?>
 <script>
 async function loadOro() {
     const tipo = document.getElementById('oro-tipo').value;
@@ -158,4 +282,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMaquinaria();
 });
 </script>
+<?php endif; ?>
 <?php include __DIR__ . '/partials/footer.php'; ?>
