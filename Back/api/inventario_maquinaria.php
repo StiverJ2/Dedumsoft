@@ -15,14 +15,14 @@ if (!require_api_auth()) {
     exit;
 }
 
-$offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+$offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
 $estado = $_GET['estado'] ?? null;
 $estado = ($estado === '') ? null : $estado;
 
 try {
     $stmt = $connLogic->prepare(
-        'SELECT id, nombre, tipo, marca, modelo, numero_serie, fecha_compra, valor_compra, estado, ultima_mantenimiento, proxima_mantenimiento, ubicacion, fecha_registro FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado)'
+        'SELECT id, nombre, tipo, marca, modelo, numero_serie, fecha_compra, valor_compra, estado, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado)'
     );
     $stmt->execute([':offset' => $offset, ':limit' => $limit, ':estado' => $estado]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -15,8 +15,8 @@ if (!require_api_auth()) {
     exit;
 }
 
-$offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+$offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
 $categoria = $_GET['categoria'] ?? null;
 $categoria = ($categoria === '') ? null : $categoria;
 $stock_bajo = filter_var($_GET['stock_bajo'] ?? null, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
@@ -26,7 +26,7 @@ if ($stock_bajo === null) {
 
 try {
     $stmt = $connLogic->prepare(
-        'SELECT id, nombre, categoria, descripcion, cantidad, unidad_medida, precio_unitario, stock_minimo, proveedor_id, ubicacion, fecha_registro, proveedor_nombre FROM fun_obtener_inventario_insumos(:offset, :limit, :categoria, :stock_bajo)'
+        'SELECT id, nombre, categoria, descripcion, cantidad, unidad_medida, precio_unitario, stock_minimo, proveedor_id, ubicacion_id, ubicacion_nombre, fecha_registro, proveedor_nombre FROM fun_obtener_inventario_insumos(:offset, :limit, :categoria, :stock_bajo)'
     );
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);

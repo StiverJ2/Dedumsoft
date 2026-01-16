@@ -293,6 +293,20 @@ CREATE TABLE artesano_especialidad (
 -- MÓDULO DE INVENTARIOS
 -- ============================================
 
+-- Tabla: ubicaciones (catálogo de ubicaciones físicas)
+CREATE TABLE ubicaciones (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    area VARCHAR(50),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE ubicaciones IS 'Catálogo de ubicaciones físicas para inventario y maquinaria';
+COMMENT ON COLUMN ubicaciones.area IS 'Área general (Almacén, Taller, Oficina, etc.)';
+
 -- Tabla: inventario_oro
 CREATE TABLE inventario_oro (
     id SERIAL PRIMARY KEY,
@@ -320,7 +334,7 @@ CREATE TABLE inventario_maquinaria (
     estado VARCHAR(20) NOT NULL DEFAULT 'operativa' CHECK (estado IN ('operativa', 'mantenimiento', 'averiada', 'fuera_servicio')),
     ultima_mantenimiento DATE,
     proxima_mantenimiento DATE,
-    ubicacion VARCHAR(100),
+    ubicacion_id INTEGER REFERENCES ubicaciones(id) ON DELETE SET NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -335,7 +349,7 @@ CREATE TABLE inventario_insumos (
     precio_unitario DECIMAL(10,2) NOT NULL CHECK (precio_unitario >= 0),
     stock_minimo DECIMAL(10,3) DEFAULT 0,
     proveedor_id INTEGER REFERENCES proveedores(id) ON DELETE SET NULL,
-    ubicacion VARCHAR(100),
+    ubicacion_id INTEGER REFERENCES ubicaciones(id) ON DELETE SET NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -563,7 +577,13 @@ CREATE INDEX idx_inventario_oro_tipo ON inventario_oro(tipo_oro);
 CREATE INDEX idx_inventario_oro_proveedor ON inventario_oro(proveedor_id);
 CREATE INDEX idx_inventario_insumos_categoria ON inventario_insumos(categoria);
 CREATE INDEX idx_inventario_insumos_proveedor ON inventario_insumos(proveedor_id);
+CREATE INDEX idx_inventario_insumos_ubicacion ON inventario_insumos(ubicacion_id);
 CREATE INDEX idx_inventario_maquinaria_estado ON inventario_maquinaria(estado);
+CREATE INDEX idx_inventario_maquinaria_ubicacion ON inventario_maquinaria(ubicacion_id);
+
+-- Ubicaciones
+CREATE INDEX idx_ubicaciones_area ON ubicaciones(area);
+CREATE INDEX idx_ubicaciones_activo ON ubicaciones(activo);
 
 -- Movimientos
 CREATE INDEX idx_mov_oro_item ON movimientos_oro(inventario_oro_id);
@@ -597,6 +617,14 @@ CREATE INDEX idx_artesano_especialidad_artesano ON artesano_especialidad(artesan
 -- DATOS DE EJEMPLO (OPCIONAL)
 -- ============================================
 
+-- Insertar ubicaciones por defecto
+INSERT INTO ubicaciones (nombre, area) VALUES
+('Almacén Principal', 'Almacén'),
+('Taller de Producción', 'Taller'),
+('Taller de Acabados', 'Taller'),
+('Bodega de Insumos', 'Bodega'),
+('Oficina Administrativa', 'Oficina');
+
 -- Insertar algunos proveedores de ejemplo
 INSERT INTO proveedores (nombre, tipo, contacto, telefono, email) VALUES
 ('Oro Internacional SA', 'oro', 'Juan Pérez', '+57-300-1234567', 'contacto@orointernacional.com'),
@@ -624,6 +652,7 @@ SELECT id, 'Fundicion' FROM artesanos WHERE nombre = 'Luis' AND apellido = 'Garc
 COMMENT ON TABLE inventario_oro IS 'Inventario de oro por tipo de quilate';
 COMMENT ON TABLE inventario_maquinaria IS 'Registro de maquinaria y equipos';
 COMMENT ON TABLE inventario_insumos IS 'Inventario de insumos (piedras, cadenas, etc.)';
+COMMENT ON TABLE ubicaciones IS 'Catálogo de ubicaciones físicas para inventario y maquinaria';
 COMMENT ON TABLE ordenes_produccion IS 'Órdenes de fabricación de productos';
 COMMENT ON TABLE creaciones_terminadas IS 'Registro de piezas terminadas con costos y fechas';
 -- COMMENT ON TABLE estadisticas_produccion IS 'Estadísticas pre-calculadas por periodo';

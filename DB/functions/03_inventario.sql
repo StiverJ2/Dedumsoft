@@ -68,7 +68,8 @@ RETURNS TABLE (
     precio_unitario numeric,
     stock_minimo numeric,
     proveedor_id int,
-    ubicacion text,
+    ubicacion_id int,
+    ubicacion_nombre text,
     fecha_registro timestamp,
     proveedor_nombre text
 )
@@ -86,11 +87,13 @@ BEGIN
         ii.precio_unitario,
         ii.stock_minimo,
         ii.proveedor_id,
-        ii.ubicacion::text,
+        ii.ubicacion_id,
+        u.nombre::text AS ubicacion_nombre,
         ii.fecha_registro,
         p.nombre::text AS proveedor_nombre
     FROM inventario_insumos ii
     LEFT JOIN proveedores p ON ii.proveedor_id = p.id
+    LEFT JOIN ubicaciones u ON ii.ubicacion_id = u.id
     WHERE (par_categoria IS NULL OR ii.categoria = par_categoria)
       AND (par_stock_bajo = FALSE OR ii.cantidad <= ii.stock_minimo)
     ORDER BY ii.fecha_registro DESC
@@ -119,7 +122,8 @@ RETURNS TABLE (
     estado text,
     ultima_mantenimiento date,
     proxima_mantenimiento date,
-    ubicacion text,
+    ubicacion_id int,
+    ubicacion_nombre text,
     fecha_registro timestamp
 )
 LANGUAGE plpgsql
@@ -138,9 +142,11 @@ BEGIN
         im.estado::text,
         im.ultima_mantenimiento,
         im.proxima_mantenimiento,
-        im.ubicacion::text,
+        im.ubicacion_id,
+        u.nombre::text AS ubicacion_nombre,
         im.fecha_registro
     FROM inventario_maquinaria im
+    LEFT JOIN ubicaciones u ON im.ubicacion_id = u.id
     WHERE (par_estado IS NULL OR im.estado = par_estado)
     ORDER BY im.fecha_registro DESC
     OFFSET par_offset

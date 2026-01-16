@@ -7,9 +7,11 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 require_login('login.php');
 
 $legacy = dedumsoft_is_legacy_browser();
+$load_uplot = !$legacy;
 $desde = $_GET['desde'] ?? date('Y-m-01');
 $hasta = $_GET['hasta'] ?? date('Y-m-t');
 $input_type = $legacy ? 'text' : 'date';
+$chart_params = 'desde=' . urlencode($desde) . '&hasta=' . urlencode($hasta);
 
 $rep_produccion = [];
 $rep_inventario = [];
@@ -129,6 +131,12 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="rep-produccion-section">
         <strong>Produccion por periodo</strong>
+        <?php if (!$legacy): ?>
+            <div class="ds-chart" id="chart-produccion"></div>
+        <?php endif; ?>
+        <?php if ($legacy): ?>
+            <img class="ds-chart-img" src="legacy_chart.php?chart=produccion&<?php echo $chart_params; ?>" alt="Grafico produccion">
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="rep-produccion" class="table table-sm">
             <thead>
@@ -164,6 +172,12 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="rep-inventario-section">
         <strong>Inventario (stock bajo)</strong>
+        <?php if (!$legacy): ?>
+            <div class="ds-chart" id="chart-inventario"></div>
+        <?php endif; ?>
+        <?php if ($legacy): ?>
+            <img class="ds-chart-img" src="legacy_chart.php?chart=inventario&<?php echo $chart_params; ?>" alt="Grafico inventario">
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="rep-inventario" class="table table-sm">
             <thead>
@@ -200,6 +214,12 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="rep-eficiencia-section">
         <strong>Eficiencia de artesanos</strong>
+        <?php if (!$legacy): ?>
+            <div class="ds-chart" id="chart-eficiencia"></div>
+        <?php endif; ?>
+        <?php if ($legacy): ?>
+            <img class="ds-chart-img" src="legacy_chart.php?chart=eficiencia&<?php echo $chart_params; ?>" alt="Grafico eficiencia">
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="rep-eficiencia" class="table table-sm">
             <thead>
@@ -232,6 +252,12 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="rep-materiales-section">
         <strong>Uso de materiales</strong>
+        <?php if (!$legacy): ?>
+            <div class="ds-chart" id="chart-materiales"></div>
+        <?php endif; ?>
+        <?php if ($legacy): ?>
+            <img class="ds-chart-img" src="legacy_chart.php?chart=materiales&<?php echo $chart_params; ?>" alt="Grafico materiales">
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="rep-materiales" class="table table-sm">
             <thead>
@@ -266,6 +292,12 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="rep-ventas-section">
         <strong>Ventas</strong>
+        <?php if (!$legacy): ?>
+            <div class="ds-chart" id="chart-ventas"></div>
+        <?php endif; ?>
+        <?php if ($legacy): ?>
+            <img class="ds-chart-img" src="legacy_chart.php?chart=ventas&<?php echo $chart_params; ?>" alt="Grafico ventas">
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="rep-ventas" class="table table-sm">
             <thead>
@@ -301,6 +333,12 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="rep-compras-section">
         <strong>Compras (entradas)</strong>
+        <?php if (!$legacy): ?>
+            <div class="ds-chart" id="chart-compras"></div>
+        <?php endif; ?>
+        <?php if ($legacy): ?>
+            <img class="ds-chart-img" src="legacy_chart.php?chart=compras&<?php echo $chart_params; ?>" alt="Grafico compras">
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="rep-compras" class="table table-sm">
             <thead>
@@ -331,6 +369,12 @@ include __DIR__ . '/partials/nav.php';
 
     <div class="card" id="rep-usuarios-section">
         <strong>Usuarios</strong>
+        <?php if (!$legacy): ?>
+            <div class="ds-chart" id="chart-usuarios"></div>
+        <?php endif; ?>
+        <?php if ($legacy): ?>
+            <img class="ds-chart-img" src="legacy_chart.php?chart=usuarios&<?php echo $chart_params; ?>" alt="Grafico usuarios">
+        <?php endif; ?>
         <div class="table-responsive">
             <table id="rep-usuarios" class="table table-sm">
             <thead>
@@ -402,56 +446,247 @@ function formatStatus(value) {
     return `<span class="ds-badge ${cls}">${label}</span>`;
 }
 
-async function loadReport(url, tableId, rowBuilder, columnCount, emptyMessage) {
+async function fetchReport(url) {
     const params = getDateParams();
     const res = await fetch(url + (params ? '?' + params : ''));
     const data = await res.json();
+    return data.DATOS || [];
+}
+
+async function loadReport(url, tableId, rowBuilder, columnCount, emptyMessage) {
+    const rows = await fetchReport(url);
     const tbody = document.querySelector(tableId + ' tbody');
     tbody.innerHTML = '';
-    const rows = data.DATOS || [];
     if (!rows.length) {
         const tr = document.createElement('tr');
         const message = emptyMessage || 'Sin datos para el rango seleccionado';
         tr.innerHTML = `<td colspan="${columnCount}">${message}</td>`;
         tbody.appendChild(tr);
-        return;
+        return rows;
     }
     rows.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = rowBuilder(row);
         tbody.appendChild(tr);
     });
+    return rows;
 }
 
-function loadAllReports() {
-    loadReport('../api/reportes_produccion.php', '#rep-produccion', row =>
+const chartCache = {};
+
+function formatShortDate(seconds) {
+    const d = new Date(seconds * 1000);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return month + '-' + day;
+}
+
+function renderChart(containerId, opts, data, emptyMessage) {
+    const container = document.querySelector(containerId);
+    if (!container) {
+        return;
+    }
+    if (!window.uPlot) {
+        container.innerHTML = '<div class="ds-chart-empty">Graficos no disponibles.</div>';
+        return;
+    }
+    if (!data.length || !data[0].length) {
+        container.innerHTML = `<div class="ds-chart-empty">${emptyMessage || 'Sin datos para el rango seleccionado'}</div>`;
+        if (chartCache[containerId]) {
+            if (typeof chartCache[containerId].destroy === 'function') {
+                chartCache[containerId].destroy();
+            }
+            delete chartCache[containerId];
+        }
+        return;
+    }
+    const width = container.clientWidth || 640;
+    const height = 220;
+    const finalOpts = Object.assign({}, opts, { width, height });
+    if (chartCache[containerId]) {
+        chartCache[containerId].setData(data);
+        if (typeof chartCache[containerId].setSize === 'function') {
+            chartCache[containerId].setSize({ width, height });
+        }
+        return;
+    }
+    container.innerHTML = '';
+    chartCache[containerId] = new uPlot(finalOpts, data, container);
+}
+
+function toDateSeconds(value) {
+    if (!value) return null;
+    const text = String(value).replace(' ', 'T').replace('Z', '');
+    const parsed = Date.parse(text);
+    if (Number.isNaN(parsed)) return null;
+    return Math.floor(parsed / 1000);
+}
+
+function countByKey(rows, key) {
+    const map = {};
+    rows.forEach(row => {
+        const raw = String(row[key] || '').trim();
+        if (!raw) return;
+        map[raw] = (map[raw] || 0) + 1;
+    });
+    const labels = Object.keys(map);
+    const values = labels.map(label => map[label]);
+    return { labels, values };
+}
+
+function sumByKey(rows, key, valueKey) {
+    const map = {};
+    rows.forEach(row => {
+        const raw = String(row[key] || '').trim();
+        if (!raw) return;
+        const value = Number(row[valueKey] || 0);
+        map[raw] = (map[raw] || 0) + (Number.isNaN(value) ? 0 : value);
+    });
+    const labels = Object.keys(map);
+    const values = labels.map(label => map[label]);
+    return { labels, values };
+}
+
+function buildTimeSeries(rows, dateKey, valueKey) {
+    const map = {};
+    rows.forEach(row => {
+        const ts = toDateSeconds(row[dateKey]);
+        if (!ts) return;
+        const value = Number(row[valueKey] || 0);
+        map[ts] = (map[ts] || 0) + (Number.isNaN(value) ? 0 : value);
+    });
+    const keys = Object.keys(map).map(k => Number(k)).sort((a, b) => a - b);
+    const series = keys.map(k => map[k]);
+    return { x: keys, y: series };
+}
+
+function buildBarOptions(labels, seriesLabel) {
+    const count = labels.length;
+    const barOpts = {
+        scales: { 
+            x: { 
+                time: false,
+                auto: false,
+                range: (u, min, max) => [-0.5, count - 0.5]
+            },
+            y: {
+                auto: true,
+                range: (u, min, max) => [0, max * 1.1]
+            }
+        },
+        axes: [
+            {
+                size: 40,
+                gap: 5,
+                splits: (u) => labels.map((_, i) => i),
+                values: (u, splits) => splits.map(i => labels[i] || ''),
+                ticks: { show: false },
+                grid: { show: false }
+            },
+            {
+                size: 50,
+                gap: 5,
+                grid: { show: true, stroke: '#eee', width: 1 }
+            }
+        ],
+        series: [
+            {},
+            {
+                label: seriesLabel,
+                stroke: '#b59d5d',
+                fill: 'rgba(212, 175, 55, 0.6)',
+                width: 0,
+                points: { show: false }
+            }
+        ],
+        padding: [10, 20, 0, 20]
+    };
+    if (window.uPlot && uPlot.paths && uPlot.paths.bars) {
+        barOpts.series[1].paths = uPlot.paths.bars({ size: [0.65, 100] });
+    }
+    return barOpts;
+}
+
+function buildLineOptions(seriesLabel) {
+    return {
+        scales: { x: { time: true } },
+        axes: [
+            {
+                size: 50,
+                gap: 5,
+                values: (u, ticks) => ticks.map(t => formatShortDate(t)),
+                grid: { show: true, stroke: '#eee', width: 1 }
+            },
+            {
+                size: 50,
+                gap: 5,
+                grid: { show: true, stroke: '#eee', width: 1 }
+            }
+        ],
+        series: [
+            {},
+            {
+                label: seriesLabel,
+                stroke: '#d4af37',
+                width: 2,
+                fill: 'rgba(212, 175, 55, 0.15)',
+                points: { show: true, size: 6, fill: '#d4af37' }
+            }
+        ],
+        padding: [10, 10, 0, 0]
+    };
+}
+
+async function loadAllReports() {
+    const produccionRows = await loadReport('../api/reportes_produccion.php', '#rep-produccion', row =>
         `<td>${row.codigo_orden}</td><td>${row.producto}</td><td>${row.cantidad}</td><td>${row.artesano || ''}</td><td>${formatStatus(row.estado)}</td>`,
         5
     );
-    loadReport('../api/reportes_inventario.php', '#rep-inventario', row =>
+    const inventarioRows = await loadReport('../api/reportes_inventario.php', '#rep-inventario', row =>
         `<td>${row.tipo}</td><td>${row.item_id}</td><td>${row.nombre}</td><td>${formatNumber(row.cantidad)}</td><td>${formatNumber(row.stock_minimo)}</td><td>${row.proveedor || ''}</td>`,
         6
     );
-    loadReport('../api/reportes_eficiencia.php', '#rep-eficiencia', row =>
+    const eficienciaRows = await loadReport('../api/reportes_eficiencia.php', '#rep-eficiencia', row =>
         `<td>${row.artesano || ''}</td><td>${row.piezas}</td><td>${formatNumber(row.horas)}</td><td>${formatNumber(row.promedio_horas)}</td>`,
         4
     );
-    loadReport('../api/reportes_materiales.php', '#rep-materiales', row =>
+    const materialesRows = await loadReport('../api/reportes_materiales.php', '#rep-materiales', row =>
         `<td>${row.tipo_material}</td><td>${row.material_id}</td><td>${row.material_nombre || ''}</td><td>${formatNumber(row.cantidad_total)}</td><td>${formatNumber(row.costo_total)}</td>`,
         5
     );
-    loadReport('../api/reportes_ventas.php', '#rep-ventas', row =>
+    const ventasRows = await loadReport('../api/reportes_ventas.php', '#rep-ventas', row =>
         `<td>${row.codigo_pieza}</td><td>${row.producto_id}</td><td>${formatDateTime(row.fecha_venta)}</td><td>${formatNumber(row.precio_venta)}</td><td>${formatNumber(row.utilidad)}</td>`,
         5
     );
-    loadReport('../api/reportes_compras.php', '#rep-compras', row =>
+    const comprasRows = await loadReport('../api/reportes_compras.php', '#rep-compras', row =>
         `<td>${row.tipo_inventario}</td><td>${formatNumber(row.cantidad_total)}</td><td>${row.movimientos}</td>`,
         3
     );
-    loadReport('../api/reportes_usuarios.php', '#rep-usuarios', row =>
+    const usuariosRows = await loadReport('../api/reportes_usuarios.php', '#rep-usuarios', row =>
         `<td>${row.id_usuario}</td><td>${row.username}</td><td>${row.nombre}</td><td>${row.rol}</td><td>${row.activo ? 'Si' : 'No'}</td>`,
         5
     );
+
+    const prodCounts = countByKey(produccionRows || [], 'estado');
+    renderChart('#chart-produccion', buildBarOptions(prodCounts.labels, 'Ordenes'), [prodCounts.labels.map((_, idx) => idx), prodCounts.values]);
+
+    const invCounts = countByKey(inventarioRows || [], 'tipo');
+    renderChart('#chart-inventario', buildBarOptions(invCounts.labels, 'Items'), [invCounts.labels.map((_, idx) => idx), invCounts.values]);
+
+    const effCounts = sumByKey(eficienciaRows || [], 'artesano', 'piezas');
+    renderChart('#chart-eficiencia', buildBarOptions(effCounts.labels, 'Piezas'), [effCounts.labels.map((_, idx) => idx), effCounts.values]);
+
+    const matTotals = sumByKey(materialesRows || [], 'tipo_material', 'costo_total');
+    renderChart('#chart-materiales', buildBarOptions(matTotals.labels, 'Costo'), [matTotals.labels.map((_, idx) => idx), matTotals.values]);
+
+    const ventasSerie = buildTimeSeries(ventasRows || [], 'fecha_venta', 'precio_venta');
+    renderChart('#chart-ventas', buildLineOptions('Ventas'), [ventasSerie.x, ventasSerie.y]);
+
+    const comprasTotals = sumByKey(comprasRows || [], 'tipo_inventario', 'cantidad_total');
+    renderChart('#chart-compras', buildBarOptions(comprasTotals.labels, 'Compras'), [comprasTotals.labels.map((_, idx) => idx), comprasTotals.values]);
+
+    const usuariosCounts = countByKey(usuariosRows || [], 'rol');
+    renderChart('#chart-usuarios', buildBarOptions(usuariosCounts.labels, 'Usuarios'), [usuariosCounts.labels.map((_, idx) => idx), usuariosCounts.values]);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

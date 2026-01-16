@@ -37,103 +37,88 @@ include __DIR__ . '/partials/nav.php';
     <div class="card">
         <strong>Ordenes de produccion</strong>
         <?php if ($legacy): ?>
-        <form method="get" action="produccion.php" class="d-flex flex-wrap gap-2 align-items-end">
-        <?php else: ?>
-        <div class="d-flex flex-wrap gap-2 align-items-end">
-        <?php endif; ?>
-            <div>
-                <label class="form-label muted" for="orden-estado">Estado</label>
-                <select id="orden-estado" name="estado" class="form-select form-select-sm ds-field">
-                    <option value="">Todos</option>
-                    <option value="pendiente" <?php echo $estado === 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
-                    <option value="en_proceso" <?php echo $estado === 'en_proceso' ? 'selected' : ''; ?>>En proceso</option>
-                    <option value="terminada" <?php echo $estado === 'terminada' ? 'selected' : ''; ?>>Terminada</option>
-                    <option value="cancelada" <?php echo $estado === 'cancelada' ? 'selected' : ''; ?>>Cancelada</option>
-                    <option value="pausada" <?php echo $estado === 'pausada' ? 'selected' : ''; ?>>Pausada</option>
-                </select>
-            </div>
-            <?php if ($legacy): ?>
-            <button class="btn btn-sm" type="submit">Actualizar</button>
-            <?php else: ?>
-            <button class="btn btn-sm" type="button" onclick="loadOrdenes()">Actualizar</button>
-            <?php endif; ?>
-        <?php if ($legacy): ?>
-        </form>
-        <?php else: ?>
-        </div>
+            <form method="get" action="produccion.php" class="d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                    <label class="form-label muted" for="orden-estado">Estado</label>
+                    <select id="orden-estado" name="estado" class="form-select form-select-sm ds-field">
+                        <option value="">Todos</option>
+                        <option value="pendiente" <?php echo $estado === 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
+                        <option value="en_proceso" <?php echo $estado === 'en_proceso' ? 'selected' : ''; ?>>En proceso
+                        </option>
+                        <option value="terminada" <?php echo $estado === 'terminada' ? 'selected' : ''; ?>>Terminada</option>
+                        <option value="cancelada" <?php echo $estado === 'cancelada' ? 'selected' : ''; ?>>Cancelada</option>
+                        <option value="pausada" <?php echo $estado === 'pausada' ? 'selected' : ''; ?>>Pausada</option>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="submit">Actualizar</button>
+                <a href="produccion.php" class="btn btn-sm btn-secondary">Limpiar</a>
+            </form>
         <?php endif; ?>
         <div class="table-responsive">
             <table id="ordenes-table" class="table table-sm">
-            <thead>
-                <tr>
-                    <th>Codigo</th>
-                    <th>Producto</th>
-                    <th>Artesano</th>
-                    <th>Estado</th>
-                    <th>Fecha inicio</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php if ($legacy): ?>
-                <?php foreach ($ordenes_rows as $row): ?>
-                    <?php
-                    $estado_raw = (string)($row['estado'] ?? '');
-                    $estado_label = strtoupper(str_replace('_', ' ', $estado_raw));
-                    $fecha_inicio = $row['fecha_inicio'] ? date('Y-m-d H:i', strtotime((string)$row['fecha_inicio'])) : '';
-                    ?>
+                <thead>
                     <tr>
-                        <td><?php echo htmlspecialchars((string)$row['codigo_orden']); ?></td>
-                        <td><?php echo htmlspecialchars((string)$row['producto_nombre']); ?></td>
-                        <td><?php echo htmlspecialchars((string)($row['artesano_nombre'] ?? '')); ?></td>
-                        <td><?php echo htmlspecialchars($estado_label); ?></td>
-                        <td><?php echo htmlspecialchars($fecha_inicio); ?></td>
+                        <th>Codigo</th>
+                        <th>Producto</th>
+                        <th>Artesano</th>
+                        <th>Estado</th>
+                        <th>Fecha inicio</th>
                     </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            </tbody>
+                </thead>
+                <tbody>
+                    <?php if ($legacy): ?>
+                        <?php foreach ($ordenes_rows as $row): ?>
+                            <?php
+                            $estado_raw = (string) ($row['estado'] ?? '');
+                            $estado_label = strtoupper(str_replace('_', ' ', $estado_raw));
+                            $fecha_inicio = $row['fecha_inicio'] ? date('Y-m-d H:i', strtotime((string) $row['fecha_inicio'])) : '';
+                            ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars((string) $row['codigo_orden']); ?></td>
+                                <td><?php echo htmlspecialchars((string) $row['producto_nombre']); ?></td>
+                                <td><?php echo htmlspecialchars((string) ($row['artesano_nombre'] ?? '')); ?></td>
+                                <td><?php echo htmlspecialchars($estado_label); ?></td>
+                                <td><?php echo htmlspecialchars($fecha_inicio); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<?php if (!$legacy): ?>
-<script>
-function formatDateTime(value) {
-    if (!value) return '';
-    let text = String(value).replace('T', ' ').replace('Z', '');
-    return text.replace(/\.\d+/, '');
-}
-
-function formatStatus(value) {
-    const raw = (value || '').toString();
-    const label = raw.replace(/_/g, ' ').toUpperCase();
-    const key = raw.toLowerCase();
-    let cls = 'ds-badge--neutral';
-    if (key === 'pendiente') cls = 'ds-badge--warning';
-    else if (key === 'en_proceso') cls = 'ds-badge--info';
-    else if (key === 'terminada') cls = 'ds-badge--success';
-    else if (key === 'cancelada') cls = 'ds-badge--danger';
-    else if (key === 'pausada') cls = 'ds-badge--muted';
-    return `<span class="ds-badge ${cls}">${label}</span>`;
-}
-
-async function loadOrdenes() {
-    const estado = document.getElementById('orden-estado').value;
-    const url = '../api/ordenes.php?limit=20&offset=0&estado=' + encodeURIComponent(estado);
-    const res = await fetch(url);
-    const data = await res.json();
-    const tbody = document.querySelector('#ordenes-table tbody');
-    tbody.innerHTML = '';
-    (data.DATOS || []).forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${row.codigo_orden}</td><td>${row.producto_nombre}</td><td>${row.artesano_nombre || ''}</td><td>${formatStatus(row.estado)}</td><td>${formatDateTime(row.fecha_inicio)}</td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadOrdenes();
-});
-</script>
-<?php endif; ?>
 <?php include __DIR__ . '/partials/footer.php'; ?>
+<?php if (!$legacy): ?>
+    <script>
+        function formatStatus(v) {
+            var raw = (v || '').toString();
+            var label = raw.replace(/_/g, ' ').toUpperCase();
+            var key = raw.toLowerCase();
+            var cls = 'ds-badge--neutral';
+            if (key === 'pendiente') cls = 'ds-badge--warning';
+            else if (key === 'en_proceso') cls = 'ds-badge--info';
+            else if (key === 'terminada') cls = 'ds-badge--success';
+            else if (key === 'cancelada') cls = 'ds-badge--danger';
+            else if (key === 'pausada') cls = 'ds-badge--muted';
+            return '<span class="ds-badge ' + cls + '">' + label + '</span>';
+        }
+        $(function () {
+            $.getJSON('../api/ordenes.php?limit=100&offset=0', function (data) {
+                $('#ordenes-table').DataTable({
+                    data: data.DATOS || [],
+                    columns: [
+                        { data: 'codigo_orden' },
+                        { data: 'producto_nombre' },
+                        { data: 'artesano_nombre', defaultContent: '' },
+                        { data: 'estado', render: formatStatus },
+                        { data: 'fecha_inicio', render: function (v) { return v ? v.replace('T', ' ').split('.')[0] : ''; } }
+                    ],
+                    language: { url: 'assets/dataTables.es-ES.json' }
+                });
+            });
+        });
+    </script>
+<?php elseif ($legacy): ?>
+    <script>if (window.DedumTableSort) DedumTableSort.init('ordenes-table');</script>
+<?php endif; ?>
