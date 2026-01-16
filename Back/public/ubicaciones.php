@@ -71,14 +71,20 @@ include __DIR__ . '/partials/nav.php';
     </div>
 
     <div class="card">
-        <strong>Listado de ubicaciones</strong>
+        <div class="ds-toolbar">
+            <strong>Listado de ubicaciones</strong>
+            <div class="ds-toolbar-actions">
+                <button type="button" class="btn-add" id="btn-add-ubicacion">+ Nueva Ubicación</button>
+            </div>
+        </div>
         <?php if ($legacy): ?>
             <form method="get" action="ubicaciones.php" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
                     <label class="form-label muted" for="ubic-area">Área</label>
                     <select id="ubic-area" name="area" class="form-select form-select-sm ds-field">
                         <option value="">Todas</option>
-                        <option value="Produccion" <?php echo $area === 'Produccion' ? 'selected' : ''; ?>>Producción</option>
+                        <option value="Produccion" <?php echo $area === 'Produccion' ? 'selected' : ''; ?>>Producción
+                        </option>
                         <option value="Almacen" <?php echo $area === 'Almacen' ? 'selected' : ''; ?>>Almacén</option>
                         <option value="Ventas" <?php echo $area === 'Ventas' ? 'selected' : ''; ?>>Ventas</option>
                         <option value="Oficina" <?php echo $area === 'Oficina' ? 'selected' : ''; ?>>Oficina</option>
@@ -99,17 +105,19 @@ include __DIR__ . '/partials/nav.php';
                         <th>Descripción</th>
                         <th>Área</th>
                         <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($legacy): ?>
                         <?php foreach ($ubicaciones_rows as $row): ?>
-                            <tr>
+                            <tr data-id="<?php echo (int) $row['id']; ?>">
                                 <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
                                 <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
                                 <td><?php echo htmlspecialchars((string) ($row['descripcion'] ?? '')); ?></td>
                                 <td><?php echo format_area_badge($row['area'] ?? 'General'); ?></td>
                                 <td><?php echo format_activo_badge($row['activo']); ?></td>
+                                <td class="ds-actions-col"></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -122,6 +130,33 @@ include __DIR__ . '/partials/nav.php';
 <?php include __DIR__ . '/partials/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
+        var ubicacionesTable = null;
+        var areaOptions = [{
+            value: 'General',
+            label: 'General'
+        },
+        {
+            value: 'Produccion',
+            label: 'Producción'
+        },
+        {
+            value: 'Almacen',
+            label: 'Almacén'
+        },
+        {
+            value: 'Ventas',
+            label: 'Ventas'
+        },
+        {
+            value: 'Oficina',
+            label: 'Oficina'
+        },
+        {
+            value: 'Taller',
+            label: 'Taller'
+        }
+        ];
+
         function formatAreaBadge(area) {
             var a = (area || 'General').toLowerCase();
             var badge = 'neutral';
@@ -155,42 +190,244 @@ include __DIR__ . '/partials/nav.php';
             return '<span class="ds-badge ds-badge--muted">Inactivo</span>';
         }
 
-        $(function () {
-            $.getJSON('../api/ubicaciones.php?limit=100&offset=0', function (data) {
-                $('#ubicaciones-table').DataTable({
-                    data: data.DATOS || [],
-                    columns: [{
-                        data: 'id'
-                    },
-                    {
-                        data: 'nombre'
-                    },
-                    {
-                        data: 'descripcion',
-                        defaultContent: ''
-                    },
-                    {
-                        data: 'area',
-                        render: function (data) {
-                            return formatAreaBadge(data);
-                        }
-                    },
-                    {
-                        data: 'activo',
-                        render: function (data) {
-                            return formatActivoBadge(data);
-                        }
-                    }
-                    ],
-                    language: {
-                        url: 'assets/dataTables.es-ES.json'
-                    }
+        function buildUbicacionForm(data) {
+            data = data || {};
+            return DsCrud.field({
+                name: 'nombre',
+                label: 'Nombre',
+                value: data.nombre || '',
+                required: true,
+                placeholder: 'Ej: Bodega Principal'
+            }) +
+                DsCrud.field({
+                    name: 'descripcion',
+                    label: 'Descripción',
+                    type: 'textarea',
+                    value: data.descripcion || '',
+                    placeholder: 'Descripción opcional...'
+                }) +
+                DsCrud.field({
+                    name: 'area',
+                    label: 'Área',
+                    type: 'select',
+                    value: data.area || 'General',
+                    options: areaOptions
                 });
+        }
+
+        function reloadTable() {
+            if (ubicacionesTable) {
+                ubicacionesTable.ajax.reload(null, false);
+            }
+        }
+
+        function openCreateModal() {
+            DsCrud.openModal({
+                title: 'Nueva Ubicación',
+                body: buildUbicacionForm(),
+                saveText: 'Crear',
+                onSave: function (formData, close) {
+                    if (!formData.nombre) {
+                        DsCrud.toast('El nombre es requerido', 'error');
+                        return;
+                    }
+                    DsCrud.api('../api/ubicaciones.php', 'POST', formData, function (success, resp) {
+                        if (success) {
+                            DsCrud.toast('Ubicación creada');
+                            reloadTable();
+                            close();
+                        } else {
+                            DsCrud.toast(resp.MENSAJE || 'Error al crear', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function openEditModal(row) {
+            DsCrud.openModal({
+                title: 'Editar Ubicación',
+                body: buildUbicacionForm(row),
+                saveText: 'Guardar',
+                onSave: function (formData, close) {
+                    if (!formData.nombre) {
+                        DsCrud.toast('El nombre es requerido', 'error');
+                        return;
+                    }
+                    formData.id = row.id;
+                    DsCrud.api('../api/ubicaciones.php', 'PUT', formData, function (success, resp) {
+                        if (success) {
+                            DsCrud.toast('Ubicación actualizada');
+                            reloadTable();
+                            close();
+                        } else {
+                            DsCrud.toast(resp.MENSAJE || 'Error al actualizar', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function openDeleteConfirm(row) {
+            DsCrud.confirm({
+                title: 'Eliminar Ubicación',
+                message: '¿Desea eliminar la ubicación "' + row.nombre + '"?',
+                warning: 'Esta acción desactivará la ubicación.',
+                confirmText: 'Eliminar',
+                onConfirm: function () {
+                    DsCrud.api('../api/ubicaciones.php', 'DELETE', {
+                        id: row.id
+                    }, function (success, resp) {
+                        if (success) {
+                            DsCrud.toast('Ubicación eliminada');
+                            reloadTable();
+                        } else {
+                            DsCrud.toast(resp.MENSAJE || 'Error al eliminar', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        $(function () {
+            ubicacionesTable = $('#ubicaciones-table').DataTable({
+                ajax: {
+                    url: '../api/ubicaciones.php?limit=500&offset=0',
+                    dataSrc: 'DATOS'
+                },
+                columns: [{
+                    data: 'id'
+                },
+                {
+                    data: 'nombre'
+                },
+                {
+                    data: 'descripcion',
+                    defaultContent: ''
+                },
+                {
+                    data: 'area',
+                    render: function (data) {
+                        return formatAreaBadge(data);
+                    }
+                },
+                {
+                    data: 'activo',
+                    render: function (data) {
+                        return formatActivoBadge(data);
+                    }
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    render: function (data, type, row) {
+                        if (type !== 'display') return '';
+                        return DsCrud.actionButtons(row.id);
+                    }
+                }
+                ],
+                language: {
+                    url: 'assets/dataTables.es-ES.json'
+                }
+            });
+
+            // Add button
+            $('#btn-add-ubicacion').on('click', openCreateModal);
+
+            // Edit/Delete buttons (delegated)
+            $('#ubicaciones-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
+                var row = ubicacionesTable.row($(this).closest('tr')).data();
+                openEditModal(row);
+            });
+
+            $('#ubicaciones-table').on('click', '.ds-action-btn[data-action="delete"]', function () {
+                var row = ubicacionesTable.row($(this).closest('tr')).data();
+                openDeleteConfirm(row);
             });
         });
     </script>
 <?php elseif ($legacy): ?>
     <script>
-        if (window.DedumTableSort) DedumTableSort.init('ubicaciones-table');
+        (function () {
+            if (window.DedumTableSort) DedumTableSort.init('ubicaciones-table');
+
+            function esc(s) {
+                if (s === null || s === undefined) return '';
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(String(s)));
+                return div.innerHTML;
+            }
+
+            function selectHtml(name, value, options, req) {
+                var h = '<select name="' + name + '" id="field-' + name + '" style="width:100%;padding:6px;font-size:14px;"' + (req ? ' required' : '') + '>';
+                for (var i = 0; i < options.length; i++) {
+                    var sel = (String(options[i].value) == String(value)) ? ' selected' : '';
+                    h += '<option value="' + esc(options[i].value) + '"' + sel + '>' + esc(options[i].label) + '</option>';
+                }
+                h += '</select>';
+                return h;
+            }
+
+            function buildUbicacionFormHtml(d) {
+                d = d || {};
+                var areaOpts = [
+                    { value: 'General', label: 'General' }, { value: 'Produccion', label: 'Producción' },
+                    { value: 'Almacen', label: 'Almacén' }, { value: 'Ventas', label: 'Ventas' },
+                    { value: 'Oficina', label: 'Oficina' }, { value: 'Taller', label: 'Taller' }
+                ];
+                return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' + esc(d.nombre || '') + '" placeholder="Ej: Bodega Principal" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Descripción</label><textarea name="descripcion" placeholder="Descripción opcional..." style="width:100%;padding:6px;font-size:14px;min-height:60px;">' + esc(d.descripcion || '') + '</textarea></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Área</label>' + selectHtml('area', d.area || 'General', areaOpts, false) + '</div>';
+            }
+
+            DsCrud.addEvent(DsCrud.getById('btn-add-ubicacion'), 'click', function () {
+                DsCrud.openModal({
+                    title: 'Nueva Ubicación',
+                    body: '<form id="frm-ubicacion">' + buildUbicacionFormHtml() + '</form>',
+                    saveText: 'Crear',
+                    onSave: function (modal) {
+                        if (!DsCrud.validateForm(modal)) return;
+                        var data = DsCrud.getFormData(modal);
+                        DsCrud.api('../api/ubicaciones.php', 'POST', data, function () {
+                            DsCrud.toast('Ubicación creada', 'success');
+                            DsCrud.closeModal();
+                            location.reload();
+                        }, function (e) { DsCrud.toast(e, 'error'); });
+                    }
+                });
+            });
+
+            DsCrud.initLegacyTable('ubicaciones-table', {
+                onEdit: function (id) {
+                    DsCrud.api('../api/ubicaciones.php?id=' + id, 'GET', null, function (res) {
+                        var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
+                        DsCrud.openModal({
+                            title: 'Editar Ubicación #' + id,
+                            body: '<form id="frm-ubicacion">' + buildUbicacionFormHtml(d) + '</form>',
+                            saveText: 'Guardar',
+                            onSave: function (modal) {
+                                if (!DsCrud.validateForm(modal)) return;
+                                var data = DsCrud.getFormData(modal);
+                                data.id = id;
+                                DsCrud.api('../api/ubicaciones.php', 'PUT', data, function () {
+                                    DsCrud.toast('Ubicación actualizada', 'success');
+                                    DsCrud.closeModal();
+                                    location.reload();
+                                }, function (e) { DsCrud.toast(e, 'error'); });
+                            }
+                        });
+                    }, function (e) { DsCrud.toast('Error: ' + e, 'error'); });
+                },
+                onDelete: function (id) {
+                    DsCrud.confirm('¿Eliminar ubicación #' + id + '?', function () {
+                        DsCrud.api('../api/ubicaciones.php', 'DELETE', { id: id }, function () {
+                            DsCrud.toast('Ubicación eliminada', 'success');
+                            location.reload();
+                        }, function (e) { DsCrud.toast(e, 'error'); });
+                    });
+                }
+            });
+        })();
     </script>
 <?php endif; ?>

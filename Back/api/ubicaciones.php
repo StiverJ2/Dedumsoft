@@ -100,5 +100,33 @@ if ($method === 'PUT') {
     exit;
 }
 
+// ============================================
+// DELETE - Eliminar (soft-delete) ubicación
+// ============================================
+if ($method === 'DELETE') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    $id = $input['id'] ?? ($_GET['id'] ?? null);
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'ID requerido.']);
+        exit;
+    }
+
+    try {
+        $stmt = $connLogic->prepare('SELECT fun_eliminar_ubicacion(:id)');
+        $stmt->bindValue(':id', (int) $id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Ubicación eliminada.']);
+    } catch (PDOException $e) {
+        error_log('ubicaciones DELETE error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;
+        http_response_code($code);
+        echo json_encode(['CODIGO' => $code, 'MENSAJE' => $code === 404 ? 'Ubicación no encontrada.' : 'Error al eliminar.']);
+    }
+    exit;
+}
+
 http_response_code(405);
 echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);

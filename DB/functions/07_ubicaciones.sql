@@ -95,13 +95,33 @@ EXCEPTION
 END;
 $$;
 
+-- Eliminar (soft-delete) ubicación
+CREATE OR REPLACE FUNCTION fun_eliminar_ubicacion(par_id int)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE ubicaciones SET activo = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = par_id AND activo = TRUE;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Ubicación no encontrada.' USING ERRCODE = 'P0002';
+    END IF;
+    
+    RETURN TRUE;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Error al eliminar ubicación.' USING ERRCODE = SQLSTATE;
+END;
+$$;
+
 -- Actualizar función de maquinaria para incluir ubicacion_nombre
 DROP FUNCTION IF EXISTS fun_obtener_inventario_maquinaria(int, int, text);
 
 CREATE OR REPLACE FUNCTION fun_obtener_inventario_maquinaria(
     par_offset int DEFAULT 0,
     par_limit int DEFAULT 50,
-    par_estado text DEFAULT NULL
+    par_estado text DEFAULT NULL,
+    par_activo boolean DEFAULT TRUE
 )
 RETURNS TABLE (
     id int,
@@ -117,7 +137,8 @@ RETURNS TABLE (
     proxima_mantenimiento date,
     ubicacion_id int,
     ubicacion_nombre text,
-    fecha_registro timestamp
+    fecha_registro timestamp,
+    activo boolean
 )
 LANGUAGE plpgsql
 AS $$
@@ -137,10 +158,12 @@ BEGIN
         im.proxima_mantenimiento,
         im.ubicacion_id,
         u.nombre::text AS ubicacion_nombre,
-        im.fecha_registro
+        im.fecha_registro,
+        im.activo
     FROM inventario_maquinaria im
     LEFT JOIN ubicaciones u ON im.ubicacion_id = u.id
     WHERE (par_estado IS NULL OR im.estado = par_estado)
+      AND (par_activo IS NULL OR im.activo = par_activo)
     ORDER BY im.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;

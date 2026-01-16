@@ -572,3 +572,206 @@ body.ds-login {
 .login-decoration {
   display: none;
 }
+
+/* ============================================
+   MODAL / DIALOG STYLES FOR IE8
+   IE8 doesn't support: flexbox, rgba, transitions, transforms, CSS variables
+   ============================================ */
+.ds-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  filter: alpha(opacity=50);
+  z-index: 1000;
+  display: block;
+  visibility: visible;
+}
+
+.ds-modal-overlay.ds-modal--open {
+  display: block;
+  visibility: visible;
+}
+
+.ds-modal {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  margin-left: -250px;
+  width: 500px;
+  background: #fff;
+  border: 2px solid #333;
+  z-index: 1001;
+  *zoom: 1;
+}
+
+.ds-modal-header {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ccc;
+  background: #f5f5f5;
+  *zoom: 1;
+}
+
+.ds-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  float: left;
+}
+
+.ds-modal-close {
+  float: right;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.ds-modal-close:hover {
+  color: #000;
+}
+
+.ds-modal-header:after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.ds-modal-body {
+  padding: 15px;
+  background: #fff;
+}
+
+.ds-modal-footer {
+  padding: 12px 15px;
+  border-top: 1px solid #ccc;
+  background: #f5f5f5;
+  text-align: right;
+  *zoom: 1;
+}
+
+.ds-modal-footer .btn,
+.ds-modal-footer .btn-add {
+  display: inline;
+  margin-left: 8px;
+}
+
+/* Form fields inside modal for IE8 */
+.ds-form-group {
+  margin-bottom: 12px;
+  *zoom: 1;
+}
+
+.ds-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.ds-form-group label.required:after {
+  content: " *";
+  color: #c00;
+}
+
+.ds-form-control {
+  width: 95%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #999;
+  background: #fff;
+  color: #333;
+  font-family: Arial, sans-serif;
+}
+
+.ds-form-control:focus {
+  border-color: #666;
+  outline: none;
+}
+
+textarea.ds-form-control {
+  height: 60px;
+  resize: none;
+}
+
+select.ds-form-control {
+  width: 100%;
+  height: 28px;
+}
+
+/* Toast notifications for IE8 */
+.ds-toast-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 280px;
+  z-index: 2000;
+}
+
+.ds-toast {
+  padding: 10px 15px;
+  margin-bottom: 8px;
+  background: #333;
+  color: #fff;
+  font-size: 13px;
+  border: 1px solid #000;
+}
+
+.ds-toast--success {
+  background: #4a7c4e;
+  border-color: #3a6c3e;
+}
+
+.ds-toast--error {
+  background: #a94442;
+  border-color: #843534;
+}
+
+/* Action buttons in table for IE8 */
+.ds-actions-cell {
+  white-space: nowrap;
+}
+
+.ds-action-btn {
+  display: inline;
+  padding: 2px 4px;
+  margin: 0 2px;
+  background: #f5f5f5;
+  border: 1px solid #999;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.ds-action-btn img {
+  vertical-align: middle;
+  border: 0;
+}
+
+.ds-action-btn:hover {
+  background: #e5e5e5;
+  border-color: #666;
+}
+
+/* Confirm dialog warning text */
+.ds-confirm-message {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.ds-confirm-warning {
+  font-size: 12px;
+  color: #a94442;
+  padding: 8px;
+  background: #f9f2f2;
+  border: 1px solid #ebccd1;
+  margin-top: 10px;
+}

@@ -46,3 +46,86 @@ EXCEPTION
         RAISE EXCEPTION 'Operacion de proveedores no disponible.' USING ERRCODE = SQLSTATE;
 END;
 $$;
+
+-- ============================================
+-- FUNCIONES CRUD PARA PROVEEDORES
+-- ============================================
+
+CREATE OR REPLACE FUNCTION fun_crear_proveedor(
+    par_nombre text,
+    par_tipo text,
+    par_contacto text DEFAULT NULL,
+    par_telefono text DEFAULT NULL,
+    par_email text DEFAULT NULL,
+    par_direccion text DEFAULT NULL
+)
+RETURNS int
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_id int;
+BEGIN
+    INSERT INTO proveedores (nombre, tipo, contacto, telefono, email, direccion, activo)
+    VALUES (par_nombre, par_tipo, par_contacto, par_telefono, par_email, par_direccion, TRUE)
+    RETURNING id INTO v_id;
+    
+    RETURN v_id;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Error al crear proveedor.' USING ERRCODE = SQLSTATE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_actualizar_proveedor(
+    par_id int,
+    par_nombre text DEFAULT NULL,
+    par_tipo text DEFAULT NULL,
+    par_contacto text DEFAULT NULL,
+    par_telefono text DEFAULT NULL,
+    par_email text DEFAULT NULL,
+    par_direccion text DEFAULT NULL,
+    par_activo boolean DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE proveedores
+    SET 
+        nombre = COALESCE(par_nombre, nombre),
+        tipo = COALESCE(par_tipo, tipo),
+        contacto = COALESCE(par_contacto, contacto),
+        telefono = COALESCE(par_telefono, telefono),
+        email = COALESCE(par_email, email),
+        direccion = COALESCE(par_direccion, direccion),
+        activo = COALESCE(par_activo, activo)
+    WHERE id = par_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Proveedor no encontrado.' USING ERRCODE = 'P0002';
+    END IF;
+    
+    RETURN TRUE;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Error al actualizar proveedor.' USING ERRCODE = SQLSTATE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_eliminar_proveedor(par_id int)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE proveedores SET activo = FALSE WHERE id = par_id AND activo = TRUE;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Proveedor no encontrado.' USING ERRCODE = 'P0002';
+    END IF;
+    
+    RETURN TRUE;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Error al eliminar proveedor.' USING ERRCODE = SQLSTATE;
+END;
+$$;

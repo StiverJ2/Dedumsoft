@@ -36,22 +36,27 @@ include __DIR__ . '/partials/nav.php';
     </div>
 
     <div class="card">
-        <strong>Listado de proveedores</strong>
-        <?php if ($legacy): ?>
-        <form method="get" action="proveedores.php" class="d-flex flex-wrap gap-2 align-items-end">
-            <div>
-                <label class="form-label muted" for="prov-tipo">Tipo</label>
-                <select id="prov-tipo" name="tipo" class="form-select form-select-sm ds-field">
-                    <option value="">Todos</option>
-                    <option value="oro" <?php echo $tipo === 'oro' ? 'selected' : ''; ?>>Oro</option>
-                    <option value="insumos" <?php echo $tipo === 'insumos' ? 'selected' : ''; ?>>Insumos</option>
-                    <option value="maquinaria" <?php echo $tipo === 'maquinaria' ? 'selected' : ''; ?>>Maquinaria
-                    </option>
-                </select>
+        <div class="ds-toolbar">
+            <strong>Listado de proveedores</strong>
+            <div class="ds-toolbar-actions">
+                <button type="button" class="btn-add" id="btn-add-proveedor">+ Nuevo Proveedor</button>
             </div>
-            <button class="btn btn-sm" type="submit">Actualizar</button>
-            <a href="proveedores.php" class="btn btn-sm btn-secondary">Limpiar</a>
-        </form>
+        </div>
+        <?php if ($legacy): ?>
+            <form method="get" action="proveedores.php" class="d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                    <label class="form-label muted" for="prov-tipo">Tipo</label>
+                    <select id="prov-tipo" name="tipo" class="form-select form-select-sm ds-field">
+                        <option value="">Todos</option>
+                        <option value="oro" <?php echo $tipo === 'oro' ? 'selected' : ''; ?>>Oro</option>
+                        <option value="insumos" <?php echo $tipo === 'insumos' ? 'selected' : ''; ?>>Insumos</option>
+                        <option value="maquinaria" <?php echo $tipo === 'maquinaria' ? 'selected' : ''; ?>>Maquinaria
+                        </option>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="submit">Actualizar</button>
+                <a href="proveedores.php" class="btn btn-sm btn-secondary">Limpiar</a>
+            </form>
         <?php endif; ?>
         <div class="table-responsive">
             <table id="proveedores-table" class="table table-sm">
@@ -62,19 +67,21 @@ include __DIR__ . '/partials/nav.php';
                         <th>Tipo</th>
                         <th>Contacto</th>
                         <th>Telefono</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($legacy): ?>
-                    <?php foreach ($proveedores_rows as $row): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
-                        <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
-                        <td><?php echo htmlspecialchars((string) $row['tipo']); ?></td>
-                        <td><?php echo htmlspecialchars((string) ($row['contacto'] ?? '')); ?></td>
-                        <td><?php echo htmlspecialchars((string) ($row['telefono'] ?? '')); ?></td>
-                    </tr>
-                    <?php endforeach; ?>
+                        <?php foreach ($proveedores_rows as $row): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
+                                <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
+                                <td><?php echo htmlspecialchars((string) $row['tipo']); ?></td>
+                                <td><?php echo htmlspecialchars((string) ($row['contacto'] ?? '')); ?></td>
+                                <td><?php echo htmlspecialchars((string) ($row['telefono'] ?? '')); ?></td>
+                                <td class="ds-actions-col"></td>
+                            </tr>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -84,38 +91,198 @@ include __DIR__ . '/partials/nav.php';
 
 <?php include __DIR__ . '/partials/footer.php'; ?>
 <?php if (!$legacy): ?>
-<script>
-$(function() {
-    $.getJSON('../api/proveedores.php?limit=100&offset=0', function(data) {
-        $('#proveedores-table').DataTable({
-            data: data.DATOS || [],
-            columns: [{
-                    data: 'id'
-                },
-                {
-                    data: 'nombre'
-                },
-                {
-                    data: 'tipo'
-                },
-                {
-                    data: 'contacto',
-                    defaultContent: ''
-                },
-                {
-                    data: 'telefono',
-                    defaultContent: ''
-                }
-            ],
-            language: {
-                url: 'assets/dataTables.es-ES.json'
+    <script>
+        $(function () {
+            var proveedoresTable;
+            var tipoOptions = [
+                { value: 'oro', label: 'Oro' },
+                { value: 'insumos', label: 'Insumos' },
+                { value: 'maquinaria', label: 'Maquinaria' }
+            ];
+
+            function buildProveedorForm(data) {
+                data = data || {};
+                return DsCrud.field({ name: 'nombre', label: 'Nombre', value: data.nombre, required: true }) +
+                    DsCrud.field({ name: 'tipo', label: 'Tipo', type: 'select', value: data.tipo, options: tipoOptions, required: true }) +
+                    DsCrud.field({ name: 'contacto', label: 'Contacto', value: data.contacto }) +
+                    DsCrud.field({ name: 'telefono', label: 'Teléfono', value: data.telefono }) +
+                    DsCrud.field({ name: 'email', label: 'Email', type: 'email', value: data.email }) +
+                    DsCrud.field({ name: 'direccion', label: 'Dirección', value: data.direccion });
             }
+
+            function openCreateModal() {
+                DsCrud.openModal({
+                    title: 'Nuevo Proveedor',
+                    body: '<form id="frm-proveedor">' + buildProveedorForm() + '</form>',
+                    onSave: function (modalEl) {
+                        var form = modalEl.querySelector('#frm-proveedor');
+                        if (!form.checkValidity()) { form.reportValidity(); return; }
+                        var fd = new FormData(form);
+                        var payload = {};
+                        fd.forEach(function (v, k) { payload[k] = v; });
+                        DsCrud.api('../api/proveedores.php', 'POST', payload, function (res) {
+                            DsCrud.toast('Proveedor creado', 'success');
+                            proveedoresTable.ajax.reload();
+                            DsCrud.closeModal();
+                        }, function (err) {
+                            DsCrud.toast(err, 'error');
+                        });
+                    }
+                });
+            }
+
+            function openEditModal(row) {
+                DsCrud.api('../api/proveedores.php?id=' + row.id, 'GET', null, function (res) {
+                    var prov = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
+                    DsCrud.openModal({
+                        title: 'Editar Proveedor #' + prov.id,
+                        body: '<form id="frm-proveedor">' + buildProveedorForm(prov) + '</form>',
+                        onSave: function (modalEl) {
+                            var form = modalEl.querySelector('#frm-proveedor');
+                            if (!form.checkValidity()) { form.reportValidity(); return; }
+                            var fd = new FormData(form);
+                            var payload = { id: prov.id };
+                            fd.forEach(function (v, k) { payload[k] = v; });
+                            DsCrud.api('../api/proveedores.php', 'PUT', payload, function (res) {
+                                DsCrud.toast('Proveedor actualizado', 'success');
+                                proveedoresTable.ajax.reload();
+                                DsCrud.closeModal();
+                            }, function (err) {
+                                DsCrud.toast(err, 'error');
+                            });
+                        }
+                    });
+                });
+            }
+
+            function openDeleteConfirm(row) {
+                DsCrud.confirm('¿Eliminar proveedor "' + row.nombre + '"?', function () {
+                    DsCrud.api('../api/proveedores.php', 'DELETE', { id: row.id }, function (res) {
+                        DsCrud.toast('Proveedor eliminado', 'success');
+                        proveedoresTable.ajax.reload();
+                    }, function (err) {
+                        DsCrud.toast(err, 'error');
+                    });
+                });
+            }
+
+            proveedoresTable = $('#proveedores-table').DataTable({
+                ajax: {
+                    url: '../api/proveedores.php?limit=500&offset=0',
+                    dataSrc: 'DATOS'
+                },
+                columns: [
+                    { data: 'id' },
+                    { data: 'nombre' },
+                    { data: 'tipo' },
+                    { data: 'contacto', defaultContent: '' },
+                    { data: 'telefono', defaultContent: '' },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        render: function (data, type, row) {
+                            if (type !== 'display') return '';
+                            return DsCrud.actionButtons(row.id);
+                        }
+                    }
+                ],
+                language: { url: 'assets/dataTables.es-ES.json' }
+            });
+
+            $('#btn-add-proveedor').on('click', openCreateModal);
+
+            $('#proveedores-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
+                var row = proveedoresTable.row($(this).closest('tr')).data();
+                openEditModal(row);
+            });
+
+            $('#proveedores-table').on('click', '.ds-action-btn[data-action="delete"]', function () {
+                var row = proveedoresTable.row($(this).closest('tr')).data();
+                openDeleteConfirm(row);
+            });
         });
-    });
-});
-</script>
+    </script>
 <?php elseif ($legacy): ?>
-<script>
-if (window.DedumTableSort) DedumTableSort.init('proveedores-table');
-</script>
+    <script>
+        (function () {
+            if (window.DedumTableSort) DedumTableSort.init('proveedores-table');
+
+            function esc(s) {
+                if (s === null || s === undefined) return '';
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(String(s)));
+                return div.innerHTML;
+            }
+
+            function selectHtml(name, value, options, req) {
+                var h = '<select name="' + name + '" id="field-' + name + '" style="width:100%;padding:6px;font-size:14px;"' + (req ? ' required' : '') + '>';
+                for (var i = 0; i < options.length; i++) {
+                    var sel = (String(options[i].value) == String(value)) ? ' selected' : '';
+                    h += '<option value="' + esc(options[i].value) + '"' + sel + '>' + esc(options[i].label) + '</option>';
+                }
+                h += '</select>';
+                return h;
+            }
+
+            function buildProveedorFormHtml(d) {
+                d = d || {};
+                var tipoOpts = [
+                    { value: 'oro', label: 'Oro' }, { value: 'insumos', label: 'Insumos' }, { value: 'maquinaria', label: 'Maquinaria' }
+                ];
+                return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' + esc(d.nombre || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Tipo <span style="color:red">*</span></label>' + selectHtml('tipo', d.tipo || 'oro', tipoOpts, true) + '</div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Contacto</label><input type="text" name="contacto" value="' + esc(d.contacto || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Telefono</label><input type="text" name="telefono" value="' + esc(d.telefono || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Email</label><input type="text" name="email" value="' + esc(d.email || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Direccion</label><input type="text" name="direccion" value="' + esc(d.direccion || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>';
+            }
+
+            DsCrud.addEvent(DsCrud.getById('btn-add-proveedor'), 'click', function () {
+                DsCrud.openModal({
+                    title: 'Nuevo Proveedor',
+                    body: '<form id="frm-proveedor">' + buildProveedorFormHtml() + '</form>',
+                    onSave: function (modal) {
+                        if (!DsCrud.validateForm(modal)) return;
+                        var data = DsCrud.getFormData(modal);
+                        DsCrud.api('../api/proveedores.php', 'POST', data, function () {
+                            DsCrud.toast('Proveedor creado', 'success');
+                            DsCrud.closeModal();
+                            location.reload();
+                        }, function (e) { DsCrud.toast(e, 'error'); });
+                    }
+                });
+            });
+
+            DsCrud.initLegacyTable('proveedores-table', {
+                onEdit: function (id) {
+                    DsCrud.api('../api/proveedores.php?id=' + id, 'GET', null, function (res) {
+                        var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
+                        DsCrud.openModal({
+                            title: 'Editar Proveedor #' + id,
+                            body: '<form id="frm-proveedor">' + buildProveedorFormHtml(d) + '</form>',
+                            onSave: function (modal) {
+                                if (!DsCrud.validateForm(modal)) return;
+                                var data = DsCrud.getFormData(modal);
+                                data.id = id;
+                                DsCrud.api('../api/proveedores.php', 'PUT', data, function () {
+                                    DsCrud.toast('Proveedor actualizado', 'success');
+                                    DsCrud.closeModal();
+                                    location.reload();
+                                }, function (e) { DsCrud.toast(e, 'error'); });
+                            }
+                        });
+                    }, function (e) { DsCrud.toast('Error: ' + e, 'error'); });
+                },
+                onDelete: function (id) {
+                    DsCrud.confirm('¿Eliminar proveedor #' + id + '?', function () {
+                        DsCrud.api('../api/proveedores.php', 'DELETE', { id: id }, function () {
+                            DsCrud.toast('Proveedor eliminado', 'success');
+                            location.reload();
+                        }, function (e) { DsCrud.toast(e, 'error'); });
+                    });
+                }
+            });
+        })();
+    </script>
 <?php endif; ?>

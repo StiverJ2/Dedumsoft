@@ -683,3 +683,262 @@ body.ds-body {
     padding: 16px;
   }
 }
+
+/* ============================================
+   MODAL / DIALOG STYLES
+   ============================================ */
+.ds-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.ds-modal-overlay.ds-modal--open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ds-modal {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: auto;
+  transform: translateY(-20px);
+  transition: transform 0.2s ease;
+}
+
+.ds-modal-overlay.ds-modal--open .ds-modal {
+  transform: translateY(0);
+}
+
+.ds-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  background: var(--ds-bg);
+}
+
+.ds-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ds-dark);
+}
+
+.ds-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--ds-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.ds-modal-close:hover {
+  color: var(--ds-dark);
+}
+
+.ds-modal-body {
+  padding: 20px;
+}
+
+.ds-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+  background: var(--ds-bg);
+}
+
+/* Form fields inside modal */
+.ds-form-group {
+  margin-bottom: 16px;
+}
+
+.ds-form-group:last-child {
+  margin-bottom: 0;
+}
+
+.ds-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ds-dark-2);
+  margin-bottom: 6px;
+}
+
+.ds-form-group label.required::after {
+  content: " *";
+  color: #dc3545;
+}
+
+.ds-form-control {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ds-dark);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.ds-form-control:focus {
+  outline: none;
+  border-color: var(--ds-gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.ds-form-control::placeholder {
+  color: #aaa;
+}
+
+select.ds-form-control {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a7a7a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+textarea.ds-form-control {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Action buttons in tables */
+.ds-action-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  font-size: 14px;
+}
+
+.ds-action-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.ds-action-btn--edit {
+  color: #0d6efd;
+}
+
+.ds-action-btn--delete {
+  color: #dc3545;
+}
+
+.ds-actions-cell {
+  white-space: nowrap;
+}
+
+/* Toast notifications */
+.ds-toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ds-toast {
+  background: #333;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: dsToastIn 0.3s ease;
+}
+
+.ds-toast--success {
+  background: #198754;
+}
+
+.ds-toast--error {
+  background: #dc3545;
+}
+
+.ds-toast--warning {
+  background: #ffc107;
+  color: #333;
+}
+
+@keyframes dsToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Toolbar above tables */
+.ds-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ds-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-add {
+  background: var(--ds-gold);
+  color: var(--ds-dark);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.btn-add:hover {
+  background: #c9a030;
+}
+
+/* Confirm dialog */
+.ds-confirm-text {
+  font-size: 15px;
+  color: var(--ds-dark-2);
+  margin: 0 0 10px;
+}
+
+.ds-confirm-warning {
+  font-size: 13px;
+  color: var(--ds-muted);
+  margin: 0;
+}
