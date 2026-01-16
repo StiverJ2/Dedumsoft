@@ -10,8 +10,9 @@ include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
 <div class="content">
-    <div class="header">
-        <h2>Configuracion</h2>
+    <div class="content-header">
+        <h1>Configuracion</h1>
+        <p>Ajustes generales del sistema</p>
     </div>
     <div class="card">
         <p>Seccion en desarrollo. Ajustes basicos se agregaran aqui.</p>

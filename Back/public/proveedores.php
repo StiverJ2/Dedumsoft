@@ -10,21 +10,27 @@ include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
 <div class="content">
-    <div class="header">
-        <h2>Proveedores</h2>
+    <div class="content-header">
+        <h1>Proveedores</h1>
+        <p>Gestion de proveedores de materiales</p>
     </div>
 
     <div class="card">
         <strong>Listado de proveedores</strong>
-        <div class="muted">Filtro por tipo</div>
-        <select id="prov-tipo">
-            <option value="">Todos</option>
-            <option value="oro">Oro</option>
-            <option value="insumos">Insumos</option>
-            <option value="maquinaria">Maquinaria</option>
-        </select>
-        <button class="btn" onclick="loadProveedores()">Actualizar</button>
-        <table id="proveedores-table">
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label muted" for="prov-tipo">Tipo</label>
+                <select id="prov-tipo" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <option value="oro">Oro</option>
+                    <option value="insumos">Insumos</option>
+                    <option value="maquinaria">Maquinaria</option>
+                </select>
+            </div>
+            <button class="btn btn-sm" onclick="loadProveedores()">Actualizar</button>
+        </div>
+        <div class="table-responsive">
+            <table id="proveedores-table" class="table table-sm">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -35,7 +41,8 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 

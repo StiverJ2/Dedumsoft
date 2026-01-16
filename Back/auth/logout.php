@@ -5,6 +5,7 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 require_once __DIR__ . '/../connection/httpMethodValidator.php';
 
 if (!validateHttpMethod('POST')) {
+    header('Location: ../public/login.php');
     exit;
 }
 
@@ -21,6 +22,5 @@ if ($token) {
 }
 
 session_destroy();
-header('Content-Type: application/json');
-http_response_code(200);
-echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Sesion cerrada.']);
+header('Location: ../public/login.php');
+exit;

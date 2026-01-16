@@ -10,23 +10,29 @@ include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
 <div class="content">
-    <div class="header">
-        <h2>Produccion</h2>
+    <div class="content-header">
+        <h1>Produccion</h1>
+        <p>Seguimiento de ordenes y estado de taller</p>
     </div>
 
     <div class="card">
         <strong>Ordenes de produccion</strong>
-        <div class="muted">Filtro por estado</div>
-        <select id="orden-estado">
-            <option value="">Todos</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="en_proceso">En proceso</option>
-            <option value="terminada">Terminada</option>
-            <option value="cancelada">Cancelada</option>
-            <option value="pausada">Pausada</option>
-        </select>
-        <button class="btn" onclick="loadOrdenes()">Actualizar</button>
-        <table id="ordenes-table">
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label muted" for="orden-estado">Estado</label>
+                <select id="orden-estado" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_proceso">En proceso</option>
+                    <option value="terminada">Terminada</option>
+                    <option value="cancelada">Cancelada</option>
+                    <option value="pausada">Pausada</option>
+                </select>
+            </div>
+            <button class="btn btn-sm" onclick="loadOrdenes()">Actualizar</button>
+        </div>
+        <div class="table-responsive">
+            <table id="ordenes-table" class="table table-sm">
             <thead>
                 <tr>
                     <th>Codigo</th>
@@ -37,7 +43,8 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 

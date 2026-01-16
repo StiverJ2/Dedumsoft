@@ -7,29 +7,42 @@ $error = isset($_GET['error']) ? 'Usuario o contrasena incorrectos.' : '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Dedumsoft</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; }
-        .box { width: 320px; margin: 100px auto; background: #fff; border: 1px solid #ddd; padding: 20px; }
-        label { display: block; margin-bottom: 6px; }
-        input { width: 100%; padding: 8px; margin-bottom: 12px; }
-        .error { color: #b00020; margin-bottom: 10px; }
-        .btn { width: 100%; padding: 8px; background: #222; color: #fff; border: none; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/login.css">
 </head>
-<body>
-    <div class="box">
-        <h2>Dedumsoft</h2>
-        <p class="muted">Iniciar sesion</p>
-        <?php if ($error): ?>
-            <div class="error"><?php echo htmlspecialchars($error); ?></div>
-        <?php endif; ?>
-        <form action="login_action.php" method="post">
-            <label for="username">Usuario</label>
-            <input type="text" name="username" id="username" required>
-            <label for="password">Contrasena</label>
-            <input type="password" name="password" id="password" required>
-            <button type="submit" class="btn">Ingresar</button>
-        </form>
+<body class="ds-login">
+    <div class="login-background">
+        <div class="login-decoration decoration-1"></div>
+        <div class="login-decoration decoration-2"></div>
+
+        <div class="login-container">
+            <div class="logo-wrapper">
+                <div class="diamond-logo"></div>
+                <h2>Joyas Van</h2>
+            </div>
+            <p class="slogan">Lujo en cada detalle</p>
+            <h4 class="subtitulo">Ingresa tu Usuario y Contrasena</h4>
+            <?php if ($error): ?>
+                <p class="error"><?php echo htmlspecialchars($error); ?></p>
+            <?php else: ?>
+                <p class="error"></p>
+            <?php endif; ?>
+            <form action="login_action.php" method="post">
+                <div class="input-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label for="password">Contrasena</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login">Ingresar</button>
+            </form>
+            <a href="#" class="forgot-password">Olvidaste tu contrasena?</a>
+        </div>
     </div>
 </body>
 </html>

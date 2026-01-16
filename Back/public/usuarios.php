@@ -10,13 +10,15 @@ include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
 <div class="content">
-    <div class="header">
-        <h2>Usuarios</h2>
+    <div class="content-header">
+        <h1>Usuarios</h1>
+        <p>Administracion de usuarios del sistema</p>
     </div>
 
     <div class="card">
         <strong>Listado de usuarios</strong>
-        <table id="usuarios-table">
+        <div class="table-responsive">
+            <table id="usuarios-table" class="table table-sm">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -27,7 +29,8 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 

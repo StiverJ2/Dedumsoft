@@ -10,23 +10,29 @@ include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
 <div class="content">
-    <div class="header">
-        <h2>Inventario</h2>
+    <div class="content-header">
+        <h1>Inventario</h1>
+        <p>Control de metales, insumos y maquinaria</p>
     </div>
 
     <div class="card">
         <strong>Inventario de oro</strong>
-        <div class="muted">Filtro por tipo</div>
-        <select id="oro-tipo">
-            <option value="">Todos</option>
-            <option value="10k">10k</option>
-            <option value="14k">14k</option>
-            <option value="18k">18k</option>
-            <option value="22k">22k</option>
-            <option value="24k">24k</option>
-        </select>
-        <button class="btn" onclick="loadOro()">Actualizar</button>
-        <table id="oro-table">
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label muted" for="oro-tipo">Tipo</label>
+                <select id="oro-tipo" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <option value="10k">10k</option>
+                    <option value="14k">14k</option>
+                    <option value="18k">18k</option>
+                    <option value="22k">22k</option>
+                    <option value="24k">24k</option>
+                </select>
+            </div>
+            <button class="btn btn-sm" onclick="loadOro()">Actualizar</button>
+        </div>
+        <div class="table-responsive">
+            <table id="oro-table" class="table table-sm">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -37,18 +43,25 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Insumos</strong>
-        <div class="muted">Filtro por categoria</div>
-        <input type="text" id="insumo-categoria" placeholder="categoria">
-        <label>
-            <input type="checkbox" id="insumo-stock-bajo"> Solo stock bajo
-        </label>
-        <button class="btn" onclick="loadInsumos()">Actualizar</button>
-        <table id="insumos-table">
+        <div class="d-flex flex-wrap gap-3 align-items-end">
+            <div>
+                <label class="form-label muted" for="insumo-categoria">Categoria</label>
+                <input type="text" id="insumo-categoria" class="form-control form-control-sm ds-field" placeholder="categoria">
+            </div>
+            <div class="form-check">
+                <input class="form-check-input ds-field" type="checkbox" id="insumo-stock-bajo">
+                <label class="form-check-label muted" for="insumo-stock-bajo">Solo stock bajo</label>
+            </div>
+            <button class="btn btn-sm" onclick="loadInsumos()">Actualizar</button>
+        </div>
+        <div class="table-responsive">
+            <table id="insumos-table" class="table table-sm">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -59,21 +72,27 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Maquinaria</strong>
-        <div class="muted">Filtro por estado</div>
-        <select id="maq-estado">
-            <option value="">Todos</option>
-            <option value="operativa">Operativa</option>
-            <option value="mantenimiento">Mantenimiento</option>
-            <option value="averiada">Averiada</option>
-            <option value="fuera_servicio">Fuera de servicio</option>
-        </select>
-        <button class="btn" onclick="loadMaquinaria()">Actualizar</button>
-        <table id="maq-table">
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label muted" for="maq-estado">Estado</label>
+                <select id="maq-estado" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <option value="operativa">Operativa</option>
+                    <option value="mantenimiento">Mantenimiento</option>
+                    <option value="averiada">Averiada</option>
+                    <option value="fuera_servicio">Fuera de servicio</option>
+                </select>
+            </div>
+            <button class="btn btn-sm" onclick="loadMaquinaria()">Actualizar</button>
+        </div>
+        <div class="table-responsive">
+            <table id="maq-table" class="table table-sm">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -84,7 +103,8 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 

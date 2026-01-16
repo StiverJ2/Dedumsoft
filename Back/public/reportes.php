@@ -10,22 +10,30 @@ include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 ?>
 <div class="content">
-    <div class="header">
-        <h2>Reportes</h2>
+    <div class="content-header">
+        <h1>Reportes</h1>
+        <p>Indicadores operativos y financieros</p>
     </div>
 
     <div class="card">
         <strong>Rango de fechas</strong>
-        <div>
-            <label>Desde <input type="date" id="desde"></label>
-            <label>Hasta <input type="date" id="hasta"></label>
-            <button class="btn" onclick="loadAllReports()">Actualizar</button>
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label muted" for="desde">Desde</label>
+                <input type="date" id="desde" class="form-control form-control-sm ds-field">
+            </div>
+            <div>
+                <label class="form-label muted" for="hasta">Hasta</label>
+                <input type="date" id="hasta" class="form-control form-control-sm ds-field">
+            </div>
+            <button class="btn btn-sm" onclick="loadAllReports()">Actualizar</button>
         </div>
     </div>
 
     <div class="card">
         <strong>Produccion por periodo</strong>
-        <table id="rep-produccion">
+        <div class="table-responsive">
+            <table id="rep-produccion" class="table table-sm">
             <thead>
                 <tr>
                     <th>Orden</th>
@@ -36,12 +44,14 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Inventario (stock bajo)</strong>
-        <table id="rep-inventario">
+        <div class="table-responsive">
+            <table id="rep-inventario" class="table table-sm">
             <thead>
                 <tr>
                     <th>Tipo</th>
@@ -53,12 +63,14 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Eficiencia de artesanos</strong>
-        <table id="rep-eficiencia">
+        <div class="table-responsive">
+            <table id="rep-eficiencia" class="table table-sm">
             <thead>
                 <tr>
                     <th>Artesano</th>
@@ -68,12 +80,14 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Uso de materiales</strong>
-        <table id="rep-materiales">
+        <div class="table-responsive">
+            <table id="rep-materiales" class="table table-sm">
             <thead>
                 <tr>
                     <th>Tipo</th>
@@ -84,12 +98,14 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Ventas</strong>
-        <table id="rep-ventas">
+        <div class="table-responsive">
+            <table id="rep-ventas" class="table table-sm">
             <thead>
                 <tr>
                     <th>Pieza</th>
@@ -100,12 +116,14 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Compras (entradas)</strong>
-        <table id="rep-compras">
+        <div class="table-responsive">
+            <table id="rep-compras" class="table table-sm">
             <thead>
                 <tr>
                     <th>Tipo inventario</th>
@@ -114,12 +132,14 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <div class="card">
         <strong>Usuarios</strong>
-        <table id="rep-usuarios">
+        <div class="table-responsive">
+            <table id="rep-usuarios" class="table table-sm">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -130,7 +150,8 @@ include __DIR__ . '/partials/nav.php';
                 </tr>
             </thead>
             <tbody></tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 
