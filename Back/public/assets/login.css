@@ -9,6 +9,22 @@ body.ds-login {
     margin: 0;
 }
 
+.ds-legacy-alert {
+    background: #fdf4d8;
+    border: 1px solid #d4af37;
+    color: #4a3c1a;
+    padding: 8px 12px;
+    font-size: 13px;
+    margin: 12px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.ds-legacy-alert a {
+    color: #7b5b00;
+    text-decoration: underline;
+}
+
 .login-background {
     width: 100%;
     height: 100%;

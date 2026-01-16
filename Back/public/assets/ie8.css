@@ -49,6 +49,7 @@ body {
     height: 16px;
     vertical-align: middle;
     margin-right: 6px;
+    border: 0;
 }
 
 .ds-nav-link.active {
@@ -106,6 +107,7 @@ body {
 .card-icon img {
     width: 32px;
     height: 32px;
+    border: 0;
 }
 
 .ds-badge {

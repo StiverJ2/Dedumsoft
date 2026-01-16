@@ -9,8 +9,33 @@ if (!defined('DEDUMSOFT_APP')) {
 if (!function_exists('dedumsoft_is_legacy_browser')) {
     function dedumsoft_is_legacy_browser(): bool
     {
+        $override = dedumsoft_ui_mode_override();
+        if ($override === 'legacy') {
+            return true;
+        }
+        if ($override === 'normal') {
+            return false;
+        }
+        return dedumsoft_is_legacy_ua();
+    }
+}
+
+if (!function_exists('dedumsoft_is_legacy_ua')) {
+    function dedumsoft_is_legacy_ua(): bool
+    {
         $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
         return stripos($ua, 'MSIE 8.0') !== false || stripos($ua, 'MSIE 7.0') !== false;
+    }
+}
+
+if (!function_exists('dedumsoft_ui_mode_override')) {
+    function dedumsoft_ui_mode_override(): string
+    {
+        $mode = strtolower(trim($_COOKIE['dedumsoft_ui_mode'] ?? ''));
+        if ($mode === 'legacy' || $mode === 'normal') {
+            return $mode;
+        }
+        return '';
     }
 }
 

@@ -158,6 +158,7 @@ body.ds-body {
     width: 16px;
     height: 16px;
     display: block;
+    border: 0;
 }
 
 .ds-nav-link > .ds-icon-img,
@@ -282,6 +283,21 @@ body.ds-body {
 .content {
     max-width: 1200px;
     margin: 0 auto;
+}
+
+.ds-legacy-alert {
+    background: #fdf4d8;
+    border: 1px solid #d4af37;
+    color: #4a3c1a;
+    padding: 8px 12px;
+    font-size: 13px;
+    margin: 16px 0 0;
+    border-radius: 6px;
+}
+
+.ds-legacy-alert a {
+    color: #7b5b00;
+    text-decoration: underline;
 }
 
 .content-header {
@@ -480,6 +496,7 @@ body.ds-body {
     width: 32px;
     height: 32px;
     display: block;
+    border: 0;
 }
 
 .dashboard-card h3 {

@@ -14,6 +14,16 @@ $maq_estado = $_GET['maq_estado'] ?? '';
 $oro_rows = [];
 $insumo_rows = [];
 $maq_rows = [];
+$categoria_options = [];
+
+try {
+    $stmt = $connLogic->query(
+        "SELECT DISTINCT categoria FROM inventario_insumos WHERE categoria IS NOT NULL AND categoria <> '' ORDER BY categoria"
+    );
+    $categoria_options = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {
+    error_log('inventario categorias error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+}
 
 if ($legacy) {
     try {
@@ -131,7 +141,14 @@ include __DIR__ . '/partials/nav.php';
         <?php endif; ?>
             <div>
                 <label class="form-label muted" for="insumo-categoria">Categoria</label>
-                <input type="text" id="insumo-categoria" name="insumo_categoria" class="form-control form-control-sm ds-field" placeholder="categoria" value="<?php echo htmlspecialchars($insumo_categoria); ?>">
+                <select id="insumo-categoria" name="insumo_categoria" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <?php foreach ($categoria_options as $categoria): ?>
+                        <option value="<?php echo htmlspecialchars((string)$categoria); ?>" <?php echo $insumo_categoria === $categoria ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars((string)$categoria); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div class="form-check">
                 <input class="form-check-input ds-field" type="checkbox" id="insumo-stock-bajo" name="insumo_stock_bajo" value="1" <?php echo $insumo_stock_bajo ? 'checked' : ''; ?>>

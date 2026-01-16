@@ -11,6 +11,7 @@ if ($error_key === 'csrf') {
 }
 $csrf = dedumsoft_csrf_token();
 $legacy = dedumsoft_is_legacy_browser();
+$legacy_ua = dedumsoft_is_legacy_ua();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -30,6 +31,12 @@ $legacy = dedumsoft_is_legacy_browser();
     <?php endif; ?>
 </head>
 <body class="ds-login">
+    <?php if (!$legacy && $legacy_ua): ?>
+        <div class="ds-legacy-alert">
+            Si el sitio no se ve bien en tu navegador, haz clic para
+            <a href="mode.php?mode=legacy">cambiar a modo legacy</a>.
+        </div>
+    <?php endif; ?>
     <div class="login-background">
         <div class="login-decoration decoration-1"></div>
         <div class="login-decoration decoration-2"></div>

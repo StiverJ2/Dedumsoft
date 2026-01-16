@@ -95,10 +95,17 @@ if (!function_exists('dedumsoft_format_status_badge')) {
         return '<span class="ds-badge ' . $class . '">' . htmlspecialchars($label) . '</span>';
     }
 }
-$icon_inventory = '<img src="assets/icons/fatcow/32/box.png" alt="Inventario">';
-$icon_sales = '<img src="assets/icons/fatcow/32/cash_stack.png" alt="Ventas">';
-$icon_orders = '<img src="assets/icons/fatcow/32/application_view_list.png" alt="Ordenes">';
-$icon_done = '<img src="assets/icons/fatcow/32/tick.png" alt="Completadas">';
+if ($legacy) {
+    $icon_inventory = '<img src="assets/icons/fatcow/32/box.png" alt="Inventario">';
+    $icon_sales = '<img src="assets/icons/fatcow/32/cash_stack.png" alt="Ventas">';
+    $icon_orders = '<img src="assets/icons/fatcow/32/application_view_list.png" alt="Ordenes">';
+    $icon_done = '<img src="assets/icons/fatcow/32/tick.png" alt="Completadas">';
+} else {
+    $icon_inventory = '&#128230;';
+    $icon_sales = '&#128176;';
+    $icon_orders = '&#128203;';
+    $icon_done = '&#9989;';
+}
 ?>
 <div class="content">
     <div class="content-header">
