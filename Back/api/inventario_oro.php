@@ -18,6 +18,7 @@ if (!require_api_auth()) {
 $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 $tipo = $_GET['tipo'] ?? null;
+$tipo = ($tipo === '') ? null : $tipo;
 
 try {
     $stmt = $connLogic->prepare(

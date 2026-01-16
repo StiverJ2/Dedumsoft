@@ -15,7 +15,7 @@ include __DIR__ . '/partials/nav.php';
         <p>Control de metales, insumos y maquinaria</p>
     </div>
 
-    <div class="card">
+    <div class="card" id="inv-oro">
         <strong>Inventario de oro</strong>
         <div class="d-flex flex-wrap gap-2 align-items-end">
             <div>
@@ -47,7 +47,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="inv-insumos">
         <strong>Insumos</strong>
         <div class="d-flex flex-wrap gap-3 align-items-end">
             <div>
@@ -76,7 +76,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="inv-maquinaria">
         <strong>Maquinaria</strong>
         <div class="d-flex flex-wrap gap-2 align-items-end">
             <div>

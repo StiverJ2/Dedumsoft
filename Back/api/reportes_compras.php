@@ -20,7 +20,7 @@ $hasta = $_GET['hasta'] ?? date('Y-m-t');
 
 try {
     $stmt = $connLogic->prepare(
-        'SELECT tipo_inventario, cantidad_total, movimientos FROM fun_reporte_compras(:desde, :hasta)'
+        'SELECT tipo_inventario, COALESCE(cantidad_total, 0) AS cantidad_total, COALESCE(movimientos, 0) AS movimientos FROM fun_reporte_compras(:desde, :hasta)'
     );
     $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

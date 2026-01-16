@@ -49,6 +49,25 @@ include __DIR__ . '/partials/nav.php';
 </div>
 
 <script>
+function formatDateTime(value) {
+    if (!value) return '';
+    let text = String(value).replace('T', ' ').replace('Z', '');
+    return text.replace(/\.\d+/, '');
+}
+
+function formatStatus(value) {
+    const raw = (value || '').toString();
+    const label = raw.replace(/_/g, ' ').toUpperCase();
+    const key = raw.toLowerCase();
+    let cls = 'ds-badge--neutral';
+    if (key === 'pendiente') cls = 'ds-badge--warning';
+    else if (key === 'en_proceso') cls = 'ds-badge--info';
+    else if (key === 'terminada') cls = 'ds-badge--success';
+    else if (key === 'cancelada') cls = 'ds-badge--danger';
+    else if (key === 'pausada') cls = 'ds-badge--muted';
+    return `<span class="ds-badge ${cls}">${label}</span>`;
+}
+
 async function loadOrdenes() {
     const estado = document.getElementById('orden-estado').value;
     const url = '../api/ordenes.php?limit=20&offset=0&estado=' + encodeURIComponent(estado);
@@ -58,7 +77,7 @@ async function loadOrdenes() {
     tbody.innerHTML = '';
     (data.DATOS || []).forEach(row => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${row.codigo_orden}</td><td>${row.producto_nombre}</td><td>${row.artesano_nombre || ''}</td><td>${row.estado}</td><td>${row.fecha_inicio || ''}</td>`;
+        tr.innerHTML = `<td>${row.codigo_orden}</td><td>${row.producto_nombre}</td><td>${row.artesano_nombre || ''}</td><td>${formatStatus(row.estado)}</td><td>${formatDateTime(row.fecha_inicio)}</td>`;
         tbody.appendChild(tr);
     });
 }

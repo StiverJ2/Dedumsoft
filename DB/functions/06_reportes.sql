@@ -199,29 +199,29 @@ BEGIN
     RETURN QUERY
     SELECT
         x.tipo_inventario,
-        SUM(x.cantidad_total) AS cantidad_total,
-        SUM(x.movimientos)::int AS movimientos
+        COALESCE(SUM(x.cantidad_total), 0) AS cantidad_total,
+        COALESCE(SUM(x.movimientos), 0)::int AS movimientos
     FROM (
         SELECT
             'oro'::text AS tipo_inventario,
-            SUM(mo.cantidad) AS cantidad_total,
-            COUNT(mo.id)::int AS movimientos
+            COALESCE(SUM(mo.cantidad), 0) AS cantidad_total,
+            COALESCE(COUNT(mo.id), 0)::int AS movimientos
         FROM movimientos_oro mo
         WHERE mo.tipo_movimiento = 'entrada'
           AND mo.fecha::date BETWEEN par_desde AND par_hasta
         UNION ALL
         SELECT
             'insumos'::text AS tipo_inventario,
-            SUM(mi.cantidad) AS cantidad_total,
-            COUNT(mi.id)::int AS movimientos
+            COALESCE(SUM(mi.cantidad), 0) AS cantidad_total,
+            COALESCE(COUNT(mi.id), 0)::int AS movimientos
         FROM movimientos_insumos mi
         WHERE mi.tipo_movimiento = 'entrada'
           AND mi.fecha::date BETWEEN par_desde AND par_hasta
         UNION ALL
         SELECT
             'maquinaria'::text AS tipo_inventario,
-            SUM(mm.cantidad) AS cantidad_total,
-            COUNT(mm.id)::int AS movimientos
+            COALESCE(SUM(mm.cantidad), 0) AS cantidad_total,
+            COALESCE(COUNT(mm.id), 0)::int AS movimientos
         FROM movimientos_maquinaria mm
         WHERE mm.tipo_movimiento = 'entrada'
           AND mm.fecha::date BETWEEN par_desde AND par_hasta

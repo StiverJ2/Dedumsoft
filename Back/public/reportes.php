@@ -30,7 +30,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rep-produccion-section">
         <strong>Produccion por periodo</strong>
         <div class="table-responsive">
             <table id="rep-produccion" class="table table-sm">
@@ -48,7 +48,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rep-inventario-section">
         <strong>Inventario (stock bajo)</strong>
         <div class="table-responsive">
             <table id="rep-inventario" class="table table-sm">
@@ -67,7 +67,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rep-eficiencia-section">
         <strong>Eficiencia de artesanos</strong>
         <div class="table-responsive">
             <table id="rep-eficiencia" class="table table-sm">
@@ -84,7 +84,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rep-materiales-section">
         <strong>Uso de materiales</strong>
         <div class="table-responsive">
             <table id="rep-materiales" class="table table-sm">
@@ -102,7 +102,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rep-ventas-section">
         <strong>Ventas</strong>
         <div class="table-responsive">
             <table id="rep-ventas" class="table table-sm">
@@ -120,7 +120,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rep-compras-section">
         <strong>Compras (entradas)</strong>
         <div class="table-responsive">
             <table id="rep-compras" class="table table-sm">
@@ -136,7 +136,7 @@ include __DIR__ . '/partials/nav.php';
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="rep-usuarios-section">
         <strong>Usuarios</strong>
         <div class="table-responsive">
             <table id="rep-usuarios" class="table table-sm">
@@ -165,13 +165,48 @@ function getDateParams() {
     return params.toString();
 }
 
-async function loadReport(url, tableId, rowBuilder) {
+function formatDateTime(value) {
+    if (!value) return '';
+    let text = String(value).replace('T', ' ').replace('Z', '');
+    return text.replace(/\.\d+/, '');
+}
+
+function formatNumber(value) {
+    if (value === null || value === undefined || value === '') return '';
+    const num = Number(value);
+    if (Number.isNaN(num)) return String(value);
+    const truncated = Math.trunc(num * 100) / 100;
+    return truncated.toFixed(2);
+}
+
+function formatStatus(value) {
+    const raw = (value || '').toString();
+    const label = raw.replace(/_/g, ' ').toUpperCase();
+    const key = raw.toLowerCase();
+    let cls = 'ds-badge--neutral';
+    if (key === 'pendiente') cls = 'ds-badge--warning';
+    else if (key === 'en_proceso') cls = 'ds-badge--info';
+    else if (key === 'terminada') cls = 'ds-badge--success';
+    else if (key === 'cancelada') cls = 'ds-badge--danger';
+    else if (key === 'pausada') cls = 'ds-badge--muted';
+    return `<span class="ds-badge ${cls}">${label}</span>`;
+}
+
+async function loadReport(url, tableId, rowBuilder, columnCount, emptyMessage) {
     const params = getDateParams();
     const res = await fetch(url + (params ? '?' + params : ''));
     const data = await res.json();
     const tbody = document.querySelector(tableId + ' tbody');
     tbody.innerHTML = '';
-    (data.DATOS || []).forEach(row => {
+    const rows = data.DATOS || [];
+    if (!rows.length) {
+        const tr = document.createElement('tr');
+        const message = emptyMessage || 'Sin datos para el rango seleccionado';
+        tr.innerHTML = `<td colspan="${columnCount}">${message}</td>`;
+        tbody.appendChild(tr);
+        return;
+    }
+    rows.forEach(row => {
         const tr = document.createElement('tr');
         tr.innerHTML = rowBuilder(row);
         tbody.appendChild(tr);
@@ -180,25 +215,32 @@ async function loadReport(url, tableId, rowBuilder) {
 
 function loadAllReports() {
     loadReport('../api/reportes_produccion.php', '#rep-produccion', row =>
-        `<td>${row.codigo_orden}</td><td>${row.producto}</td><td>${row.cantidad}</td><td>${row.artesano || ''}</td><td>${row.estado}</td>`
+        `<td>${row.codigo_orden}</td><td>${row.producto}</td><td>${row.cantidad}</td><td>${row.artesano || ''}</td><td>${formatStatus(row.estado)}</td>`,
+        5
     );
     loadReport('../api/reportes_inventario.php', '#rep-inventario', row =>
-        `<td>${row.tipo}</td><td>${row.item_id}</td><td>${row.nombre}</td><td>${row.cantidad}</td><td>${row.stock_minimo}</td><td>${row.proveedor || ''}</td>`
+        `<td>${row.tipo}</td><td>${row.item_id}</td><td>${row.nombre}</td><td>${formatNumber(row.cantidad)}</td><td>${formatNumber(row.stock_minimo)}</td><td>${row.proveedor || ''}</td>`,
+        6
     );
     loadReport('../api/reportes_eficiencia.php', '#rep-eficiencia', row =>
-        `<td>${row.artesano || ''}</td><td>${row.piezas}</td><td>${row.horas}</td><td>${row.promedio_horas}</td>`
+        `<td>${row.artesano || ''}</td><td>${row.piezas}</td><td>${formatNumber(row.horas)}</td><td>${formatNumber(row.promedio_horas)}</td>`,
+        4
     );
     loadReport('../api/reportes_materiales.php', '#rep-materiales', row =>
-        `<td>${row.tipo_material}</td><td>${row.material_id}</td><td>${row.material_nombre || ''}</td><td>${row.cantidad_total}</td><td>${row.costo_total}</td>`
+        `<td>${row.tipo_material}</td><td>${row.material_id}</td><td>${row.material_nombre || ''}</td><td>${formatNumber(row.cantidad_total)}</td><td>${formatNumber(row.costo_total)}</td>`,
+        5
     );
     loadReport('../api/reportes_ventas.php', '#rep-ventas', row =>
-        `<td>${row.codigo_pieza}</td><td>${row.producto_id}</td><td>${row.fecha_venta || ''}</td><td>${row.precio_venta}</td><td>${row.utilidad}</td>`
+        `<td>${row.codigo_pieza}</td><td>${row.producto_id}</td><td>${formatDateTime(row.fecha_venta)}</td><td>${formatNumber(row.precio_venta)}</td><td>${formatNumber(row.utilidad)}</td>`,
+        5
     );
     loadReport('../api/reportes_compras.php', '#rep-compras', row =>
-        `<td>${row.tipo_inventario}</td><td>${row.cantidad_total}</td><td>${row.movimientos}</td>`
+        `<td>${row.tipo_inventario}</td><td>${formatNumber(row.cantidad_total)}</td><td>${row.movimientos}</td>`,
+        3
     );
     loadReport('../api/reportes_usuarios.php', '#rep-usuarios', row =>
-        `<td>${row.id_usuario}</td><td>${row.username}</td><td>${row.nombre}</td><td>${row.rol}</td><td>${row.activo ? 'Si' : 'No'}</td>`
+        `<td>${row.id_usuario}</td><td>${row.username}</td><td>${row.nombre}</td><td>${row.rol}</td><td>${row.activo ? 'Si' : 'No'}</td>`,
+        5
     );
 }
 

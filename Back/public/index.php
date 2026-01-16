@@ -15,10 +15,84 @@ try {
 } catch (PDOException $e) {
     $ordenes = [];
 }
-$ordenes_count = count($ordenes);
+$inventario_total = 0;
+$inventario_stock_bajo = 0;
+$ventas_mes_total = 0.0;
+$ordenes_activas = 0;
+$ordenes_completadas_mes = 0;
+$month_start = date('Y-m-01');
+$month_end = date('Y-m-t');
+
+try {
+    $inventario_total = (int)$connLogic
+        ->query('SELECT (SELECT COUNT(*) FROM inventario_oro) + (SELECT COUNT(*) FROM inventario_insumos) + (SELECT COUNT(*) FROM inventario_maquinaria) AS total')
+        ->fetchColumn();
+
+    $inventario_stock_bajo = (int)$connLogic
+        ->query('SELECT COUNT(*) FROM fun_reporte_inventario()')
+        ->fetchColumn();
+
+    $stmt = $connLogic->prepare(
+        'SELECT COALESCE(SUM(ct.precio_venta_real), 0) FROM creaciones_terminadas ct WHERE ct.vendida = TRUE AND ct.fecha_venta::date BETWEEN :desde AND :hasta'
+    );
+    $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
+    $ventas_mes_total = (float)$stmt->fetchColumn();
+
+    $ordenes_activas = (int)$connLogic
+        ->query("SELECT COUNT(*) FROM ordenes_produccion WHERE estado NOT IN ('terminada', 'cancelada')")
+        ->fetchColumn();
+
+    $stmt = $connLogic->prepare(
+        "SELECT COUNT(*) FROM ordenes_produccion WHERE estado = 'terminada' AND fecha_fin_real IS NOT NULL AND fecha_fin_real::date BETWEEN :desde AND :hasta"
+    );
+    $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
+    $ordenes_completadas_mes = (int)$stmt->fetchColumn();
+} catch (PDOException $e) {
+    $inventario_total = 0;
+    $inventario_stock_bajo = 0;
+    $ventas_mes_total = 0.0;
+    $ordenes_activas = 0;
+    $ordenes_completadas_mes = 0;
+}
 
 include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
+
+if (!function_exists('dedumsoft_format_datetime')) {
+    function dedumsoft_format_datetime(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        try {
+            $dt = new DateTime($value);
+            return $dt->format('Y-m-d H:i');
+        } catch (Exception $e) {
+            return preg_replace('/\.\d+/', '', $value);
+        }
+    }
+}
+
+if (!function_exists('dedumsoft_format_status_badge')) {
+    function dedumsoft_format_status_badge(?string $value): string
+    {
+        $raw = strtolower(trim((string)$value));
+        $label = strtoupper(str_replace('_', ' ', $raw));
+        $class = 'ds-badge--neutral';
+        if ($raw === 'pendiente') {
+            $class = 'ds-badge--warning';
+        } elseif ($raw === 'en_proceso') {
+            $class = 'ds-badge--info';
+        } elseif ($raw === 'terminada') {
+            $class = 'ds-badge--success';
+        } elseif ($raw === 'cancelada') {
+            $class = 'ds-badge--danger';
+        } elseif ($raw === 'pausada') {
+            $class = 'ds-badge--muted';
+        }
+        return '<span class="ds-badge ' . $class . '">' . htmlspecialchars($label) . '</span>';
+    }
+}
 ?>
 <div class="content">
     <div class="content-header">
@@ -30,34 +104,34 @@ include __DIR__ . '/partials/nav.php';
         <div class="dashboard-card gold">
             <div class="card-icon">&#x1F48E;</div>
             <h3>Inventario Actual</h3>
-            <p class="stat">0 items</p>
+            <p class="stat"><?php echo number_format($inventario_total); ?> items</p>
             <div class="card-footer">
-                <span>0%</span>
+                <span><?php echo (int)$inventario_stock_bajo; ?> en stock bajo</span>
             </div>
         </div>
 
         <div class="dashboard-card silver">
             <div class="card-icon">&#x1F4B0;</div>
             <h3>Ventas del Mes</h3>
-            <p class="stat">$0</p>
+            <p class="stat">$<?php echo number_format($ventas_mes_total, 2); ?></p>
             <div class="card-footer">
-                <span>0% mes anterior</span>
+                <span><?php echo htmlspecialchars(date('m/Y', strtotime($month_start))); ?></span>
             </div>
         </div>
 
         <div class="dashboard-card bronze">
             <div class="card-icon">&#x1F4C8;</div>
             <h3>Ordenes Activas</h3>
-            <p class="stat"><?php echo (int)$ordenes_count; ?></p>
+            <p class="stat"><?php echo (int)$ordenes_activas; ?></p>
             <div class="card-footer">
-                <span>0 refabricado</span>
+                <span><?php echo count($ordenes); ?> recientes</span>
             </div>
         </div>
 
         <div class="dashboard-card pearl">
             <div class="card-icon">&#x2705;</div>
             <h3>Ordenes Completadas</h3>
-            <p class="stat">0</p>
+            <p class="stat"><?php echo (int)$ordenes_completadas_mes; ?></p>
             <div class="card-footer">
                 <span>este mes</span>
             </div>
@@ -84,8 +158,8 @@ include __DIR__ . '/partials/nav.php';
                             <tr>
                                 <td><?php echo htmlspecialchars($orden['codigo_orden'] ?? ''); ?></td>
                                 <td><?php echo htmlspecialchars($orden['producto_nombre'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($orden['estado'] ?? ''); ?></td>
-                                <td><?php echo htmlspecialchars($orden['fecha_creacion'] ?? ''); ?></td>
+                                <td><?php echo dedumsoft_format_status_badge($orden['estado'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars(dedumsoft_format_datetime($orden['fecha_creacion'] ?? '')); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

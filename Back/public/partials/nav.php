@@ -8,6 +8,20 @@ if (!function_exists('dedumsoft_nav_active')) {
     }
 }
 
+if (!function_exists('dedumsoft_nav_active_section')) {
+    function dedumsoft_nav_active_section(string $current, string $target, string $section, string $default = ''): string
+    {
+        if ($current !== $target) {
+            return '';
+        }
+        $current_section = $_GET['section'] ?? '';
+        if ($current_section === '' && $default !== '') {
+            return $default === $section ? 'active' : '';
+        }
+        return $current_section === $section ? 'active' : '';
+    }
+}
+
 $current = basename($_SERVER['PHP_SELF'] ?? '');
 $inv_open = in_array($current, ['inventario.php', 'proveedores.php'], true);
 $prod_open = in_array($current, ['produccion.php'], true);
@@ -46,13 +60,13 @@ if ($rolid === 1) {
             <span class="ds-arrow">&#9660;</span>
         </button>
         <div id="ds-inventario" class="collapse ds-submenu <?php echo $inv_open ? 'show' : ''; ?>">
-            <a class="<?php echo dedumsoft_nav_active($current, 'inventario.php'); ?>" href="inventario.php">
+            <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'insumos', 'insumos'); ?>" href="inventario.php?section=insumos#inv-insumos">
                 <span class="ds-subicon">&#x1F9EA;</span> Insumos
             </a>
-            <a class="<?php echo dedumsoft_nav_active($current, 'inventario.php'); ?>" href="inventario.php">
+            <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'maquinaria', 'insumos'); ?>" href="inventario.php?section=maquinaria#inv-maquinaria">
                 <span class="ds-subicon">&#x1F529;</span> Maquinaria
             </a>
-            <a class="<?php echo dedumsoft_nav_active($current, 'inventario.php'); ?>" href="inventario.php">
+            <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'oro', 'insumos'); ?>" href="inventario.php?section=oro#inv-oro">
                 <span class="ds-subicon">&#x1F48D;</span> Oro
             </a>
             <a class="<?php echo dedumsoft_nav_active($current, 'proveedores.php'); ?>" href="proveedores.php">
@@ -77,13 +91,13 @@ if ($rolid === 1) {
             <span class="ds-arrow">&#9660;</span>
         </button>
         <div id="ds-reportes" class="collapse ds-submenu <?php echo $rep_open ? 'show' : ''; ?>">
-            <a class="<?php echo dedumsoft_nav_active($current, 'reportes.php'); ?>" href="reportes.php">
+            <a class="<?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'produccion', 'produccion'); ?>" href="reportes.php?section=produccion#rep-produccion-section">
                 <span class="ds-subicon">&#x1F4CA;</span> Produccion
             </a>
-            <a class="<?php echo dedumsoft_nav_active($current, 'reportes.php'); ?>" href="reportes.php">
+            <a class="<?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'ventas', 'produccion'); ?>" href="reportes.php?section=ventas#rep-ventas-section">
                 <span class="ds-subicon">&#x1F4B0;</span> Ventas
             </a>
-            <a class="<?php echo dedumsoft_nav_active($current, 'reportes.php'); ?>" href="reportes.php">
+            <a class="<?php echo dedumsoft_nav_active_section($current, 'reportes.php', 'compras', 'produccion'); ?>" href="reportes.php?section=compras#rep-compras-section">
                 <span class="ds-subicon">&#x1F9FE;</span> Compras
             </a>
         </div>
