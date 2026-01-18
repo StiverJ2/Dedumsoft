@@ -1,4 +1,4 @@
--- ============================================
+﻿-- ============================================
 -- MIGRACIÓN: Eliminar columnas ubicacion redundantes
 -- Fecha: 2026-01-16
 -- Descripción: Elimina las columnas de texto 'ubicacion'
@@ -7,28 +7,31 @@
 -- Depende de: 001_add_ubicaciones.sql
 -- ============================================
 
+SET search_path TO joyeria, seguridad, public;
+
 BEGIN;
 
--- 1. Verificar que la migración anterior fue exitosa
+-- 1. Verificar existencia de columnas (sin abortar)
 DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'inventario_maquinaria' 
-        AND column_name = 'ubicacion_id'
+        WHERE table_schema = 'joyeria'
+          AND table_name = 'inventario_maquinaria' 
+          AND column_name = 'ubicacion_id'
     ) THEN
-        RAISE EXCEPTION 'La columna ubicacion_id no existe en inventario_maquinaria. Ejecute primero 001_add_ubicaciones.sql';
+        RAISE NOTICE 'La columna ubicacion_id no existe en inventario_maquinaria.';
     END IF;
-    
+
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'inventario_insumos' 
-        AND column_name = 'ubicacion_id'
+        WHERE table_schema = 'joyeria'
+          AND table_name = 'inventario_insumos' 
+          AND column_name = 'ubicacion_id'
     ) THEN
-        RAISE EXCEPTION 'La columna ubicacion_id no existe en inventario_insumos. Ejecute primero 001_add_ubicaciones.sql';
+        RAISE NOTICE 'La columna ubicacion_id no existe en inventario_insumos.';
     END IF;
 END $$;
-
 -- 2. Eliminar columna ubicacion de inventario_maquinaria
 ALTER TABLE inventario_maquinaria 
 DROP COLUMN IF EXISTS ubicacion;
@@ -44,3 +47,6 @@ COMMIT;
 -- Los datos de ubicacion ya fueron migrados
 -- a la tabla ubicaciones en 001_add_ubicaciones.sql
 -- ============================================
+
+
+

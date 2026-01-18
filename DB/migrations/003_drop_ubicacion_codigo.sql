@@ -7,6 +7,8 @@
 -- Depende de: 001_add_ubicaciones.sql
 -- ============================================
 
+SET search_path TO joyeria, seguridad, public;
+
 BEGIN;
 
 -- 1. Eliminar la constraint UNIQUE de codigo (si existe)
@@ -18,3 +20,4 @@ ALTER TABLE ubicaciones
 DROP COLUMN IF EXISTS codigo;
 
 COMMIT;
+

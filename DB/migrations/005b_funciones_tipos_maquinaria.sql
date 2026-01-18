@@ -3,7 +3,7 @@
 -- Ejecutar DESPUÉS de la migración 005
 -- ============================================
 
-SET search_path TO joyeria, public;
+SET search_path TO joyeria, seguridad, public;
 
 -- ============================================
 -- FUNCIÓN PARA LISTAR TIPOS DE MAQUINARIA

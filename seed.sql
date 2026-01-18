@@ -114,6 +114,29 @@ WHERE a.nombre = 'Luis' AND a.apellido = 'Garcia'
   );
 
 -- ============================================
+-- UBICACIONES
+-- ============================================
+INSERT INTO ubicaciones (nombre, area)
+SELECT 'estante A', 'Bodega'
+WHERE NOT EXISTS (SELECT 1 FROM ubicaciones WHERE nombre = 'estante A');
+
+INSERT INTO ubicaciones (nombre, area)
+SELECT 'estante B', 'Bodega'
+WHERE NOT EXISTS (SELECT 1 FROM ubicaciones WHERE nombre = 'estante B');
+
+INSERT INTO ubicaciones (nombre, area)
+SELECT 'taller', 'Taller'
+WHERE NOT EXISTS (SELECT 1 FROM ubicaciones WHERE nombre = 'taller');
+
+INSERT INTO ubicaciones (nombre, area)
+SELECT 'taller 1', 'Taller'
+WHERE NOT EXISTS (SELECT 1 FROM ubicaciones WHERE nombre = 'taller 1');
+
+INSERT INTO ubicaciones (nombre, area)
+SELECT 'taller 2', 'Taller'
+WHERE NOT EXISTS (SELECT 1 FROM ubicaciones WHERE nombre = 'taller 2');
+
+-- ============================================
 -- INVENTARIO ORO
 -- ============================================
 INSERT INTO inventario_oro (
@@ -197,7 +220,7 @@ INSERT INTO inventario_insumos (
     precio_unitario,
     stock_minimo,
     proveedor_id,
-    ubicacion
+    ubicacion_id
 )
 SELECT
     'Diamante 1mm',
@@ -208,8 +231,9 @@ SELECT
     15.50,
     50.000,
     p.id,
-    'estante A'
+    u.id
 FROM proveedores p
+JOIN ubicaciones u ON u.nombre = 'estante A'
 WHERE p.nombre = 'Piedras del Norte' AND p.tipo = 'insumos'
   AND NOT EXISTS (
       SELECT 1 FROM inventario_insumos WHERE nombre = 'Diamante 1mm' AND categoria = 'piedras'
@@ -224,7 +248,7 @@ INSERT INTO inventario_insumos (
     precio_unitario,
     stock_minimo,
     proveedor_id,
-    ubicacion
+    ubicacion_id
 )
 SELECT
     'Zirconia 3mm',
@@ -235,8 +259,9 @@ SELECT
     2.50,
     30.000,
     p.id,
-    'estante A'
+    u.id
 FROM proveedores p
+JOIN ubicaciones u ON u.nombre = 'estante A'
 WHERE p.nombre = 'Piedras del Norte' AND p.tipo = 'insumos'
   AND NOT EXISTS (
       SELECT 1 FROM inventario_insumos WHERE nombre = 'Zirconia 3mm' AND categoria = 'piedras'
@@ -251,7 +276,7 @@ INSERT INTO inventario_insumos (
     precio_unitario,
     stock_minimo,
     proveedor_id,
-    ubicacion
+    ubicacion_id
 )
 SELECT
     'Cadena plata 45cm',
@@ -262,8 +287,9 @@ SELECT
     35.00,
     10.000,
     p.id,
-    'estante B'
+    u.id
 FROM proveedores p
+JOIN ubicaciones u ON u.nombre = 'estante B'
 WHERE p.nombre = 'Piedras del Norte' AND p.tipo = 'insumos'
   AND NOT EXISTS (
       SELECT 1 FROM inventario_insumos WHERE nombre = 'Cadena plata 45cm' AND categoria = 'cadenas'
@@ -278,7 +304,7 @@ INSERT INTO inventario_insumos (
     precio_unitario,
     stock_minimo,
     proveedor_id,
-    ubicacion
+    ubicacion_id
 )
 SELECT
     'Cera modelado',
@@ -289,8 +315,9 @@ SELECT
     120.00,
     2.000,
     p.id,
-    'taller'
+    u.id
 FROM proveedores p
+JOIN ubicaciones u ON u.nombre = 'taller'
 WHERE p.nombre = 'Piedras del Norte' AND p.tipo = 'insumos'
   AND NOT EXISTS (
       SELECT 1 FROM inventario_insumos WHERE nombre = 'Cera modelado' AND categoria = 'consumibles'
@@ -310,7 +337,7 @@ INSERT INTO inventario_maquinaria (
     estado,
     ultima_mantenimiento,
     proxima_mantenimiento,
-    ubicacion
+    ubicacion_id
 )
 SELECT
     'Horno de fundicion',
@@ -323,8 +350,10 @@ SELECT
     'operativa',
     (CURRENT_DATE - INTERVAL '30 days')::date,
     (CURRENT_DATE + INTERVAL '150 days')::date,
-    'taller 1'
-WHERE NOT EXISTS (
+    u.id
+FROM ubicaciones u
+WHERE u.nombre = 'taller 1'
+  AND NOT EXISTS (
     SELECT 1 FROM inventario_maquinaria WHERE numero_serie = 'GH200-001'
 );
 
@@ -339,7 +368,7 @@ INSERT INTO inventario_maquinaria (
     estado,
     ultima_mantenimiento,
     proxima_mantenimiento,
-    ubicacion
+    ubicacion_id
 )
 SELECT
     'Pulidora industrial',
@@ -352,8 +381,10 @@ SELECT
     'operativa',
     (CURRENT_DATE - INTERVAL '20 days')::date,
     (CURRENT_DATE + INTERVAL '120 days')::date,
-    'taller 2'
-WHERE NOT EXISTS (
+    u.id
+FROM ubicaciones u
+WHERE u.nombre = 'taller 2'
+  AND NOT EXISTS (
     SELECT 1 FROM inventario_maquinaria WHERE numero_serie = 'SP55-014'
 );
 

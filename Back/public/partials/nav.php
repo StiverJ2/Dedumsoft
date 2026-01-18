@@ -25,7 +25,7 @@ if (!function_exists('dedumsoft_nav_active_section')) {
 $current = basename($_SERVER['PHP_SELF'] ?? '');
 $legacy = dedumsoft_is_legacy_browser();
 $legacy_ua = dedumsoft_is_legacy_ua();
-$inv_open = in_array($current, ['inventario.php', 'proveedores.php', 'ubicaciones.php'], true);
+$inv_open = in_array($current, ['inventario.php', 'inventario_insumos.php', 'inventario_maquinaria.php', 'inventario_oro.php', 'proveedores.php', 'ubicaciones.php'], true);
 $prod_open = in_array($current, ['produccion.php'], true);
 $rep_open = in_array($current, ['reportes.php'], true);
 $adm_open = in_array($current, ['usuarios.php'], true);
@@ -58,18 +58,18 @@ if ($rolid === 1) {
             </a>
 
             <div class="ds-nav-section">Inventario</div>
-            <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'insumos', 'insumos'); ?>"
-                href="inventario.php?section=insumos#inv-insumos">
+            <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'inventario_insumos.php'); ?>"
+                href="inventario_insumos.php#inv-insumos">
                 <img class="ds-icon-img" src="assets/icons/fatcow/16/box_front.png" alt="">
                 Insumos
             </a>
-            <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'maquinaria', 'insumos'); ?>"
-                href="inventario.php?section=maquinaria#inv-maquinaria">
+            <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'inventario_maquinaria.php'); ?>"
+                href="inventario_maquinaria.php#inv-maquinaria">
                 <img class="ds-icon-img" src="assets/icons/fatcow/16/toolbox.png" alt="">
                 Maquinaria
             </a>
-            <a class="ds-nav-link <?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'oro', 'insumos'); ?>"
-                href="inventario.php?section=oro#inv-oro">
+            <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'inventario_oro.php'); ?>"
+                href="inventario_oro.php#inv-oro">
                 <img class="ds-icon-img" src="assets/icons/fatcow/16/diamond.png" alt="">
                 Oro
             </a>
@@ -156,16 +156,16 @@ if ($rolid === 1) {
                     <span class="ds-arrow">&#9660;</span>
                 </button>
                 <div id="ds-inventario" class="collapse ds-submenu <?php echo $inv_open ? 'show' : ''; ?>">
-                    <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'insumos', 'insumos'); ?>"
-                        href="inventario.php?section=insumos#inv-insumos">
+                    <a class="<?php echo dedumsoft_nav_active($current, 'inventario_insumos.php'); ?>"
+                        href="inventario_insumos.php#inv-insumos">
                         <span class="ds-subicon">&#128230;</span> Insumos
                     </a>
-                    <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'maquinaria', 'insumos'); ?>"
-                        href="inventario.php?section=maquinaria#inv-maquinaria">
+                    <a class="<?php echo dedumsoft_nav_active($current, 'inventario_maquinaria.php'); ?>"
+                        href="inventario_maquinaria.php#inv-maquinaria">
                         <span class="ds-subicon">&#128295;</span> Maquinaria
                     </a>
-                    <a class="<?php echo dedumsoft_nav_active_section($current, 'inventario.php', 'oro', 'insumos'); ?>"
-                        href="inventario.php?section=oro#inv-oro">
+                    <a class="<?php echo dedumsoft_nav_active($current, 'inventario_oro.php'); ?>"
+                        href="inventario_oro.php#inv-oro">
                         <span class="ds-subicon">&#128142;</span> Oro
                     </a>
                     <a class="<?php echo dedumsoft_nav_active($current, 'proveedores.php'); ?>" href="proveedores.php">

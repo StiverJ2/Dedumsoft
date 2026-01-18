@@ -187,9 +187,15 @@ var DsCrud = (function() {
 
     function actionButtons(id) {
         if (id === undefined || id === null) return '';
+        var useEmoji = typeof window !== 'undefined' && window.DEDUMSOFT_ICON_MODE === 'emoji';
         var html = '<div class="ds-actions-cell">';
-        html += '<button type="button" class="ds-action-btn ds-action-btn--edit" data-action="edit" data-id="' + escapeHtml(id) + '" title="Editar"><img src="assets/icons/fatcow/16/pencil.png" alt="Editar"></button>';
-        html += '<button type="button" class="ds-action-btn ds-action-btn--delete" data-action="delete" data-id="' + escapeHtml(id) + '" title="Eliminar"><img src="assets/icons/fatcow/16/cross.png" alt="Eliminar"></button>';
+        if (useEmoji) {
+            html += '<button type="button" class="ds-action-btn ds-action-btn--edit" data-action="edit" data-id="' + escapeHtml(id) + '" title="Editar" aria-label="Editar">✏️</button>';
+            html += '<button type="button" class="ds-action-btn ds-action-btn--delete" data-action="delete" data-id="' + escapeHtml(id) + '" title="Eliminar" aria-label="Eliminar">🗑️</button>';
+        } else {
+            html += '<button type="button" class="ds-action-btn ds-action-btn--edit" data-action="edit" data-id="' + escapeHtml(id) + '" title="Editar"><img src="assets/icons/fatcow/16/pencil.png" alt="Editar"></button>';
+            html += '<button type="button" class="ds-action-btn ds-action-btn--delete" data-action="delete" data-id="' + escapeHtml(id) + '" title="Eliminar"><img src="assets/icons/fatcow/16/cross.png" alt="Eliminar"></button>';
+        }
         html += '</div>';
         return html;
     }

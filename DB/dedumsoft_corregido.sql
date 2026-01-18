@@ -8,31 +8,36 @@
 
 
 -- ====================================================
--- LIMPIEZA DE TABLAS
+-- LIMPIEZA DE TABLAS (OPCIONAL)
+-- Para habilitar, ejecutar: SET dedumsoft.allow_destructive = 'on';
 -- ====================================================
-DROP TABLE IF EXISTS retrabajos; 
-DROP TABLE IF EXISTS creaciones_terminadas;
-DROP TABLE IF EXISTS consumo_materiales;
-DROP TABLE IF EXISTS movimientos;
-DROP TABLE IF EXISTS recetas_produccion;
-DROP TABLE IF EXISTS ordenes_produccion;
-DROP TABLE IF EXISTS user_roles;
-DROP TABLE IF EXISTS sesiones_usuario;
-DROP TABLE IF EXISTS log_auditoria;
+DO $$
+BEGIN
+    IF COALESCE(current_setting('dedumsoft.allow_destructive', true), 'off') = 'on' THEN
+        DROP TABLE IF EXISTS retrabajos; 
+        DROP TABLE IF EXISTS creaciones_terminadas;
+        DROP TABLE IF EXISTS consumo_materiales;
+        DROP TABLE IF EXISTS movimientos;
+        DROP TABLE IF EXISTS recetas_produccion;
+        DROP TABLE IF EXISTS ordenes_produccion;
+        DROP TABLE IF EXISTS user_roles;
+        DROP TABLE IF EXISTS sesiones_usuario;
+        DROP TABLE IF EXISTS log_auditoria;
 
-DROP TABLE IF EXISTS inventario_oro;
-DROP TABLE IF EXISTS inventario_maquinaria;
-DROP TABLE IF EXISTS inventario_insumos;
+        DROP TABLE IF EXISTS inventario_oro;
+        DROP TABLE IF EXISTS inventario_maquinaria;
+        DROP TABLE IF EXISTS inventario_insumos;
 
-DROP TABLE IF EXISTS productos;
+        DROP TABLE IF EXISTS productos;
 
-DROP TABLE IF EXISTS proveedores;
-DROP TABLE IF EXISTS roles;
-DROP TABLE IF EXISTS users;
+        DROP TABLE IF EXISTS proveedores;
+        DROP TABLE IF EXISTS roles;
+        DROP TABLE IF EXISTS users;
 
--- Opcional:
--- DROP SCHEMA IF EXISTS joyeria CASCADE;
-
+        -- Opcional:
+        -- DROP SCHEMA IF EXISTS joyeria CASCADE;
+    END IF;
+END $$;
 
 
 -- Crear esquema (opcional)
@@ -44,7 +49,7 @@ SET search_path TO joyeria, public;
 -- TABLAS DE USUARIOS
 -- ============================================
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id_user NUMERIC(10) PRIMARY KEY NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
     password_user VARCHAR(255) NOT NULL,
@@ -61,12 +66,12 @@ CREATE TABLE users (
 );
 
 
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id_role NUMERIC(10) PRIMARY KEY     NOT NULL,
     nombre VARCHAR(200)                 NOT NULL
 );
 
-CREATE TABLE user_roles (
+CREATE TABLE IF NOT EXISTS user_roles (
     id_user NUMERIC(10)      NOT NULL PRIMARY KEY ,
     id_role NUMERIC(10)   NOT NULL,
     fecha_asignacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -74,7 +79,7 @@ CREATE TABLE user_roles (
     FOREIGN KEY (id_role) REFERENCES roles(id_role) 
 );
 
-CREATE TABLE sesiones_usuario (
+CREATE TABLE IF NOT EXISTS sesiones_usuario (
     id_sesion NUMERIC(10) PRIMARY KEY NOT NULL,
     id_user NUMERIC(10) NOT NULL,                          -- Usuario que inicia sesión
     fecha_inicio_seccion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -83,7 +88,7 @@ CREATE TABLE sesiones_usuario (
     FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
 );
 
-CREATE TABLE log_auditoria (
+CREATE TABLE IF NOT EXISTS log_auditoria (
     id_evento NUMERIC(10) PRIMARY KEY NOT NULL,
     id_user NUMERIC(10) NOT NULL,
     id_sesion NUMERIC(10) NOT NULL,
@@ -102,7 +107,7 @@ CREATE TABLE log_auditoria (
 -- ============================================
 
 -- Tabla: proveedores
-CREATE TABLE proveedores (
+CREATE TABLE IF NOT EXISTS proveedores (
     id_proveedor NUMERIC (12) PRIMARY KEY NOT NULL,
     tipo_id_proveedor VARCHAR(3) NOT NULL CHECK (tipo_id_proveedor IN ('nit', 'cc')),
     nombre_proveedor VARCHAR(200) NOT NULL,
@@ -133,7 +138,7 @@ CREATE TABLE proveedores (
 -- ============================================
 
 -- Tabla: inventario_oro
-CREATE TABLE inventario_oro (
+CREATE TABLE IF NOT EXISTS inventario_oro (
     id_oro INT PRIMARY KEY NOT NULL,
     tipo_oro VARCHAR(4) NOT NULL CHECK (tipo_oro IN ('10k', '14k', '18k', '22k', '24k')),
     peso_gramos DECIMAL(10,3) NOT NULL CHECK (peso_gramos > 0),
@@ -148,7 +153,7 @@ CREATE TABLE inventario_oro (
     );
 
 -- Tabla: inventario_maquinaria
-CREATE TABLE inventario_maquinaria (
+CREATE TABLE IF NOT EXISTS inventario_maquinaria (
     id_maquinaria VARCHAR (15) PRIMARY KEY NOT NULL,
     nombre_maquinaria VARCHAR(200) NOT NULL,
     tipo_maquinaria VARCHAR(100) NOT NULL,
@@ -166,7 +171,7 @@ CREATE TABLE inventario_maquinaria (
 );
 
 -- Tabla: inventario_insumos
-CREATE TABLE inventario_insumos (
+CREATE TABLE IF NOT EXISTS inventario_insumos (
     id_insumos NUMERIC(20)  PRIMARY KEY NOT NULL,
     nombre_insumos VARCHAR(50) NOT NULL,
     categoria_insumos VARCHAR(100) NOT NULL,
@@ -182,7 +187,7 @@ CREATE TABLE inventario_insumos (
 );
 
 -- Tabla: movimientos (historial de todos los inventarios)
-CREATE TABLE movimientos(
+CREATE TABLE IF NOT EXISTS movimientos(
     id_movim SERIAL PRIMARY KEY,
     tipo_inventario VARCHAR(20) NOT NULL CHECK (tipo_inventario IN ('oro', 'maquinaria', 'insumos')),
     item_id INTEGER NOT NULL,
@@ -202,7 +207,7 @@ CREATE TABLE movimientos(
 -- ============================================
 
 -- Tabla: productos (catálogo)
-CREATE TABLE productos (
+CREATE TABLE IF NOT EXISTS productos (
     id_productos INTEGER    PRIMARY KEY NOT NULL,
     nombre_productos VARCHAR(200) NOT NULL,
     codigo_sku VARCHAR(50) UNIQUE NOT NULL, ---ESTO PARA QUE ES ???
@@ -216,7 +221,7 @@ CREATE TABLE productos (
 );
 
 -- Tabla: recetas_produccion (BOM - Bill of Materials)
-CREATE TABLE recetas_produccion (
+CREATE TABLE IF NOT EXISTS recetas_produccion (
     id_receta_produccion INTEGER PRIMARY KEY    NOT NULL,
     tipo_material_recetas     VARCHAR(20) NOT NULL CHECK (tipo_material_recetas  IN ('oro', 'insumo')),
     id_insumos NUMERIC(20) NOT NULL,
@@ -230,7 +235,7 @@ CREATE TABLE recetas_produccion (
 );
 
 -- Tabla: ordenes_produccion
-CREATE TABLE ordenes_produccion (
+CREATE TABLE IF NOT EXISTS ordenes_produccion (
     id_orden_prod    INTEGER    PRIMARY KEY     NOT NULL,
     codigo_orden    NUMERIC(20)     NOT NULL,
     id_productos        INTEGER      NOT NULL,      
@@ -249,7 +254,7 @@ CREATE TABLE ordenes_produccion (
 );
 
 -- Tabla: consumo_materiales
-CREATE TABLE consumo_materiales (
+CREATE TABLE IF NOT EXISTS consumo_materiales (
     id_consumo      INTEGER     PRIMARY KEY NOT NULL,
     id_orden_prod    INTEGER       NOT NULL,
     tipo_material VARCHAR(20) NOT NULL CHECK (tipo_material IN ('oro', 'insumo')),
@@ -268,7 +273,7 @@ CREATE TABLE consumo_materiales (
 -- ============================================
 
 -- Tabla: creaciones_terminadas
-CREATE TABLE creaciones_terminadas(
+CREATE TABLE IF NOT EXISTS creaciones_terminadas(
     id_terminados  	INTEGER		 PRIMARY KEY     NOT NULL,
     id_orden_prod    INTEGER       NOT NULL,
     id_insumos NUMERIC(20) NOT NULL,
@@ -296,7 +301,7 @@ CREATE TABLE creaciones_terminadas(
     FOREIGN KEY (id_insumos)    REFERENCES inventario_insumos(id_insumos)ON DELETE RESTRICT
 );
 
-CREATE TABLE retrabajos (
+CREATE TABLE IF NOT EXISTS retrabajos (
     id_retrabajo     DECIMAL(12)        PRIMARY KEY                                     NOT NULL,   -- ID del retrabajo
     id_terminados  	 INTEGER													          NOT NULL,  -- ID del producto final asociado
     motivo_retrabajo            VARCHAR(50)                                             NOT NULL,   -- Razón del retrabajo
@@ -330,5 +335,6 @@ SELECT
     COUNT(*) AS cantidad
 FROM creaciones_terminadas
 GROUP BY id_orden_prod, calidad;
+
 
 
