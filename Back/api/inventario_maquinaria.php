@@ -28,7 +28,7 @@ if ($method === 'GET') {
         $id = (int) $_GET['id'];
         try {
             $stmt = $connLogic->prepare(
-                'SELECT id, nombre, tipo_maquinaria_id, tipo_codigo, tipo_nombre, marca, modelo, numero_serie, fecha_compra, valor_compra, estado, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(0, 1000, NULL, NULL) WHERE id = :id'
+                'SELECT id, nombre, tipo_maquinaria_id, tipo_nombre, marca, modelo, numero_serie, fecha_compra, valor_compra, estado, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(0, 1000, NULL, NULL) WHERE id = :id'
             );
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
             $stmt->execute();
@@ -54,7 +54,7 @@ if ($method === 'GET') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, tipo_maquinaria_id, tipo_codigo, tipo_nombre, marca, modelo, numero_serie, fecha_compra, valor_compra, estado, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado, :activo)'
+            'SELECT id, nombre, tipo_maquinaria_id, tipo_nombre, marca, modelo, numero_serie, fecha_compra, valor_compra, estado, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado, :activo)'
         );
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);

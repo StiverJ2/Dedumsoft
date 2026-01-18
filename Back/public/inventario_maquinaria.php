@@ -18,7 +18,10 @@ function format_maq_tipo_badge($tipo)
     $tipo = trim((string) $tipo);
     if ($tipo === '')
         return '';
-    $key = strtolower($tipo);
+    // Normalizar: quitar acentos para comparación
+    $acentos = ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ñ'];
+    $sinAcentos = ['a', 'e', 'i', 'o', 'u', 'n', 'a', 'e', 'i', 'o', 'u', 'n'];
+    $key = strtolower(str_replace($acentos, $sinAcentos, $tipo));
     $label = ucwords(str_replace('_', ' ', $tipo));
     $cls = 'ds-badge--neutral';
     if (strpos($key, 'corte') !== false || strpos($key, 'sierra') !== false)
@@ -66,7 +69,7 @@ try {
 }
 
 try {
-    $stmt = $connLogic->query("SELECT id, codigo, nombre FROM tipos_maquinaria WHERE activo = TRUE ORDER BY nombre");
+    $stmt = $connLogic->query("SELECT id, nombre FROM tipos_maquinaria WHERE activo = TRUE ORDER BY nombre");
     $tipo_maquinaria_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log('inventario tipos_maquinaria error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
