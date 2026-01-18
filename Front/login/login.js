@@ -1,4 +1,4 @@
-document.getElementById("loginForm").addEventListener("submit", async function(e) {
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const username = document.getElementById("username").value.trim();
@@ -23,20 +23,11 @@ document.getElementById("loginForm").addEventListener("submit", async function(e
         
         // Aquí iría tu llamada real a la API:
         /*
-        const response = await fetch("/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password })
-        });
+        const response = await axios.post("/api/login", { username, password });
+        const data = response.data;
 
-        const data = await response.json();
-
-        if (response.ok) {
-            sessionStorage.setItem("authToken", data.token);
-            window.location.href = "index.html";
-        } else {
-            errorMessage.textContent = data.message || "Usuario o contraseña incorrectos.";
-        }
+        sessionStorage.setItem("authToken", data.token);
+        window.location.href = "index.html";
         */
         
         // Simulación de login exitoso para demostración
@@ -49,7 +40,7 @@ document.getElementById("loginForm").addEventListener("submit", async function(e
 
     } catch (error) {
         console.error("Error de conexión:", error);
-        errorMessage.textContent = "Error de conexión con el servidor.";
+        errorMessage.textContent = error.response?.data?.message || "Error de conexión con el servidor.";
     } finally {
         loginButton.textContent = "Ingresar";
         loginButton.disabled = false;
@@ -58,17 +49,17 @@ document.getElementById("loginForm").addEventListener("submit", async function(e
 
 // Efecto de focus mejorado
 document.querySelectorAll('input').forEach(input => {
-    input.addEventListener('focus', function() {
-        this.parentElement.style.transform = 'translateY(-2px)';
+    input.addEventListener('focus', () => {
+        input.parentElement.style.transform = 'translateY(-2px)';
     });
     
-    input.addEventListener('blur', function() {
-        this.parentElement.style.transform = 'translateY(0)';
+    input.addEventListener('blur', () => {
+        input.parentElement.style.transform = 'translateY(0)';
     });
 });
 
 // Funcionalidad para el enlace "Olvidé mi contraseña"
-document.querySelector(".forgot-password").addEventListener("click", function(e) {
+document.querySelector(".forgot-password").addEventListener("click", (e) => {
     e.preventDefault();
     alert("Función de recuperación de contraseña en desarrollo. Por favor, contacte al administrador.");
 });

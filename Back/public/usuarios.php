@@ -137,22 +137,22 @@ include __DIR__ . '/partials/nav.php';
 <?php include __DIR__ . '/partials/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
-        function formatRol(rol) {
+        const formatRol = (rol) => {
             if (!rol) return '';
-            var key = rol.toLowerCase();
-            var label = rol.charAt(0).toUpperCase() + rol.slice(1);
-            var cls = 'ds-badge--neutral';
+            const key = rol.toLowerCase();
+            const label = rol.charAt(0).toUpperCase() + rol.slice(1);
+            let cls = 'ds-badge--neutral';
             if (key === 'administrador') cls = 'ds-badge--danger';
             else if (key === 'operador') cls = 'ds-badge--info';
             else if (key === 'lectura') cls = 'ds-badge--muted';
-            return '<span class="ds-badge ' + cls + '">' + label + '</span>';
-        }
-        function formatActivo(v) {
+            return `<span class="ds-badge ${cls}">${label}</span>`;
+        };
+        const formatActivo = (v) => {
             if (v) return '<span class="ds-badge ds-badge--success">Activo</span>';
             return '<span class="ds-badge ds-badge--muted">Inactivo</span>';
-        }
-        $(function () {
-            $.getJSON('../api/reportes_usuarios.php', function (data) {
+        };
+        $(() => {
+            $.getJSON('../api/reportes_usuarios.php', (data) => {
                 $('#usuarios-table').DataTable({
                     data: data.DATOS || [],
                     columns: [

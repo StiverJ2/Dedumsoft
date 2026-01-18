@@ -410,30 +410,30 @@ include __DIR__ . '/partials/nav.php';
 
 <?php if (!$legacy): ?>
 <script>
-function getDateParams() {
+const getDateParams = () => {
     const desde = document.getElementById('desde').value;
     const hasta = document.getElementById('hasta').value;
     const params = new URLSearchParams();
     if (desde) params.set('desde', desde);
     if (hasta) params.set('hasta', hasta);
     return params.toString();
-}
+};
 
-function formatDateTime(value) {
+const formatDateTime = (value) => {
     if (!value) return '';
     let text = String(value).replace('T', ' ').replace('Z', '');
     return text.replace(/\.\d+/, '');
-}
+};
 
-function formatNumber(value) {
+const formatNumber = (value) => {
     if (value === null || value === undefined || value === '') return '';
     const num = Number(value);
     if (Number.isNaN(num)) return String(value);
     const truncated = Math.trunc(num * 100) / 100;
     return truncated.toFixed(2);
-}
+};
 
-function formatStatus(value) {
+const formatStatus = (value) => {
     const raw = (value || '').toString();
     const label = raw.replace(/_/g, ' ').toUpperCase();
     const key = raw.toLowerCase();
@@ -444,16 +444,15 @@ function formatStatus(value) {
     else if (key === 'cancelada') cls = 'ds-badge--danger';
     else if (key === 'pausada') cls = 'ds-badge--muted';
     return `<span class="ds-badge ${cls}">${label}</span>`;
-}
+};
 
-async function fetchReport(url) {
+const fetchReport = async (url) => {
     const params = getDateParams();
-    const res = await fetch(url + (params ? '?' + params : ''));
-    const data = await res.json();
-    return data.DATOS || [];
-}
+    const response = await axios.get(url, { params: new URLSearchParams(params) });
+    return response.data.DATOS || [];
+};
 
-async function loadReport(url, tableId, rowBuilder, columnCount, emptyMessage) {
+const loadReport = async (url, tableId, rowBuilder, columnCount, emptyMessage) => {
     const rows = await fetchReport(url);
     const tbody = document.querySelector(tableId + ' tbody');
     tbody.innerHTML = '';
@@ -470,18 +469,18 @@ async function loadReport(url, tableId, rowBuilder, columnCount, emptyMessage) {
         tbody.appendChild(tr);
     });
     return rows;
-}
+};
 
 const chartCache = {};
 
-function formatShortDate(seconds) {
+const formatShortDate = (seconds) => {
     const d = new Date(seconds * 1000);
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return month + '-' + day;
-}
+};
 
-function renderChart(containerId, opts, data, emptyMessage) {
+const renderChart = (containerId, opts, data, emptyMessage) => {
     const container = document.querySelector(containerId);
     if (!container) {
         return;
@@ -512,17 +511,17 @@ function renderChart(containerId, opts, data, emptyMessage) {
     }
     container.innerHTML = '';
     chartCache[containerId] = new uPlot(finalOpts, data, container);
-}
+};
 
-function toDateSeconds(value) {
+const toDateSeconds = (value) => {
     if (!value) return null;
     const text = String(value).replace(' ', 'T').replace('Z', '');
     const parsed = Date.parse(text);
     if (Number.isNaN(parsed)) return null;
     return Math.floor(parsed / 1000);
-}
+};
 
-function countByKey(rows, key) {
+const countByKey = (rows, key) => {
     const map = {};
     rows.forEach(row => {
         const raw = String(row[key] || '').trim();
@@ -532,9 +531,9 @@ function countByKey(rows, key) {
     const labels = Object.keys(map);
     const values = labels.map(label => map[label]);
     return { labels, values };
-}
+};
 
-function sumByKey(rows, key, valueKey) {
+const sumByKey = (rows, key, valueKey) => {
     const map = {};
     rows.forEach(row => {
         const raw = String(row[key] || '').trim();
@@ -545,9 +544,9 @@ function sumByKey(rows, key, valueKey) {
     const labels = Object.keys(map);
     const values = labels.map(label => map[label]);
     return { labels, values };
-}
+};
 
-function buildTimeSeries(rows, dateKey, valueKey) {
+const buildTimeSeries = (rows, dateKey, valueKey) => {
     const map = {};
     rows.forEach(row => {
         const ts = toDateSeconds(row[dateKey]);
@@ -558,9 +557,9 @@ function buildTimeSeries(rows, dateKey, valueKey) {
     const keys = Object.keys(map).map(k => Number(k)).sort((a, b) => a - b);
     const series = keys.map(k => map[k]);
     return { x: keys, y: series };
-}
+};
 
-function buildBarOptions(labels, seriesLabel) {
+const buildBarOptions = (labels, seriesLabel) => {
     const count = labels.length;
     const barOpts = {
         scales: { 
@@ -605,9 +604,9 @@ function buildBarOptions(labels, seriesLabel) {
         barOpts.series[1].paths = uPlot.paths.bars({ size: [0.65, 100] });
     }
     return barOpts;
-}
+};
 
-function buildLineOptions(seriesLabel) {
+const buildLineOptions = (seriesLabel) => {
     return {
         scales: { x: { time: true } },
         axes: [
@@ -635,9 +634,9 @@ function buildLineOptions(seriesLabel) {
         ],
         padding: [10, 10, 0, 0]
     };
-}
+};
 
-async function loadAllReports() {
+const loadAllReports = async () => {
     const produccionRows = await loadReport('../api/reportes_produccion.php', '#rep-produccion', row =>
         `<td>${row.codigo_orden}</td><td>${row.producto}</td><td>${row.cantidad}</td><td>${row.artesano || ''}</td><td>${formatStatus(row.estado)}</td>`,
         5
@@ -687,7 +686,7 @@ async function loadAllReports() {
 
     const usuariosCounts = countByKey(usuariosRows || [], 'rol');
     renderChart('#chart-usuarios', buildBarOptions(usuariosCounts.labels, 'Usuarios'), [usuariosCounts.labels.map((_, idx) => idx), usuariosCounts.values]);
-}
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     const today = new Date();

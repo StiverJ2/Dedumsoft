@@ -130,8 +130,8 @@ include __DIR__ . '/partials/nav.php';
 <?php include __DIR__ . '/partials/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
-        var ubicacionesTable = null;
-        var areaOptions = [{
+        let ubicacionesTable = null;
+        const areaOptions = [{
             value: 'General',
             label: 'General'
         },
@@ -157,9 +157,9 @@ include __DIR__ . '/partials/nav.php';
         }
         ];
 
-        function formatAreaBadge(area) {
-            var a = (area || 'General').toLowerCase();
-            var badge = 'neutral';
+        const formatAreaBadge = (area) => {
+            const a = (area || 'General').toLowerCase();
+            let badge = 'neutral';
             switch (a) {
                 case 'produccion':
                 case 'producción':
@@ -179,18 +179,18 @@ include __DIR__ . '/partials/nav.php';
                     badge = 'danger';
                     break;
             }
-            var display = a.charAt(0).toUpperCase() + a.slice(1);
-            return '<span class="ds-badge ds-badge--' + badge + '">' + display + '</span>';
-        }
+            const display = a.charAt(0).toUpperCase() + a.slice(1);
+            return `<span class="ds-badge ds-badge--${badge}">${display}</span>`;
+        };
 
-        function formatActivoBadge(activo) {
+        const formatActivoBadge = (activo) => {
             if (activo) {
                 return '<span class="ds-badge ds-badge--success">Activo</span>';
             }
             return '<span class="ds-badge ds-badge--muted">Inactivo</span>';
-        }
+        };
 
-        function buildUbicacionForm(data) {
+        const buildUbicacionForm = (data) => {
             data = data || {};
             return DsCrud.field({
                 name: 'nombre',
@@ -213,25 +213,31 @@ include __DIR__ . '/partials/nav.php';
                     value: data.area || 'General',
                     options: areaOptions
                 });
-        }
+        };
 
-        function reloadTable() {
+        const reloadTable = () => {
             if (ubicacionesTable) {
                 ubicacionesTable.ajax.reload(null, false);
             }
-        }
+        };
 
-        function openCreateModal() {
+        const openCreateModal = () => {
             DsCrud.openModal({
                 title: 'Nueva Ubicación',
-                body: buildUbicacionForm(),
+                body: `<form id="frm-ubicacion">${buildUbicacionForm()}</form>`,
                 saveText: 'Crear',
-                onSave: function (formData, close) {
-                    if (!formData.nombre) {
-                        DsCrud.toast('El nombre es requerido', 'error');
+                onSave: (modalEl, close) => {
+                    const form = modalEl.querySelector('#frm-ubicacion');
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
                         return;
                     }
-                    DsCrud.api('../api/ubicaciones.php', 'POST', formData, function (success, resp) {
+                    const fd = new FormData(form);
+                    const payload = {};
+                    fd.forEach((value, key) => {
+                        payload[key] = value;
+                    });
+                    DsCrud.api('../api/ubicaciones.php', 'POST', payload, (success, resp) => {
                         if (success) {
                             DsCrud.toast('Ubicación creada');
                             reloadTable();
@@ -242,20 +248,22 @@ include __DIR__ . '/partials/nav.php';
                     });
                 }
             });
-        }
+        };
 
-        function openEditModal(row) {
+        const openEditModal = (row) => {
             DsCrud.openModal({
                 title: 'Editar Ubicación',
-                body: buildUbicacionForm(row),
+                body: `<form id="frm-ubicacion">${buildUbicacionForm(row)}</form>`,
                 saveText: 'Guardar',
-                onSave: function (formData, close) {
-                    if (!formData.nombre) {
-                        DsCrud.toast('El nombre es requerido', 'error');
+                onSave: (modalEl, close) => {
+                    const form = modalEl.querySelector('#frm-ubicacion');
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
                         return;
                     }
-                    formData.id = row.id;
-                    DsCrud.api('../api/ubicaciones.php', 'PUT', formData, function (success, resp) {
+                    const fd = new FormData(form);
+                    const payload = { id: row.id, ...Object.fromEntries(fd) };
+                    DsCrud.api('../api/ubicaciones.php', 'PUT', payload, (success, resp) => {
                         if (success) {
                             DsCrud.toast('Ubicación actualizada');
                             reloadTable();
@@ -266,18 +274,18 @@ include __DIR__ . '/partials/nav.php';
                     });
                 }
             });
-        }
+        };
 
-        function openDeleteConfirm(row) {
+        const openDeleteConfirm = (row) => {
             DsCrud.confirm({
                 title: 'Eliminar Ubicación',
-                message: '¿Desea eliminar la ubicación "' + row.nombre + '"?',
+                message: `¿Desea eliminar la ubicación "${row.nombre}"?`,
                 warning: 'Esta acción desactivará la ubicación.',
                 confirmText: 'Eliminar',
-                onConfirm: function () {
+                onConfirm: () => {
                     DsCrud.api('../api/ubicaciones.php', 'DELETE', {
                         id: row.id
-                    }, function (success, resp) {
+                    }, (success, resp) => {
                         if (success) {
                             DsCrud.toast('Ubicación eliminada');
                             reloadTable();
@@ -289,61 +297,45 @@ include __DIR__ . '/partials/nav.php';
             });
         }
 
-        $(function () {
+        document.addEventListener('DOMContentLoaded', () => {
             ubicacionesTable = $('#ubicaciones-table').DataTable({
                 ajax: {
                     url: '../api/ubicaciones.php?limit=500&offset=0',
                     dataSrc: 'DATOS'
                 },
-                columns: [{
-                    data: 'id'
-                },
-                {
-                    data: 'nombre'
-                },
-                {
-                    data: 'descripcion',
-                    defaultContent: ''
-                },
-                {
-                    data: 'area',
-                    render: function (data) {
-                        return formatAreaBadge(data);
+                columns: [
+                    { data: 'id' },
+                    { data: 'nombre' },
+                    { data: 'descripcion', defaultContent: '' },
+                    { data: 'area', render: (data) => formatAreaBadge(data) },
+                    { data: 'activo', render: (data) => formatActivoBadge(data) },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        render: (data, type, row) => type === 'display' ? DsCrud.actionButtons(row.id) : ''
                     }
-                },
-                {
-                    data: 'activo',
-                    render: function (data) {
-                        return formatActivoBadge(data);
-                    }
-                },
-                {
-                    data: null,
-                    orderable: false,
-                    searchable: false,
-                    render: function (data, type, row) {
-                        if (type !== 'display') return '';
-                        return DsCrud.actionButtons(row.id);
-                    }
-                }
                 ],
-                language: {
-                    url: 'assets/dataTables.es-ES.json'
-                }
+                language: { url: 'assets/dataTables.es-ES.json' }
             });
 
             // Add button
-            $('#btn-add-ubicacion').on('click', openCreateModal);
+            document.getElementById('btn-add-ubicacion').addEventListener('click', openCreateModal);
 
             // Edit/Delete buttons (delegated)
-            $('#ubicaciones-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
-                var row = ubicacionesTable.row($(this).closest('tr')).data();
-                openEditModal(row);
-            });
+            document.getElementById('ubicaciones-table').addEventListener('click', (e) => {
+                const editBtn = e.target.closest('.ds-action-btn[data-action="edit"]');
+                if (editBtn) {
+                    const row = ubicacionesTable.row(editBtn.closest('tr')).data();
+                    openEditModal(row);
+                    return;
+                }
 
-            $('#ubicaciones-table').on('click', '.ds-action-btn[data-action="delete"]', function () {
-                var row = ubicacionesTable.row($(this).closest('tr')).data();
-                openDeleteConfirm(row);
+                const deleteBtn = e.target.closest('.ds-action-btn[data-action="delete"]');
+                if (deleteBtn) {
+                    const row = ubicacionesTable.row(deleteBtn.closest('tr')).data();
+                    openDeleteConfirm(row);
+                }
             });
         });
     </script>
@@ -360,7 +352,8 @@ include __DIR__ . '/partials/nav.php';
             }
 
             function selectHtml(name, value, options, req) {
-                var h = '<select name="' + name + '" id="field-' + name + '" style="width:100%;padding:6px;font-size:14px;"' + (req ? ' required' : '') + '>';
+                var h = '<select name="' + name + '" id="field-' + name +
+                    '" style="width:100%;padding:6px;font-size:14px;"' + (req ? ' required' : '') + '>';
                 for (var i = 0; i < options.length; i++) {
                     var sel = (String(options[i].value) == String(value)) ? ' selected' : '';
                     h += '<option value="' + esc(options[i].value) + '"' + sel + '>' + esc(options[i].label) + '</option>';
@@ -371,14 +364,35 @@ include __DIR__ . '/partials/nav.php';
 
             function buildUbicacionFormHtml(d) {
                 d = d || {};
-                var areaOpts = [
-                    { value: 'General', label: 'General' }, { value: 'Produccion', label: 'Producción' },
-                    { value: 'Almacen', label: 'Almacén' }, { value: 'Ventas', label: 'Ventas' },
-                    { value: 'Oficina', label: 'Oficina' }, { value: 'Taller', label: 'Taller' }
+                var areaOpts = [{
+                    value: 'General',
+                    label: 'General'
+                }, {
+                    value: 'Produccion',
+                    label: 'Producción'
+                },
+                {
+                    value: 'Almacen',
+                    label: 'Almacén'
+                }, {
+                    value: 'Ventas',
+                    label: 'Ventas'
+                },
+                {
+                    value: 'Oficina',
+                    label: 'Oficina'
+                }, {
+                    value: 'Taller',
+                    label: 'Taller'
+                }
                 ];
-                return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' + esc(d.nombre || '') + '" placeholder="Ej: Bodega Principal" style="width:100%;padding:6px;font-size:14px;" required></div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Descripción</label><textarea name="descripcion" placeholder="Descripción opcional..." style="width:100%;padding:6px;font-size:14px;min-height:60px;">' + esc(d.descripcion || '') + '</textarea></div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Área</label>' + selectHtml('area', d.area || 'General', areaOpts, false) + '</div>';
+                return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' +
+                    esc(d.nombre || '') +
+                    '" placeholder="Ej: Bodega Principal" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Descripción</label><textarea name="descripcion" placeholder="Descripción opcional..." style="width:100%;padding:6px;font-size:14px;min-height:60px;">' +
+                    esc(d.descripcion || '') + '</textarea></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Área</label>' +
+                    selectHtml('area', d.area || 'General', areaOpts, false) + '</div>';
             }
 
             DsCrud.addEvent(DsCrud.getById('btn-add-ubicacion'), 'click', function () {
@@ -393,7 +407,9 @@ include __DIR__ . '/partials/nav.php';
                             DsCrud.toast('Ubicación creada', 'success');
                             DsCrud.closeModal();
                             location.reload();
-                        }, function (e) { DsCrud.toast(e, 'error'); });
+                        }, function (e) {
+                            DsCrud.toast(e, 'error');
+                        });
                     }
                 });
             });
@@ -404,27 +420,39 @@ include __DIR__ . '/partials/nav.php';
                         var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                         DsCrud.openModal({
                             title: 'Editar Ubicación #' + id,
-                            body: '<form id="frm-ubicacion">' + buildUbicacionFormHtml(d) + '</form>',
+                            body: '<form id="frm-ubicacion">' + buildUbicacionFormHtml(d) +
+                                '</form>',
                             saveText: 'Guardar',
                             onSave: function (modal) {
                                 if (!DsCrud.validateForm(modal)) return;
                                 var data = DsCrud.getFormData(modal);
                                 data.id = id;
-                                DsCrud.api('../api/ubicaciones.php', 'PUT', data, function () {
-                                    DsCrud.toast('Ubicación actualizada', 'success');
-                                    DsCrud.closeModal();
-                                    location.reload();
-                                }, function (e) { DsCrud.toast(e, 'error'); });
+                                DsCrud.api('../api/ubicaciones.php', 'PUT', data,
+                                    function () {
+                                        DsCrud.toast('Ubicación actualizada',
+                                            'success');
+                                        DsCrud.closeModal();
+                                        location.reload();
+                                    },
+                                    function (e) {
+                                        DsCrud.toast(e, 'error');
+                                    });
                             }
                         });
-                    }, function (e) { DsCrud.toast('Error: ' + e, 'error'); });
+                    }, function (e) {
+                        DsCrud.toast('Error: ' + e, 'error');
+                    });
                 },
                 onDelete: function (id) {
                     DsCrud.confirm('¿Eliminar ubicación #' + id + '?', function () {
-                        DsCrud.api('../api/ubicaciones.php', 'DELETE', { id: id }, function () {
+                        DsCrud.api('../api/ubicaciones.php', 'DELETE', {
+                            id: id
+                        }, function () {
                             DsCrud.toast('Ubicación eliminada', 'success');
                             location.reload();
-                        }, function (e) { DsCrud.toast(e, 'error'); });
+                        }, function (e) {
+                            DsCrud.toast(e, 'error');
+                        });
                     });
                 }
             });

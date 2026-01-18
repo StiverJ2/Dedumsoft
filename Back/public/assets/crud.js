@@ -3,82 +3,83 @@
  * Provides modal dialogs and API helpers for Create, Update, Delete operations
  */
 
-var DsCrud = (function() {
+const DsCrud = (() => {
     'use strict';
 
-    var toastContainer = null;
-    var currentModal = null;
+    let currentModal = null;
+    let notyf = null;
 
-    function ensureToastContainer() {
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.className = 'ds-toast-container';
-            document.body.appendChild(toastContainer);
+    const initNotyf = () => {
+        if (!notyf && window.Notyf) {
+            notyf = new Notyf({
+                duration: 3000,
+                position: { x: 'right', y: 'top' },
+                dismissible: true
+            });
         }
-        return toastContainer;
-    }
+        return notyf;
+    };
 
-    function toast(message, type) {
-        type = type || 'success';
-        var container = ensureToastContainer();
-        var el = document.createElement('div');
-        el.className = 'ds-toast ds-toast--' + type;
-        el.textContent = message;
-        container.appendChild(el);
-        setTimeout(function() {
-            el.style.opacity = '0';
-            setTimeout(function() {
-                if (el.parentNode) el.parentNode.removeChild(el);
-            }, 300);
-        }, 3000);
-    }
+    const toast = (message, type = 'success') => {
+        const notyfInstance = initNotyf();
+        if (notyfInstance) {
+            if (type === 'error') {
+                notyfInstance.error(message);
+            } else {
+                notyfInstance.success(message);
+            }
+        } else {
+            // Fallback to console if Notyf is not available
+            console[type === 'error' ? 'error' : 'log'](message);
+        }
+    };
 
-    function escapeHtml(text) {
+    const escapeHtml = (text) => {
         if (text === null || text === undefined) return '';
-        var div = document.createElement('div');
+        const div = document.createElement('div');
         div.textContent = String(text);
         return div.innerHTML;
-    }
+    };
 
-    function closeModal() {
+    const closeModal = () => {
         if (currentModal && currentModal.overlay && currentModal.overlay.parentNode) {
             currentModal.overlay.classList.remove('ds-modal--open');
-            setTimeout(function() {
+            setTimeout(() => {
                 if (currentModal && currentModal.overlay && currentModal.overlay.parentNode) {
                     currentModal.overlay.parentNode.removeChild(currentModal.overlay);
                 }
                 currentModal = null;
             }, 200);
         }
-    }
+    };
 
-    function openModal(options) {
+    const openModal = (options) => {
         closeModal();
 
-        var title = options.title || 'Modal';
-        var bodyHtml = options.body || '';
-        var onSave = options.onSave;
-        var saveText = options.saveText || 'Guardar';
-        var cancelText = options.cancelText || 'Cancelar';
+        const title = options.title || 'Modal';
+        const bodyHtml = options.body || '';
+        const onSave = options.onSave;
+        const saveText = options.saveText || 'Guardar';
+        const cancelText = options.cancelText || 'Cancelar';
 
-        var overlay = document.createElement('div');
+        const overlay = document.createElement('div');
         overlay.className = 'ds-modal-overlay';
 
-        var modal = document.createElement('div');
+        const modal = document.createElement('div');
         modal.className = 'ds-modal';
 
-        var header = document.createElement('div');
+        const header = document.createElement('div');
         header.className = 'ds-modal-header';
-        header.innerHTML = '<h3>' + escapeHtml(title) + '</h3><button type="button" class="ds-modal-close" aria-label="Cerrar">&times;</button>';
+        header.innerHTML = `<h3>${escapeHtml(title)}</h3><button type="button" class="ds-modal-close" aria-label="Cerrar">&times;</button>`;
 
-        var body = document.createElement('div');
+        const body = document.createElement('div');
         body.className = 'ds-modal-body';
         body.innerHTML = bodyHtml;
 
-        var footer = document.createElement('div');
+        const footer = document.createElement('div');
         footer.className = 'ds-modal-footer';
-        footer.innerHTML = '<button type="button" class="btn btn-secondary ds-modal-cancel">' + escapeHtml(cancelText) + '</button>' +
-            '<button type="button" class="btn ds-modal-save">' + escapeHtml(saveText) + '</button>';
+        footer.innerHTML = `<button type="button" class="btn btn-secondary ds-modal-cancel">${escapeHtml(cancelText)}</button>
+            <button type="button" class="btn ds-modal-save">${escapeHtml(saveText)}</button>`;
 
         modal.appendChild(header);
         modal.appendChild(body);
@@ -86,119 +87,143 @@ var DsCrud = (function() {
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        currentModal = { overlay: overlay, modal: modal, body: body };
+        currentModal = { overlay, modal, body };
 
-        requestAnimationFrame(function() {
+        requestAnimationFrame(() => {
             overlay.classList.add('ds-modal--open');
         });
 
         header.querySelector('.ds-modal-close').addEventListener('click', closeModal);
-        overlay.addEventListener('click', function(e) {
+        overlay.addEventListener('click', (e) => {
             if (e.target === overlay) closeModal();
         });
         footer.querySelector('.ds-modal-cancel').addEventListener('click', closeModal);
-        footer.querySelector('.ds-modal-save').addEventListener('click', function() {
+        footer.querySelector('.ds-modal-save').addEventListener('click', () => {
             if (onSave) {
-                onSave(modal);
+                const formData = getFormData(modal);
+                onSave(modal, closeModal, formData);
             }
         });
 
-        var firstInput = body.querySelector('input, select, textarea');
+        const firstInput = body.querySelector('input, select, textarea');
         if (firstInput) {
-            setTimeout(function() { firstInput.focus(); }, 100);
+            setTimeout(() => firstInput.focus(), 100);
         }
 
-        return { close: closeModal, modal: modal, body: body, overlay: overlay };
-    }
+        return { close: closeModal, modal, body, overlay };
+    };
 
-    function confirm(message, onConfirm) {
+    const getFormData = (formOrModal) => {
+        const data = {};
+        const inputs = formOrModal.querySelectorAll('input, select, textarea');
+        
+        inputs.forEach((el) => {
+            const name = el.name || el.getAttribute('name');
+            if (!name) return;
+            
+            if (el.type === 'checkbox') {
+                data[name] = el.checked;
+            } else if (el.type === 'radio') {
+                if (el.checked) {
+                    data[name] = el.value;
+                }
+            } else {
+                data[name] = el.value;
+            }
+        });
+        
+        return data;
+    };
+
+    const confirm = (message, onConfirm) => {
         openModal({
             title: 'Confirmar',
-            body: '<p class="ds-confirm-text">' + escapeHtml(message) + '</p>',
+            body: `<p class="ds-confirm-text">${escapeHtml(message)}</p>`,
             saveText: 'Eliminar',
             cancelText: 'Cancelar',
-            onSave: function() {
+            onSave: () => {
                 if (onConfirm) onConfirm();
                 closeModal();
             }
         });
-    }
+    };
 
-    function field(options) {
-        var name = options.name;
-        var label = options.label || name;
-        var type = options.type || 'text';
-        var value = options.value !== undefined && options.value !== null ? options.value : '';
-        var required = options.required ? ' required' : '';
-        var requiredMark = options.required ? ' <span style="color:#c00">*</span>' : '';
-        var placeholder = options.placeholder || '';
-        var optionsList = options.options || [];
-        var attrs = options.attrs || '';
+    const field = (options) => {
+        const name = options.name;
+        const label = options.label || name;
+        const type = options.type || 'text';
+        const value = options.value !== undefined && options.value !== null ? options.value : '';
+        const required = options.required ? ' required' : '';
+        const requiredMark = options.required ? ' <span style="color:#c00">*</span>' : '';
+        const placeholder = options.placeholder || '';
+        const optionsList = options.options || [];
+        const attrs = options.attrs || '';
 
-        var html = '<div class="ds-form-group">';
-        html += '<label for="field-' + escapeHtml(name) + '">' + escapeHtml(label) + requiredMark + '</label>';
+        let html = '<div class="ds-form-group">';
+        html += `<label for="field-${escapeHtml(name)}">${escapeHtml(label)}${requiredMark}</label>`;
 
         if (type === 'select') {
-            html += '<select id="field-' + escapeHtml(name) + '" name="' + escapeHtml(name) + '" class="ds-form-control"' + required + '>';
-            for (var i = 0; i < optionsList.length; i++) {
-                var opt = optionsList[i];
-                var optVal = typeof opt === 'object' ? opt.value : opt;
-                var optLabel = typeof opt === 'object' ? opt.label : opt;
-                var selected = String(optVal) === String(value) ? ' selected' : '';
-                html += '<option value="' + escapeHtml(optVal) + '"' + selected + '>' + escapeHtml(optLabel) + '</option>';
-            }
+            html += `<select id="field-${escapeHtml(name)}" name="${escapeHtml(name)}" class="ds-form-control"${required}>`;
+            optionsList.forEach((opt) => {
+                const optVal = typeof opt === 'object' ? opt.value : opt;
+                const optLabel = typeof opt === 'object' ? opt.label : opt;
+                const selected = String(optVal) === String(value) ? ' selected' : '';
+                html += `<option value="${escapeHtml(optVal)}"${selected}>${escapeHtml(optLabel)}</option>`;
+            });
             html += '</select>';
         } else if (type === 'textarea') {
-            html += '<textarea id="field-' + escapeHtml(name) + '" name="' + escapeHtml(name) + '" class="ds-form-control" placeholder="' + escapeHtml(placeholder) + '"' + required + ' ' + attrs + '>' + escapeHtml(value) + '</textarea>';
+            html += `<textarea id="field-${escapeHtml(name)}" name="${escapeHtml(name)}" class="ds-form-control" placeholder="${escapeHtml(placeholder)}"${required} ${attrs}>${escapeHtml(value)}</textarea>`;
         } else {
-            html += '<input type="' + escapeHtml(type) + '" id="field-' + escapeHtml(name) + '" name="' + escapeHtml(name) + '" class="ds-form-control" value="' + escapeHtml(value) + '" placeholder="' + escapeHtml(placeholder) + '"' + required + ' ' + attrs + '>';
+            html += `<input type="${escapeHtml(type)}" id="field-${escapeHtml(name)}" name="${escapeHtml(name)}" class="ds-form-control" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}"${required} ${attrs}>`;
         }
 
         html += '</div>';
         return html;
-    }
+    };
 
-    function api(url, method, data, onSuccess, onError) {
-        var options = {
+    const api = (url, method, data, onSuccess, onError) => {
+        const config = {
             method: method,
+            url: url,
             headers: { 'Content-Type': 'application/json' }
         };
+        
         if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
-            options.body = JSON.stringify(data);
+            config.data = data;
         }
-        fetch(url, options)
-            .then(function(res) {
-                return res.json().then(function(json) {
-                    return { ok: res.ok, status: res.status, data: json };
-                });
-            })
-            .then(function(result) {
-                if (result.ok && result.data.CODIGO !== 500) {
-                    if (onSuccess) onSuccess(result.data);
+        
+        axios(config)
+            .then((response) => {
+                const responseData = response.data;
+                if (responseData.CODIGO !== 500) {
+                    if (onSuccess) onSuccess(true, responseData);
                 } else {
-                    var errMsg = result.data.MENSAJE || result.data.message || 'Error en la operación';
+                    const errMsg = responseData.MENSAJE || responseData.message || 'Error en la operación';
                     if (onError) onError(errMsg);
+                    else if (onSuccess) onSuccess(false, responseData);
                 }
             })
-            .catch(function(err) {
-                if (onError) onError(err.message || 'Error de conexión');
+            .catch((error) => {
+                const errMsg = error.response?.data?.MENSAJE || error.message || 'Error de conexión';
+                if (onError) onError(errMsg);
+                else if (onSuccess) onSuccess(false, { MENSAJE: errMsg });
             });
-    }
+    };
 
-    function actionButtons(id) {
+    const actionButtons = (id) => {
         if (id === undefined || id === null) return '';
-        var useEmoji = typeof window !== 'undefined' && window.DEDUMSOFT_ICON_MODE === 'emoji';
-        var html = '<div class="ds-actions-cell">';
+        const useEmoji = typeof window !== 'undefined' && window.DEDUMSOFT_ICON_MODE === 'emoji';
+        let html = '<div class="ds-actions-cell">';
         if (useEmoji) {
-            html += '<button type="button" class="ds-action-btn ds-action-btn--edit" data-action="edit" data-id="' + escapeHtml(id) + '" title="Editar" aria-label="Editar">✏️</button>';
-            html += '<button type="button" class="ds-action-btn ds-action-btn--delete" data-action="delete" data-id="' + escapeHtml(id) + '" title="Eliminar" aria-label="Eliminar">🗑️</button>';
+            html += `<button type="button" class="ds-action-btn ds-action-btn--edit" data-action="edit" data-id="${escapeHtml(id)}" title="Editar" aria-label="Editar">✏️</button>`;
+            html += `<button type="button" class="ds-action-btn ds-action-btn--delete" data-action="delete" data-id="${escapeHtml(id)}" title="Eliminar" aria-label="Eliminar">🗑️</button>`;
         } else {
-            html += '<button type="button" class="ds-action-btn ds-action-btn--edit" data-action="edit" data-id="' + escapeHtml(id) + '" title="Editar"><img src="assets/icons/fatcow/16/pencil.png" alt="Editar"></button>';
-            html += '<button type="button" class="ds-action-btn ds-action-btn--delete" data-action="delete" data-id="' + escapeHtml(id) + '" title="Eliminar"><img src="assets/icons/fatcow/16/cross.png" alt="Eliminar"></button>';
+            html += `<button type="button" class="ds-action-btn ds-action-btn--edit" data-action="edit" data-id="${escapeHtml(id)}" title="Editar"><img src="assets/icons/fatcow/16/pencil.png" alt="Editar"></button>`;
+            html += `<button type="button" class="ds-action-btn ds-action-btn--delete" data-action="delete" data-id="${escapeHtml(id)}" title="Eliminar"><img src="assets/icons/fatcow/16/cross.png" alt="Eliminar"></button>`;
         }
         html += '</div>';
         return html;
-    }
+    };
 
     return {
         toast: toast,
@@ -208,6 +233,7 @@ var DsCrud = (function() {
         field: field,
         api: api,
         actionButtons: actionButtons,
-        escapeHtml: escapeHtml
+        escapeHtml: escapeHtml,
+        getFormData: getFormData
     };
 })();
