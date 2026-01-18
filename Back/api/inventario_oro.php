@@ -28,7 +28,7 @@ if ($method === 'GET') {
         $id = (int) $_GET['id'];
         try {
             $stmt = $connLogic->prepare(
-                'SELECT id, tipo_oro, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(0, 1000, NULL, NULL) WHERE id = :id'
+                'SELECT id, tipo_oro_id, tipo_oro_nombre, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(0, 1000, NULL, NULL) WHERE id = :id'
             );
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
             $stmt->execute();
@@ -45,8 +45,7 @@ if ($method === 'GET') {
 
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
     $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
-    $tipo = $_GET['tipo'] ?? null;
-    $tipo = ($tipo === '') ? null : $tipo;
+    $tipo_id = isset($_GET['tipo_id']) && $_GET['tipo_id'] !== '' ? (int) $_GET['tipo_id'] : null;
     $activo = filter_var($_GET['activo'] ?? 'true', FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
     if ($activo === null) {
         $activo = true;
@@ -54,11 +53,11 @@ if ($method === 'GET') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, tipo_oro, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(:offset, :limit, :tipo, :activo)'
+            'SELECT id, tipo_oro_id, tipo_oro_nombre, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(:offset, :limit, :tipo_id::int, :activo)'
         );
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':tipo', $tipo, $tipo === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->bindValue(':tipo_id', $tipo_id, $tipo_id === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
         $stmt->bindValue(':activo', $activo, PDO::PARAM_BOOL);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -86,7 +85,7 @@ if ($method === 'POST') {
     }
 
     // Validar campos requeridos
-    $required = ['tipo_oro', 'peso_gramos', 'precio_gramo'];
+    $required = ['tipo_oro_id', 'peso_gramos', 'precio_gramo'];
     foreach ($required as $field) {
         if (!isset($input[$field]) || $input[$field] === '') {
             http_response_code(400);
@@ -97,9 +96,9 @@ if ($method === 'POST') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_crear_inventario_oro(:tipo_oro, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza, :lote)'
+            'SELECT fun_crear_inventario_oro(:tipo_oro_id, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza, :lote)'
         );
-        $stmt->bindValue(':tipo_oro', $input['tipo_oro'], PDO::PARAM_STR);
+        $stmt->bindValue(':tipo_oro_id', (int) $input['tipo_oro_id'], PDO::PARAM_INT);
         $stmt->bindValue(':peso_gramos', $input['peso_gramos']);
         $stmt->bindValue(':precio_gramo', $input['precio_gramo']);
         $stmt->bindValue(':proveedor_id', $input['proveedor_id'] ?? null, isset($input['proveedor_id']) ? PDO::PARAM_INT : PDO::PARAM_NULL);
@@ -134,10 +133,10 @@ if ($method === 'PUT') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_actualizar_inventario_oro(:id, :tipo_oro, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza, :lote)'
+            'SELECT fun_actualizar_inventario_oro(:id, :tipo_oro_id, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza, :lote)'
         );
         $stmt->bindValue(':id', (int) $input['id'], PDO::PARAM_INT);
-        $stmt->bindValue(':tipo_oro', $input['tipo_oro'] ?? null, isset($input['tipo_oro']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':tipo_oro_id', isset($input['tipo_oro_id']) ? (int) $input['tipo_oro_id'] : null, isset($input['tipo_oro_id']) ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':peso_gramos', $input['peso_gramos'] ?? null);
         $stmt->bindValue(':precio_gramo', $input['precio_gramo'] ?? null);
         $stmt->bindValue(':proveedor_id', $input['proveedor_id'] ?? null, isset($input['proveedor_id']) ? PDO::PARAM_INT : PDO::PARAM_NULL);

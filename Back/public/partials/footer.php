@@ -5,16 +5,19 @@ $legacy = dedumsoft_is_legacy_browser();
 </main>
 </div>
 <?php if ($legacy): ?>
-    <script src="assets/table-sort.js"></script>
-    <script src="assets/crud-legacy.js"></script>
+<script src="assets/table-sort.js"></script>
+<script src="assets/crud-legacy.js"></script>
 <?php else: ?>
-    <script src="assets/jquery-3.7.1.min.js"></script>
-    <script src="assets/jquery.dataTables.min.js"></script>
-    <script src="assets/dataTables.bootstrap5.min.js"></script>
-    <script src="../bootstrap/popper.min.js"></script>
-    <script src="../bootstrap/bootstrap.min.js"></script>
-    <script src="assets/crud.js"></script>
+<script src="assets/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+<script src="assets/jquery.dataTables.min.js"></script>
+<script src="assets/dataTables.bootstrap5.min.js"></script>
+<script src="../bootstrap/popper.min.js"></script>
+<script src="../bootstrap/bootstrap.min.js"></script>
+<script>
+window.DEDUMSOFT_ICON_MODE = 'emoji';
+</script>
+<script src="assets/crud.js"></script>
 <?php endif; ?>
-</body>
-
-</html>

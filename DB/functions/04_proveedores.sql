@@ -7,13 +7,14 @@ SET search_path TO joyeria, seguridad, public;
 CREATE OR REPLACE FUNCTION fun_obtener_proveedores(
     par_offset int DEFAULT 0,
     par_limit int DEFAULT 50,
-    par_tipo text DEFAULT NULL,
+    par_tipo_id int DEFAULT NULL,
     par_activo boolean DEFAULT TRUE
 )
 RETURNS TABLE (
     id int,
     nombre text,
-    tipo text,
+    tipo_proveedor_id int,
+    tipo_nombre text,
     contacto text,
     telefono text,
     email text,
@@ -28,7 +29,8 @@ BEGIN
     SELECT
         p.id,
         p.nombre::text,
-        p.tipo::text,
+        p.tipo_proveedor_id,
+        t.nombre::text AS tipo_nombre,
         p.contacto::text,
         p.telefono::text,
         p.email::text,
@@ -36,7 +38,8 @@ BEGIN
         p.activo,
         p.fecha_registro
     FROM proveedores p
-    WHERE (par_tipo IS NULL OR p.tipo = par_tipo)
+    LEFT JOIN tipos_proveedor t ON p.tipo_proveedor_id = t.id
+    WHERE (par_tipo_id IS NULL OR p.tipo_proveedor_id = par_tipo_id)
       AND (par_activo IS NULL OR p.activo = par_activo)
     ORDER BY p.fecha_registro DESC
     OFFSET par_offset
@@ -53,7 +56,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION fun_crear_proveedor(
     par_nombre text,
-    par_tipo text,
+    par_tipo_proveedor_id int DEFAULT 1,
     par_contacto text DEFAULT NULL,
     par_telefono text DEFAULT NULL,
     par_email text DEFAULT NULL,
@@ -65,8 +68,8 @@ AS $$
 DECLARE
     v_id int;
 BEGIN
-    INSERT INTO proveedores (nombre, tipo, contacto, telefono, email, direccion, activo)
-    VALUES (par_nombre, par_tipo, par_contacto, par_telefono, par_email, par_direccion, TRUE)
+    INSERT INTO proveedores (nombre, tipo_proveedor_id, contacto, telefono, email, direccion, activo)
+    VALUES (par_nombre, par_tipo_proveedor_id, par_contacto, par_telefono, par_email, par_direccion, TRUE)
     RETURNING id INTO v_id;
     
     RETURN v_id;
@@ -79,7 +82,7 @@ $$;
 CREATE OR REPLACE FUNCTION fun_actualizar_proveedor(
     par_id int,
     par_nombre text DEFAULT NULL,
-    par_tipo text DEFAULT NULL,
+    par_tipo_proveedor_id int DEFAULT NULL,
     par_contacto text DEFAULT NULL,
     par_telefono text DEFAULT NULL,
     par_email text DEFAULT NULL,
@@ -93,7 +96,7 @@ BEGIN
     UPDATE proveedores
     SET 
         nombre = COALESCE(par_nombre, nombre),
-        tipo = COALESCE(par_tipo, tipo),
+        tipo_proveedor_id = COALESCE(par_tipo_proveedor_id, tipo_proveedor_id),
         contacto = COALESCE(par_contacto, contacto),
         telefono = COALESCE(par_telefono, telefono),
         email = COALESCE(par_email, email),

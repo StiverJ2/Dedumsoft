@@ -7,12 +7,13 @@ SET search_path TO joyeria, seguridad, public;
 CREATE OR REPLACE FUNCTION fun_obtener_inventario_oro(
     par_offset int DEFAULT 0,
     par_limit int DEFAULT 50,
-    par_tipo text DEFAULT NULL,
+    par_tipo_id int DEFAULT NULL,
     par_activo boolean DEFAULT TRUE
 )
 RETURNS TABLE (
     id int,
-    tipo_oro text,
+    tipo_oro_id int,
+    tipo_oro_nombre text,
     peso_gramos numeric,
     precio_gramo numeric,
     proveedor_id int,
@@ -31,7 +32,8 @@ BEGIN
     RETURN QUERY
     SELECT
         io.id,
-        io.tipo_oro::text,
+        io.tipo_oro_id,
+        t.nombre::text AS tipo_oro_nombre,
         io.peso_gramos,
         io.precio_gramo,
         io.proveedor_id,
@@ -45,7 +47,8 @@ BEGIN
         io.activo
     FROM inventario_oro io
     LEFT JOIN proveedores p ON io.proveedor_id = p.id
-    WHERE (par_tipo IS NULL OR io.tipo_oro = par_tipo)
+    LEFT JOIN tipos_oro t ON io.tipo_oro_id = t.id
+    WHERE (par_tipo_id IS NULL OR io.tipo_oro_id = par_tipo_id)
       AND (par_activo IS NULL OR io.activo = par_activo)
     ORDER BY io.fecha_registro DESC
     OFFSET par_offset
@@ -174,9 +177,9 @@ $$;
 -- ============================================
 
 CREATE OR REPLACE FUNCTION fun_crear_inventario_oro(
-    par_tipo_oro text,
-    par_peso_gramos numeric,
-    par_precio_gramo numeric,
+    par_tipo_oro_id int DEFAULT 1,
+    par_peso_gramos numeric DEFAULT 0,
+    par_precio_gramo numeric DEFAULT 0,
     par_proveedor_id int DEFAULT NULL,
     par_fecha_ingreso date DEFAULT CURRENT_DATE,
     par_ubicacion text DEFAULT NULL,
@@ -189,8 +192,8 @@ AS $$
 DECLARE
     v_id int;
 BEGIN
-    INSERT INTO inventario_oro (tipo_oro, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, activo)
-    VALUES (par_tipo_oro, par_peso_gramos, par_precio_gramo, par_proveedor_id, par_fecha_ingreso, par_ubicacion, par_pureza, par_lote, TRUE)
+    INSERT INTO inventario_oro (tipo_oro_id, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, activo)
+    VALUES (par_tipo_oro_id, par_peso_gramos, par_precio_gramo, par_proveedor_id, par_fecha_ingreso, par_ubicacion, par_pureza, par_lote, TRUE)
     RETURNING id INTO v_id;
     
     RETURN v_id;
@@ -202,7 +205,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION fun_actualizar_inventario_oro(
     par_id int,
-    par_tipo_oro text DEFAULT NULL,
+    par_tipo_oro_id int DEFAULT NULL,
     par_peso_gramos numeric DEFAULT NULL,
     par_precio_gramo numeric DEFAULT NULL,
     par_proveedor_id int DEFAULT NULL,
@@ -217,7 +220,7 @@ AS $$
 BEGIN
     UPDATE inventario_oro
     SET 
-        tipo_oro = COALESCE(par_tipo_oro, tipo_oro),
+        tipo_oro_id = COALESCE(par_tipo_oro_id, tipo_oro_id),
         peso_gramos = COALESCE(par_peso_gramos, peso_gramos),
         precio_gramo = COALESCE(par_precio_gramo, precio_gramo),
         proveedor_id = COALESCE(par_proveedor_id, proveedor_id),

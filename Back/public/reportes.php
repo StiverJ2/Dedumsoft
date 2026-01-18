@@ -698,3 +698,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <?php endif; ?>
 <?php include __DIR__ . '/partials/footer.php'; ?>
+</body>
+</html>

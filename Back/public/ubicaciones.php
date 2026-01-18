@@ -9,6 +9,31 @@ require_login('login.php');
 $legacy = dedumsoft_is_legacy_browser();
 $area = $_GET['area'] ?? '';
 $ubicaciones_rows = [];
+$area_options = [];
+
+// Obtener áreas desde tabla de catálogo
+if ($legacy) {
+    try {
+        $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM areas WHERE activo = true ORDER BY orden, nombre');
+        $stmt->execute();
+        $areas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $area_options = array_map(function ($a) {
+            return ['value' => $a['id'], 'label' => $a['nombre']];
+        }, $areas);
+    } catch (PDOException $e) {
+        error_log('areas error: ' . $e->getMessage());
+        // Fallback a valores por defecto
+        $area_options = [
+            ['value' => 1, 'label' => 'General'],
+            ['value' => 2, 'label' => 'Producción'],
+            ['value' => 3, 'label' => 'Almacén'],
+            ['value' => 4, 'label' => 'Ventas'],
+            ['value' => 5, 'label' => 'Oficina'],
+            ['value' => 6, 'label' => 'Taller']
+        ];
+    }
+}
 
 function format_area_badge($area)
 {
@@ -48,11 +73,11 @@ function format_activo_badge($activo)
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, descripcion, area, activo FROM fun_obtener_ubicaciones(:offset, :limit, :area, :activo)'
+            'SELECT id, nombre, descripcion, area_id, area_nombre, activo FROM fun_obtener_ubicaciones(:offset, :limit, :area_id, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
         $stmt->bindValue(':limit', 50, PDO::PARAM_INT);
-        $stmt->bindValue(':area', $area !== '' ? $area : null, $area !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':area_id', $area !== '' ? (int) $area : null, $area !== '' ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $ubicaciones_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -115,7 +140,7 @@ include __DIR__ . '/partials/nav.php';
                                 <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
                                 <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
                                 <td><?php echo htmlspecialchars((string) ($row['descripcion'] ?? '')); ?></td>
-                                <td><?php echo format_area_badge($row['area'] ?? 'General'); ?></td>
+                                <td><?php echo format_area_badge($row['area_nombre'] ?? 'General'); ?></td>
                                 <td><?php echo format_activo_badge($row['activo']); ?></td>
                                 <td class="ds-actions-col"></td>
                             </tr>
@@ -127,35 +152,21 @@ include __DIR__ . '/partials/nav.php';
     </div>
 </div>
 
-<?php include __DIR__ . '/partials/footer.php'; ?>
 <?php if (!$legacy): ?>
+    <!-- Load scripts before inline JS -->
+    <script src="assets/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script src="assets/jquery.dataTables.min.js"></script>
+    <script src="assets/dataTables.bootstrap5.min.js"></script>
+    <script src="../bootstrap/popper.min.js"></script>
+    <script src="../bootstrap/bootstrap.min.js"></script>
+    <script>window.DEDUMSOFT_ICON_MODE = 'emoji';</script>
+    <script src="assets/crud.js"></script>
     <script>
         let ubicacionesTable = null;
-        const areaOptions = [{
-            value: 'General',
-            label: 'General'
-        },
-        {
-            value: 'Produccion',
-            label: 'Producción'
-        },
-        {
-            value: 'Almacen',
-            label: 'Almacén'
-        },
-        {
-            value: 'Ventas',
-            label: 'Ventas'
-        },
-        {
-            value: 'Oficina',
-            label: 'Oficina'
-        },
-        {
-            value: 'Taller',
-            label: 'Taller'
-        }
-        ];
+        let areaOptions = [];
 
         const formatAreaBadge = (area) => {
             const a = (area || 'General').toLowerCase();
@@ -207,10 +218,10 @@ include __DIR__ . '/partials/nav.php';
                     placeholder: 'Descripción opcional...'
                 }) +
                 DsCrud.field({
-                    name: 'area',
+                    name: 'area_id',
                     label: 'Área',
                     type: 'select',
-                    value: data.area || 'General',
+                    value: data.area_id || 1,
                     options: areaOptions
                 });
         };
@@ -262,7 +273,10 @@ include __DIR__ . '/partials/nav.php';
                         return;
                     }
                     const fd = new FormData(form);
-                    const payload = { id: row.id, ...Object.fromEntries(fd) };
+                    const payload = {
+                        id: row.id,
+                        ...Object.fromEntries(fd)
+                    };
                     DsCrud.api('../api/ubicaciones.php', 'PUT', payload, (success, resp) => {
                         if (success) {
                             DsCrud.toast('Ubicación actualizada');
@@ -297,26 +311,75 @@ include __DIR__ . '/partials/nav.php';
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Cargar opciones desde la API
+            try {
+                const response = await axios.get('../api/opciones.php?tipo=areas');
+                areaOptions = response.data.DATOS || [];
+            } catch (error) {
+                console.error('Error cargando opciones:', error);
+                // Fallback a valores por defecto
+                areaOptions = [{
+                    value: 'General',
+                    label: 'General'
+                },
+                {
+                    value: 'Produccion',
+                    label: 'Producción'
+                },
+                {
+                    value: 'Almacen',
+                    label: 'Almacén'
+                },
+                {
+                    value: 'Ventas',
+                    label: 'Ventas'
+                },
+                {
+                    value: 'Oficina',
+                    label: 'Oficina'
+                },
+                {
+                    value: 'Taller',
+                    label: 'Taller'
+                }
+                ];
+            }
+
             ubicacionesTable = $('#ubicaciones-table').DataTable({
                 ajax: {
                     url: '../api/ubicaciones.php?limit=500&offset=0',
                     dataSrc: 'DATOS'
                 },
-                columns: [
-                    { data: 'id' },
-                    { data: 'nombre' },
-                    { data: 'descripcion', defaultContent: '' },
-                    { data: 'area', render: (data) => formatAreaBadge(data) },
-                    { data: 'activo', render: (data) => formatActivoBadge(data) },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        render: (data, type, row) => type === 'display' ? DsCrud.actionButtons(row.id) : ''
-                    }
+                columns: [{
+                    data: 'id'
+                },
+                {
+                    data: 'nombre'
+                },
+                {
+                    data: 'descripcion',
+                    defaultContent: ''
+                },
+                {
+                    data: 'area_nombre',
+                    render: (data) => formatAreaBadge(data || 'General')
+                },
+                {
+                    data: 'activo',
+                    render: (data) => formatActivoBadge(data)
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    render: (data, type, row) => type === 'display' ? DsCrud.actionButtons(row.id) :
+                        ''
+                }
                 ],
-                language: { url: 'assets/dataTables.es-ES.json' }
+                language: {
+                    url: 'assets/dataTables.es-ES.json'
+                }
             });
 
             // Add button
@@ -364,35 +427,14 @@ include __DIR__ . '/partials/nav.php';
 
             function buildUbicacionFormHtml(d) {
                 d = d || {};
-                var areaOpts = [{
-                    value: 'General',
-                    label: 'General'
-                }, {
-                    value: 'Produccion',
-                    label: 'Producción'
-                },
-                {
-                    value: 'Almacen',
-                    label: 'Almacén'
-                }, {
-                    value: 'Ventas',
-                    label: 'Ventas'
-                },
-                {
-                    value: 'Oficina',
-                    label: 'Oficina'
-                }, {
-                    value: 'Taller',
-                    label: 'Taller'
-                }
-                ];
+                var areaOpts = <?php echo json_encode($area_options); ?>;
                 return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' +
                     esc(d.nombre || '') +
                     '" placeholder="Ej: Bodega Principal" style="width:100%;padding:6px;font-size:14px;" required></div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Descripción</label><textarea name="descripcion" placeholder="Descripción opcional..." style="width:100%;padding:6px;font-size:14px;min-height:60px;">' +
                     esc(d.descripcion || '') + '</textarea></div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Área</label>' +
-                    selectHtml('area', d.area || 'General', areaOpts, false) + '</div>';
+                    selectHtml('area_id', d.area_id || 1, areaOpts, false) + '</div>';
             }
 
             DsCrud.addEvent(DsCrud.getById('btn-add-ubicacion'), 'click', function () {
@@ -458,4 +500,11 @@ include __DIR__ . '/partials/nav.php';
             });
         })();
     </script>
+<?php else: ?>
+    <!-- Legacy scripts -->
+    <script src="assets/table-sort.js"></script>
+    <script src="assets/crud-legacy.js"></script>
 <?php endif; ?>
+</body>
+
+</html>

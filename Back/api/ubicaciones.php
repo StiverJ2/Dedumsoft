@@ -16,15 +16,18 @@ if (!require_api_auth()) {
 if ($method === 'GET') {
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
     $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
-    $area = $_GET['area'] ?? null;
-    $area = ($area === '') ? null : $area;
+    $area_id = isset($_GET['area_id']) && $_GET['area_id'] !== '' ? (int) $_GET['area_id'] : null;
     $activo = isset($_GET['activo']) ? ($_GET['activo'] === '1' || $_GET['activo'] === 'true') : true;
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, descripcion, area, activo, created_at FROM fun_obtener_ubicaciones(:offset, :limit, :area, :activo)'
+            'SELECT id, nombre, descripcion, area_id, area_nombre, activo, created_at FROM fun_obtener_ubicaciones(:offset, :limit, :area_id::int, :activo)'
         );
-        $stmt->execute([':offset' => $offset, ':limit' => $limit, ':area' => $area, ':activo' => $activo]);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':area_id', $area_id, $area_id === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        $stmt->bindValue(':activo', $activo, PDO::PARAM_BOOL);
+        $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('ubicaciones GET error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
@@ -42,7 +45,7 @@ if ($method === 'POST') {
 
     $nombre = $input['nombre'] ?? null;
     $descripcion = $input['descripcion'] ?? null;
-    $area = $input['area'] ?? 'General';
+    $area_id = isset($input['area_id']) ? (int) $input['area_id'] : 1;
 
     if (!$nombre) {
         http_response_code(400);
@@ -51,8 +54,8 @@ if ($method === 'POST') {
     }
 
     try {
-        $stmt = $connLogic->prepare('SELECT fun_crear_ubicacion(:nombre, :descripcion, :area)');
-        $stmt->execute([':nombre' => $nombre, ':descripcion' => $descripcion, ':area' => $area]);
+        $stmt = $connLogic->prepare('SELECT fun_crear_ubicacion(:nombre, :descripcion, :area_id)');
+        $stmt->execute([':nombre' => $nombre, ':descripcion' => $descripcion, ':area_id' => $area_id]);
         $result = $stmt->fetchColumn();
     } catch (PDOException $e) {
         error_log('ubicaciones POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
@@ -77,16 +80,16 @@ if ($method === 'PUT') {
 
     $nombre = $input['nombre'] ?? null;
     $descripcion = $input['descripcion'] ?? null;
-    $area = $input['area'] ?? null;
+    $area_id = isset($input['area_id']) ? (int) $input['area_id'] : null;
     $activo = isset($input['activo']) ? (bool) $input['activo'] : null;
 
     try {
-        $stmt = $connLogic->prepare('SELECT fun_actualizar_ubicacion(:id, :nombre, :descripcion, :area, :activo)');
+        $stmt = $connLogic->prepare('SELECT fun_actualizar_ubicacion(:id, :nombre, :descripcion, :area_id, :activo)');
         $stmt->execute([
             ':id' => $id,
             ':nombre' => $nombre,
             ':descripcion' => $descripcion,
-            ':area' => $area,
+            ':area_id' => $area_id,
             ':activo' => $activo
         ]);
     } catch (PDOException $e) {

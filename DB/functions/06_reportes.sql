@@ -95,13 +95,14 @@ BEGIN
         SELECT
             'oro'::text AS tipo_material,
             co.inventario_oro_id AS material_id,
-            ('Oro ' || io.tipo_oro)::text AS material_nombre,
+            ('Oro ' || COALESCE(tor.nombre, 'Sin tipo'))::text AS material_nombre,
             SUM(co.cantidad_consumida) AS cantidad_total,
             SUM(co.cantidad_consumida * COALESCE(co.costo_unitario, 0)) AS costo_total
         FROM consumo_oro co
         INNER JOIN inventario_oro io ON co.inventario_oro_id = io.id
+        LEFT JOIN tipos_oro tor ON io.tipo_oro_id = tor.id
         WHERE co.fecha_consumo::date BETWEEN par_desde AND par_hasta
-        GROUP BY co.inventario_oro_id, io.tipo_oro
+        GROUP BY co.inventario_oro_id, tor.nombre
         UNION ALL
         SELECT
             'insumo'::text AS tipo_material,

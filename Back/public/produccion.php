@@ -122,3 +122,6 @@ include __DIR__ . '/partials/nav.php';
 <?php elseif ($legacy): ?>
     <script>if (window.DedumTableSort) DedumTableSort.init('ordenes-table');</script>
 <?php endif; ?>
+</body>
+
+</html>

@@ -183,7 +183,8 @@ if ($legacy) {
                     alt="Grafico ventas del mes">
                 <div class="chart-summary">
                     Total: $<?php echo number_format($ventas_mes_total, 2); ?> |
-                    Periodo: <?php echo date('d/m', strtotime($month_start)); ?> - <?php echo date('d/m/Y', strtotime($month_end)); ?> |
+                    Periodo: <?php echo date('d/m', strtotime($month_start)); ?> -
+                    <?php echo date('d/m/Y', strtotime($month_end)); ?> |
                     Transacciones: <?php echo count($ventas_chart); ?>
                 </div>
             <?php endif; ?>
@@ -195,7 +196,7 @@ if ($legacy) {
             <?php else: ?>
                 <img class="ds-chart-img" src="legacy_chart.php?chart=ordenes_estado" alt="Grafico ordenes por estado">
                 <div class="chart-summary">
-                    <?php 
+                    <?php
                     $estado_summary = [];
                     foreach ($ordenes_estado as $est) {
                         $estado_summary[] = ucfirst(str_replace('_', ' ', $est['estado'])) . ': ' . $est['total'];
@@ -377,3 +378,6 @@ if ($legacy) {
     </script>
 <?php endif; ?>
 <?php include __DIR__ . '/partials/footer.php'; ?>
+</body>
+
+</html>

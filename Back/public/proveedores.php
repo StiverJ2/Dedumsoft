@@ -9,15 +9,37 @@ require_login('login.php');
 $legacy = dedumsoft_is_legacy_browser();
 $tipo = $_GET['tipo'] ?? '';
 $proveedores_rows = [];
+$tipo_proveedor_options = [];
+
+// Obtener tipos de proveedor desde tabla de catálogo
+if ($legacy) {
+    try {
+        $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_proveedor WHERE activo = true ORDER BY orden, nombre');
+        $stmt->execute();
+        $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $tipo_proveedor_options = array_map(function ($t) {
+            return ['value' => $t['id'], 'label' => $t['nombre']];
+        }, $tipos);
+    } catch (PDOException $e) {
+        error_log('tipos proveedor error: ' . $e->getMessage());
+        // Fallback a valores por defecto
+        $tipo_proveedor_options = [
+            ['value' => 1, 'label' => 'Oro'],
+            ['value' => 2, 'label' => 'Insumos'],
+            ['value' => 3, 'label' => 'Maquinaria']
+        ];
+    }
+}
 
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, tipo, contacto, telefono FROM fun_obtener_proveedores(:offset, :limit, :tipo, :activo)'
+            'SELECT id, nombre, tipo_proveedor_id, tipo_nombre, contacto, telefono FROM fun_obtener_proveedores(:offset, :limit, :tipo_id, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
         $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
-        $stmt->bindValue(':tipo', $tipo !== '' ? $tipo : null, $tipo !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':tipo_id', $tipo !== '' ? (int) $tipo : null, $tipo !== '' ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $proveedores_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -76,7 +98,7 @@ include __DIR__ . '/partials/nav.php';
                             <tr>
                                 <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
                                 <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
-                                <td><?php echo htmlspecialchars((string) $row['tipo']); ?></td>
+                                <td><?php echo htmlspecialchars((string) $row['tipo_nombre']); ?></td>
                                 <td><?php echo htmlspecialchars((string) ($row['contacto'] ?? '')); ?></td>
                                 <td><?php echo htmlspecialchars((string) ($row['telefono'] ?? '')); ?></td>
                                 <td class="ds-actions-col"></td>
@@ -92,21 +114,31 @@ include __DIR__ . '/partials/nav.php';
 <?php include __DIR__ . '/partials/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            var proveedoresTable;
-            var tipoOptions = [{
-                value: 'oro',
-                label: 'Oro'
-            },
-            {
-                value: 'insumos',
-                label: 'Insumos'
-            },
-            {
-                value: 'maquinaria',
-                label: 'Maquinaria'
+        document.addEventListener('DOMContentLoaded', async () => {
+            let proveedoresTable;
+            let tipoOptions = [];
+
+            // Cargar opciones desde la API
+            try {
+                const response = await axios.get('../api/opciones.php?tipo=tipos_proveedor');
+                tipoOptions = response.data.DATOS || [];
+            } catch (error) {
+                console.error('Error cargando opciones:', error);
+                // Fallback a valores por defecto
+                tipoOptions = [{
+                    value: 'oro',
+                    label: 'Oro'
+                },
+                {
+                    value: 'insumos',
+                    label: 'Insumos'
+                },
+                {
+                    value: 'maquinaria',
+                    label: 'Maquinaria'
+                }
+                ];
             }
-            ];
 
             const buildProveedorForm = (data) => {
                 data = data || {};
@@ -117,10 +149,10 @@ include __DIR__ . '/partials/nav.php';
                     required: true
                 }) +
                     DsCrud.field({
-                        name: 'tipo',
+                        name: 'tipo_proveedor_id',
                         label: 'Tipo',
                         type: 'select',
-                        value: data.tipo,
+                        value: data.tipo_proveedor_id,
                         options: tipoOptions,
                         required: true
                     }) +
@@ -183,7 +215,10 @@ include __DIR__ . '/partials/nav.php';
                                 return;
                             }
                             const fd = new FormData(form);
-                            const payload = { id: prov.id, ...Object.fromEntries(fd) };
+                            const payload = {
+                                id: prov.id,
+                                ...Object.fromEntries(fd)
+                            };
                             DsCrud.api('../api/proveedores.php', 'PUT', payload, (res) => {
                                 DsCrud.toast('Proveedor actualizado', 'success');
                                 proveedoresTable.ajax.reload();
@@ -221,7 +256,7 @@ include __DIR__ . '/partials/nav.php';
                     data: 'nombre'
                 },
                 {
-                    data: 'tipo'
+                    data: 'tipo_nombre'
                 },
                 {
                     data: 'contacto',
@@ -289,20 +324,11 @@ include __DIR__ . '/partials/nav.php';
 
             function buildProveedorFormHtml(d) {
                 d = d || {};
-                var tipoOpts = [{
-                    value: 'oro',
-                    label: 'Oro'
-                }, {
-                    value: 'insumos',
-                    label: 'Insumos'
-                }, {
-                    value: 'maquinaria',
-                    label: 'Maquinaria'
-                }];
+                var tipoOpts = <?php echo json_encode($tipo_proveedor_options); ?>;
                 return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' +
                     esc(d.nombre || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Tipo <span style="color:red">*</span></label>' +
-                    selectHtml('tipo', d.tipo || 'oro', tipoOpts, true) + '</div>' +
+                    selectHtml('tipo_proveedor_id', d.tipo_proveedor_id || 1, tipoOpts, true) + '</div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Contacto</label><input type="text" name="contacto" value="' +
                     esc(d.contacto || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Telefono</label><input type="text" name="telefono" value="' +
@@ -375,3 +401,6 @@ include __DIR__ . '/partials/nav.php';
         })();
     </script>
 <?php endif; ?>
+</body>
+
+</html>

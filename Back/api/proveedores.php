@@ -25,8 +25,7 @@ if (!require_api_auth()) {
 if ($method === 'GET') {
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
     $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
-    $tipo = $_GET['tipo'] ?? null;
-    $tipo = ($tipo === '') ? null : $tipo;
+    $tipo_id = isset($_GET['tipo_id']) && $_GET['tipo_id'] !== '' ? (int) $_GET['tipo_id'] : null;
     $activo_raw = $_GET['activo'] ?? null;
     if ($activo_raw === null) {
         $activo = true;
@@ -36,11 +35,11 @@ if ($method === 'GET') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, tipo, contacto, telefono, email, direccion, activo, fecha_registro FROM fun_obtener_proveedores(:offset, :limit, :tipo, :activo)'
+            'SELECT id, nombre, tipo_proveedor_id, tipo_nombre, contacto, telefono, email, direccion, activo, fecha_registro FROM fun_obtener_proveedores(:offset, :limit, :tipo_id::int, :activo)'
         );
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':tipo', $tipo, $tipo === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->bindValue(':tipo_id', $tipo_id, $tipo_id === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
         $stmt->bindValue(':activo', $activo, $activo === null ? PDO::PARAM_NULL : PDO::PARAM_BOOL);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -68,7 +67,7 @@ if ($method === 'POST') {
     }
 
     // Validar campos requeridos
-    $required = ['nombre', 'tipo'];
+    $required = ['nombre', 'tipo_proveedor_id'];
     foreach ($required as $field) {
         if (!isset($input[$field]) || $input[$field] === '') {
             http_response_code(400);
@@ -77,20 +76,12 @@ if ($method === 'POST') {
         }
     }
 
-    // Validar tipo
-    $tipos_validos = ['oro', 'insumos', 'maquinaria'];
-    if (!in_array($input['tipo'], $tipos_validos)) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Tipo debe ser: oro, insumos o maquinaria']);
-        exit;
-    }
-
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_crear_proveedor(:nombre, :tipo, :contacto, :telefono, :email, :direccion)'
+            'SELECT fun_crear_proveedor(:nombre, :tipo_proveedor_id, :contacto, :telefono, :email, :direccion)'
         );
         $stmt->bindValue(':nombre', $input['nombre'], PDO::PARAM_STR);
-        $stmt->bindValue(':tipo', $input['tipo'], PDO::PARAM_STR);
+        $stmt->bindValue(':tipo_proveedor_id', (int) $input['tipo_proveedor_id'], PDO::PARAM_INT);
         $stmt->bindValue(':contacto', $input['contacto'] ?? null, isset($input['contacto']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':telefono', $input['telefono'] ?? null, isset($input['telefono']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':email', $input['email'] ?? null, isset($input['email']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
@@ -120,23 +111,13 @@ if ($method === 'PUT') {
         exit;
     }
 
-    // Validar tipo si se proporciona
-    if (isset($input['tipo'])) {
-        $tipos_validos = ['oro', 'insumos', 'maquinaria'];
-        if (!in_array($input['tipo'], $tipos_validos)) {
-            http_response_code(400);
-            echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Tipo debe ser: oro, insumos o maquinaria']);
-            exit;
-        }
-    }
-
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_actualizar_proveedor(:id, :nombre, :tipo, :contacto, :telefono, :email, :direccion, :activo)'
+            'SELECT fun_actualizar_proveedor(:id, :nombre, :tipo_proveedor_id, :contacto, :telefono, :email, :direccion, :activo)'
         );
         $stmt->bindValue(':id', (int) $input['id'], PDO::PARAM_INT);
         $stmt->bindValue(':nombre', $input['nombre'] ?? null, isset($input['nombre']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
-        $stmt->bindValue(':tipo', $input['tipo'] ?? null, isset($input['tipo']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':tipo_proveedor_id', isset($input['tipo_proveedor_id']) ? (int) $input['tipo_proveedor_id'] : null, isset($input['tipo_proveedor_id']) ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':contacto', $input['contacto'] ?? null, isset($input['contacto']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':telefono', $input['telefono'] ?? null, isset($input['telefono']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':email', $input['email'] ?? null, isset($input['email']) ? PDO::PARAM_STR : PDO::PARAM_NULL);

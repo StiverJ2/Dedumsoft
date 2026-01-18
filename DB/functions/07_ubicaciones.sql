@@ -2,49 +2,48 @@
 -- FUNCIONES PARA UBICACIONES
 -- ============================================
 
+SET search_path TO joyeria, seguridad, public;
+
 -- Obtener ubicaciones
 CREATE OR REPLACE FUNCTION fun_obtener_ubicaciones(
     par_offset int DEFAULT 0,
     par_limit int DEFAULT 100,
-    par_area text DEFAULT NULL,
+    par_area_id int DEFAULT NULL,
     par_activo boolean DEFAULT TRUE
 )
 RETURNS TABLE (
     id int,
     nombre text,
     descripcion text,
-    area text,
+    area_id int,
+    area_nombre text,
     activo boolean,
     created_at timestamp
 )
-LANGUAGE plpgsql
+LANGUAGE sql
 AS $$
-BEGIN
-    RETURN QUERY
     SELECT
         u.id,
         u.nombre::text,
         u.descripcion::text,
-        u.area::text,
+        u.area_id,
+        a.nombre::text AS area_nombre,
         u.activo,
         u.created_at
     FROM ubicaciones u
+    LEFT JOIN areas a ON u.area_id = a.id
     WHERE (par_activo IS NULL OR u.activo = par_activo)
-      AND (par_area IS NULL OR u.area = par_area)
-    ORDER BY u.area, u.nombre
+      AND (par_area_id IS NULL OR u.area_id = par_area_id)
+    ORDER BY a.orden, u.nombre
     OFFSET par_offset
     LIMIT par_limit;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al obtener ubicaciones.' USING ERRCODE = SQLSTATE;
-END;
 $$;
 
 -- Crear ubicación
 CREATE OR REPLACE FUNCTION fun_crear_ubicacion(
     par_nombre text,
     par_descripcion text DEFAULT NULL,
-    par_area text DEFAULT 'General'
+    par_area_id int DEFAULT 1
 )
 RETURNS int
 LANGUAGE plpgsql
@@ -52,8 +51,8 @@ AS $$
 DECLARE
     v_id int;
 BEGIN
-    INSERT INTO ubicaciones (nombre, descripcion, area)
-    VALUES (par_nombre, par_descripcion, par_area)
+    INSERT INTO ubicaciones (nombre, descripcion, area_id)
+    VALUES (par_nombre, par_descripcion, par_area_id)
     RETURNING id INTO v_id;
     
     RETURN v_id;
@@ -68,7 +67,7 @@ CREATE OR REPLACE FUNCTION fun_actualizar_ubicacion(
     par_id int,
     par_nombre text DEFAULT NULL,
     par_descripcion text DEFAULT NULL,
-    par_area text DEFAULT NULL,
+    par_area_id int DEFAULT NULL,
     par_activo boolean DEFAULT NULL
 )
 RETURNS boolean
@@ -79,7 +78,7 @@ BEGIN
     SET 
         nombre = COALESCE(par_nombre, nombre),
         descripcion = COALESCE(par_descripcion, descripcion),
-        area = COALESCE(par_area, area),
+        area_id = COALESCE(par_area_id, area_id),
         activo = COALESCE(par_activo, activo),
         updated_at = CURRENT_TIMESTAMP
     WHERE id = par_id;
@@ -114,8 +113,9 @@ EXCEPTION
 END;
 $$;
 
--- Actualizar función de maquinaria para incluir ubicacion_nombre
+-- Actualizar función de maquinaria para incluir ubicacion_nombre y tipo_maquinaria
 DROP FUNCTION IF EXISTS fun_obtener_inventario_maquinaria(int, int, text);
+DROP FUNCTION IF EXISTS fun_obtener_inventario_maquinaria(int, int, text, boolean);
 
 CREATE OR REPLACE FUNCTION fun_obtener_inventario_maquinaria(
     par_offset int DEFAULT 0,
@@ -126,7 +126,9 @@ CREATE OR REPLACE FUNCTION fun_obtener_inventario_maquinaria(
 RETURNS TABLE (
     id int,
     nombre text,
-    tipo text,
+    tipo_maquinaria_id int,
+    tipo_codigo text,
+    tipo_nombre text,
     marca text,
     modelo text,
     numero_serie text,
@@ -140,14 +142,14 @@ RETURNS TABLE (
     fecha_registro timestamp,
     activo boolean
 )
-LANGUAGE plpgsql
+LANGUAGE sql
 AS $$
-BEGIN
-    RETURN QUERY
     SELECT
         im.id,
         im.nombre::text,
-        im.tipo::text,
+        im.tipo_maquinaria_id,
+        tm.codigo::text AS tipo_codigo,
+        tm.nombre::text AS tipo_nombre,
         im.marca::text,
         im.modelo::text,
         im.numero_serie::text,
@@ -162,13 +164,10 @@ BEGIN
         im.activo
     FROM inventario_maquinaria im
     LEFT JOIN ubicaciones u ON im.ubicacion_id = u.id
+    LEFT JOIN tipos_maquinaria tm ON im.tipo_maquinaria_id = tm.id
     WHERE (par_estado IS NULL OR im.estado = par_estado)
       AND (par_activo IS NULL OR im.activo = par_activo)
     ORDER BY im.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al obtener inventario de maquinaria.' USING ERRCODE = SQLSTATE;
-END;
 $$;
