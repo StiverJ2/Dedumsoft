@@ -1,0 +1,729 @@
+# 🛠️ Guía del Desarrollador - Dedumsoft
+
+> **Sistema de Gestión de Joyería**  
+> Versión: 1.0 | PHP 7.4+ | PostgreSQL 17+
+
+---
+
+## 📑 Tabla de Contenidos
+
+1. [Arquitectura General](#1-arquitectura-general)
+2. [Sistema de Autenticación](#2-sistema-de-autenticación)
+3. [Sistema de Permisos (RBAC)](#3-sistema-de-permisos-rbac)
+4. [Estructura de Base de Datos](#4-estructura-de-base-de-datos)
+5. [Patrón de APIs](#5-patrón-de-apis)
+6. [⚠️ Compatibilidad Legacy (IE8)](#6-️-compatibilidad-legacy-ie8)
+7. [Seguridad](#7-seguridad)
+8. [Despliegue](#8-despliegue)
+9. [Gotchas y Errores Comunes](#9-gotchas-y-errores-comunes)
+
+---
+
+## 1. Arquitectura General
+
+### Estructura de Carpetas
+
+```
+Dedumsoft/
+├── Back/                    # Backend PHP
+│   ├── api/                 # Endpoints REST (CRUD)
+│   ├── auth/                # Autenticación y autorización
+│   ├── bootstrap/           # CSS/JS de Bootstrap
+│   ├── connection/          # Conexión DB y middleware
+│   ├── env/                 # Configuración de entorno
+│   └── public/              # Vistas PHP (frontend renderizado)
+│       ├── assets/          # JS, CSS, iconos
+│       └── partials/        # Header, nav, footer reutilizables
+├── DB/                      # Scripts SQL
+│   ├── functions/           # Funciones PostgreSQL (fun_*)
+│   └── migrations/          # Migraciones futuras
+├── Front/                   # Landing page estática
+└── scripts/                 # Scripts de deploy
+```
+
+### Flujo de una Petición
+
+```
+[Cliente] → [public/*.php] → [auth.php] → [api/*.php] → [PostgreSQL]
+               │                  │              │
+               │                  │              └── Funciones fun_*
+               │                  └── Valida sesión/JWT
+               └── Renderiza HTML + incluye partials
+```
+
+### Stack Tecnológico
+
+| Capa          | Tecnología                                 |
+| ------------- | ------------------------------------------ |
+| Frontend      | HTML5, Bootstrap 5, jQuery 3.7, DataTables |
+| Backend       | PHP 7.4+ (PDO)                             |
+| Base de Datos | PostgreSQL 17+                             |
+| Autenticación | Sesiones PHP + JWT (API)                   |
+| Gráficos      | uPlot (moderno) / GD Library (legacy)      |
+
+---
+
+## 2. Sistema de Autenticación
+
+### Archivos Clave
+
+| Archivo                  | Propósito                 |
+| ------------------------ | ------------------------- |
+| `auth/login.php`         | Endpoint POST para login  |
+| `auth/login_service.php` | Lógica de login (9 pasos) |
+| `auth/auth.php`          | Funciones de autorización |
+| `auth/jwt.php`           | Generación/validación JWT |
+| `auth/session.php`       | Gestión de sesión PHP     |
+| `auth/logout.php`        | Cierre de sesión          |
+
+### Flujo de Login (9 Pasos)
+
+```php
+// En login_service.php - función login_user()
+
+// Paso 1: Validar campos requeridos
+// Paso 2: Sanitizar entrada
+// Paso 3: Conectar a BD
+// Paso 4: Buscar usuario por username
+// Paso 5: Verificar contraseña (password_verify)
+// Paso 6: Verificar estado activo
+// Paso 7: Registrar log de acceso
+// Paso 8: Cargar permisos de menú ← ¡IMPORTANTE!
+// Paso 9: Crear sesión y JWT
+```
+
+### Funciones de Autorización
+
+```php
+// En auth/auth.php
+
+require_login();              // Redirige a login si no autenticado
+require_api_auth();           // Valida JWT, retorna 401 si falla
+get_session_user();           // Obtiene datos del usuario actual
+dedumsoft_user_can_menu($id); // Verifica permiso de menú
+require_menu_access($id);     // Bloquea acceso si no tiene permiso
+```
+
+### Uso en Vistas
+
+```php
+<?php
+require_once '../auth/auth.php';
+require_login();                    // Paso 1: Verificar sesión
+require_menu_access(2);             // Paso 2: Verificar permiso menú #2
+
+// Si llega aquí, usuario autenticado Y autorizado
+$user = get_session_user();
+?>
+```
+
+### Uso en APIs
+
+```php
+<?php
+require_once '../auth/auth.php';
+require_api_auth();  // Valida JWT del header Authorization: Bearer xxx
+
+// Si llega aquí, JWT válido
+$user = get_session_user();
+```
+
+---
+
+## 3. Sistema de Permisos (RBAC)
+
+### ⚠️ CONCEPTO CRÍTICO
+
+El sistema usa **Role-Based Access Control (RBAC)** con 3 tablas:
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐
+│   seg_rol   │      │ seg_menurol  │      │  seg_menu   │
+├─────────────┤      ├──────────────┤      ├─────────────┤
+│ id_rol (PK) │◄────┐│ rolid (FK)   │┌────►│ id_menu(PK) │
+│ nombre      │     ││ menuid (FK)  ││     │ nombre      │
+│ comentario  │     │├──────────────┤│     │ ruta        │
+└─────────────┘     ││ abrir        ││     │ comentario  │
+                    ││ guardar      ││     └─────────────┘
+                    ││ editar       ││
+                    ││ eliminar     │┘
+                    │└──────────────┘
+                    │
+                    └── Tabla pivote con permisos CRUD
+```
+
+### Tipos de Permisos
+
+| Permiso    | Descripción        | Uso     |
+| ---------- | ------------------ | ------- |
+| `abrir`    | Puede ver/acceder  | Lectura |
+| `guardar`  | Puede crear nuevos | INSERT  |
+| `editar`   | Puede modificar    | UPDATE  |
+| `eliminar` | Puede borrar       | DELETE  |
+
+### Roles Predefinidos
+
+```sql
+-- En DB/seed.sql
+INSERT INTO seguridad.seg_rol VALUES
+(1, 'ADMIN', 'Acceso total'),
+(2, 'OPERADOR', 'Producción y configuración'),
+(3, 'LECTURA', 'Solo consulta');
+```
+
+### Menús del Sistema
+
+| ID  | Nombre        | Ruta                      |
+| --- | ------------- | ------------------------- |
+| 1   | Dashboard     | /public/index.php         |
+| 2   | Inventario    | /public/inventario.php    |
+| 3   | Produccion    | /public/produccion.php    |
+| 4   | Reportes      | /public/reportes.php      |
+| 5   | Usuarios      | /public/usuarios.php      |
+| 6   | Proveedores   | /public/proveedores.php   |
+| 7   | Configuracion | /public/configuracion.php |
+
+### ⚠️ IMPORTANTE: Caché de Permisos
+
+```php
+// Los permisos se cargan UNA VEZ durante el login
+// Se almacenan en: $_SESSION['user']['permisos_menu']
+// Estructura:
+$_SESSION['user']['permisos_menu'] = [
+    1 => ['abrir' => true, 'guardar' => true, 'editar' => true, 'eliminar' => true],
+    2 => ['abrir' => true, 'guardar' => false, 'editar' => false, 'eliminar' => false],
+    // ...
+];
+
+// ⚠️ Si cambias permisos en BD, el usuario debe RE-LOGUEARSE
+// para que los cambios surtan efecto.
+```
+
+### Verificar Permisos en Código
+
+```php
+// Verificar si puede acceder a un menú
+if (dedumsoft_user_can_menu(2)) {
+    // Usuario puede acceder a Inventario
+}
+
+// Bloquear acceso (redirige a forbidden)
+require_menu_access(5); // Solo ADMIN puede ver Usuarios
+
+// Verificar permiso específico CRUD
+$permisos = $_SESSION['user']['permisos_menu'][2] ?? [];
+if ($permisos['editar'] ?? false) {
+    // Mostrar botón de editar
+}
+```
+
+---
+
+## 4. Estructura de Base de Datos
+
+### Esquemas PostgreSQL
+
+```sql
+-- Tres esquemas principales:
+CREATE SCHEMA joyeria;     -- Datos de negocio
+CREATE SCHEMA seguridad;   -- Usuarios, roles, logs
+CREATE SCHEMA public;      -- Extensiones y utilidades
+```
+
+### Tablas Principales
+
+#### Esquema `joyeria`
+
+| Tabla              | Propósito                    |
+| ------------------ | ---------------------------- |
+| `inv_insumos`      | Inventario de insumos        |
+| `inv_oro`          | Inventario de oro/materiales |
+| `inv_maquinaria`   | Maquinaria y equipos         |
+| `ord_ordenes`      | Órdenes de producción        |
+| `ord_consumos`     | Materiales consumidos        |
+| `prov_proveedores` | Catálogo de proveedores      |
+| `prov_compras`     | Registro de compras          |
+| `cat_*`            | Tablas de catálogos          |
+
+#### Esquema `seguridad`
+
+| Tabla          | Propósito                     |
+| -------------- | ----------------------------- |
+| `seg_usuario`  | Usuarios del sistema          |
+| `seg_rol`      | Roles (ADMIN, OPERADOR, etc.) |
+| `seg_menu`     | Menús/módulos del sistema     |
+| `seg_menurol`  | Permisos rol-menú (pivote)    |
+| `seg_login`    | Logs de acceso                |
+| `seg_bitacora` | Auditoría de cambios          |
+
+### Convención de Nombres
+
+```
+Prefijo     Significado
+--------    -----------
+inv_        Inventario
+ord_        Órdenes/Producción
+prov_       Proveedores/Compras
+cat_        Catálogos
+seg_        Seguridad
+fun_        Funciones almacenadas
+```
+
+### Funciones Almacenadas (fun\_\*)
+
+Las operaciones complejas usan funciones PostgreSQL:
+
+```sql
+-- Ejemplo: Buscar en inventario (las funciones retornan columnas definidas)
+SELECT id, nombre, cantidad, unidad
+FROM joyeria.fun_inv_buscar_insumos('oro', 10, 0);
+
+-- Patrón común:
+-- fun_[modulo]_[accion]_[entidad](parámetros)
+```
+
+| Función      | Propósito                 |
+| ------------ | ------------------------- |
+| `fun_inv_*`  | Operaciones de inventario |
+| `fun_ord_*`  | Gestión de órdenes        |
+| `fun_prov_*` | Proveedores y compras     |
+| `fun_seg_*`  | Seguridad y auditoría     |
+| `fun_rep_*`  | Reportes                  |
+
+---
+
+## 5. Patrón de APIs
+
+### Estructura Estándar
+
+Todas las APIs siguen el mismo patrón:
+
+```php
+<?php
+/**
+ * API de [Entidad]
+ * Métodos: GET, POST, PUT, DELETE
+ */
+
+require_once '../auth/auth.php';
+require_once '../connection/connectionLogic.php';
+require_once '../connection/httpMethodValidator.php';
+
+// 1. Autenticación
+require_api_auth();
+
+// 2. Validar método HTTP
+$method = validate_http_method(['GET', 'POST', 'PUT', 'DELETE']);
+
+// 3. Procesar según método
+switch ($method) {
+    case 'GET':
+        // Listar o buscar
+        break;
+    case 'POST':
+        // Crear nuevo
+        break;
+    case 'PUT':
+        // Actualizar existente
+        break;
+    case 'DELETE':
+        // Eliminar
+        break;
+}
+
+// 4. Respuesta JSON
+header('Content-Type: application/json');
+echo json_encode($response);
+```
+
+### Respuestas Estándar
+
+```php
+// Éxito
+[
+    'success' => true,
+    'data' => [...],
+    'message' => 'Operación exitosa'
+]
+
+// Error
+[
+    'success' => false,
+    'error' => 'Descripción del error',
+    'code' => 400  // Código HTTP
+]
+```
+
+### Llamadas desde Frontend
+
+```javascript
+// Con Axios (recomendado)
+axios.get('/api/inventario_oro.php')
+    .then(res => console.log(res.data))
+    .catch(err => console.error(err));
+
+// Con jQuery (legacy)
+$.ajax({
+    url: '/api/inventario_oro.php',
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + token },
+    success: function(data) { ... }
+});
+```
+
+---
+
+## 6. ⚠️ Compatibilidad Legacy (IE8)
+
+### 🚨 ADVERTENCIA IMPORTANTE
+
+Este proyecto **mantiene compatibilidad con Internet Explorer 8**.  
+Esto afecta SIGNIFICATIVAMENTE cómo se escribe el código.
+
+### ¿Por qué IE8?
+
+Algunos clientes usan equipos antiguos con Windows XP/Vista que no pueden actualizarse.
+
+### Archivos de Compatibilidad
+
+| Archivo                   | Propósito                    |
+| ------------------------- | ---------------------------- |
+| `assets/ie8.css`          | Estilos específicos IE8      |
+| `assets/ie8.js`           | **Polyfill JSON2** (crítico) |
+| `public/legacy_chart.php` | Genera gráficos PNG con GD   |
+
+### ⚠️ NO USAR (Incompatible con IE8)
+
+```javascript
+// ❌ PROHIBIDO - No funciona en IE8
+
+// Arrow functions
+const fn = () => {};
+
+// let/const
+let x = 1;
+const y = 2;
+
+// Template literals
+`Hello ${name}`;
+
+// Destructuring
+const {a, b} = obj;
+
+// Spread operator
+[...array];
+
+// Promises
+fetch('/api').then(...);
+
+// forEach en NodeList
+document.querySelectorAll('div').forEach(...);
+
+// classList
+element.classList.add('clase');
+```
+
+### ✅ USAR ESTO EN SU LUGAR
+
+```javascript
+// ✅ CORRECTO - Compatible con IE8
+
+// Funciones tradicionales
+var fn = function () {};
+
+// Siempre var
+var x = 1;
+var y = 2;
+
+// Concatenación
+"Hello " + name;
+
+// Acceso directo
+var a = obj.a;
+var b = obj.b;
+
+// Bucles for tradicionales
+for (var i = 0; i < array.length; i++) {}
+
+// jQuery para AJAX
+$.ajax({ url: "/api", success: function (data) {} });
+
+// jQuery para iterar
+$("div").each(function () {});
+
+// className para clases
+element.className += " clase";
+```
+
+### JSON en IE8
+
+```javascript
+// IE8 no tiene JSON nativo
+// El polyfill en ie8.js provee JSON.parse y JSON.stringify
+
+// ❌ NUNCA usar eval para JSON
+var data = eval("(" + jsonString + ")");
+
+// ✅ SIEMPRE usar JSON.parse (con polyfill)
+var data = JSON.parse(jsonString);
+```
+
+### Gráficos en IE8
+
+IE8 no soporta Canvas ni SVG modernos. Usamos **generación de PNG server-side**:
+
+```php
+// legacy_chart.php - Genera gráficos como imágenes PNG
+
+// En el HTML:
+<img src="legacy_chart.php?type=bar&data=..." alt="Gráfico">
+
+// El servidor usa GD Library para dibujar el gráfico
+// y devuelve una imagen PNG
+```
+
+### Detección de IE8
+
+```php
+// En partials/header.php
+<!--[if lte IE 8]>
+    <link rel="stylesheet" href="assets/ie8.css">
+    <script src="assets/ie8.js"></script>
+<![endif]-->
+```
+
+```javascript
+// En JavaScript
+var isIE8 = (function () {
+  var ua = navigator.userAgent;
+  return ua.indexOf("MSIE 8") !== -1 || ua.indexOf("MSIE 7") !== -1;
+})();
+
+if (isIE8) {
+  // Usar fallback legacy
+}
+```
+
+---
+
+## 7. Seguridad
+
+### Medidas Implementadas
+
+| Medida              | Archivo                     | Descripción             |
+| ------------------- | --------------------------- | ----------------------- |
+| Rate Limiting       | `connection/rate_limit.php` | 60 req/min por IP       |
+| CSRF                | `auth/session.php`          | Token en formularios    |
+| Password Hashing    | `login_service.php`         | bcrypt/argon2id         |
+| Prepared Statements | Todos                       | PDO con parámetros      |
+| JWT                 | `auth/jwt.php`              | HMAC-SHA256, 24h expiry |
+| CSP Headers         | `partials/header.php`       | Content-Security-Policy |
+| Cookie HttpOnly     | `auth/session.php`          | Previene XSS            |
+
+### Validación de Entrada
+
+```php
+// SIEMPRE usar prepared statements con columnas explícitas
+$stmt = $pdo->prepare("SELECT id, username, email FROM users WHERE id = :id");
+$stmt->execute([':id' => $id]);
+
+// NUNCA concatenar SQL ni usar SELECT *
+// ❌ $sql = "SELECT * FROM users WHERE id = " . $id;
+```
+
+### Rate Limiting
+
+```php
+// En connection/rate_limit.php
+check_rate_limit();  // 60 req/min, bloquea si excede
+
+// Configuración
+define('RATE_LIMIT_REQUESTS', 60);
+define('RATE_LIMIT_WINDOW', 60); // segundos
+```
+
+### CSRF Token
+
+```php
+// Generar token
+$csrf = generate_csrf_token();
+
+// En formularios
+<input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+
+// Validar en backend
+if (!validate_csrf_token($_POST['csrf_token'])) {
+    die('Token CSRF inválido');
+}
+```
+
+---
+
+## 8. Despliegue
+
+### Scripts Disponibles
+
+| Script                    | Plataforma | Uso                |
+| ------------------------- | ---------- | ------------------ |
+| `scripts/deploy_back.sh`  | Linux/Mac  | `./deploy_back.sh` |
+| `scripts/deploy_back.bat` | Windows    | `deploy_back.bat`  |
+
+### Pasos de Despliegue
+
+1. **Configurar entorno**
+
+   ```bash
+   cp Back/env/env.example.php Back/env/env.php
+   # Editar env.php con credenciales reales
+   ```
+
+2. **Crear base de datos**
+
+   ```bash
+   psql -U postgres -f DB/install.sql
+   psql -U postgres -d dedumsoft -f DB/db_schema.sql
+   psql -U postgres -d dedumsoft -f DB/functions/*.sql
+   psql -U postgres -d dedumsoft -f DB/seed.sql
+   ```
+
+3. **Configurar permisos**
+
+   ```bash
+   chmod 755 Back/
+   chmod 644 Back/**/*.php
+   ```
+
+4. **Ejecutar script de deploy**
+   ```bash
+   cd scripts
+   ./deploy_back.sh
+   ```
+
+### Variables de Entorno
+
+```php
+// En env/env.php
+return [
+    'DB_HOST' => 'localhost',
+    'DB_PORT' => '5432',
+    'DB_NAME' => 'dedumsoft',
+    'DB_USER' => 'app_user',
+    'DB_PASS' => 'secure_password',
+    'JWT_SECRET' => 'clave_secreta_32_chars_minimo',
+    'ENVIRONMENT' => 'production'  // development | production
+];
+```
+
+---
+
+## 9. Gotchas y Errores Comunes
+
+### ❌ Errores Frecuentes
+
+#### 1. Permisos no actualizan
+
+```
+Problema: Cambié permisos en BD pero usuario sigue igual
+Causa: Permisos cacheados en sesión
+Solución: Usuario debe cerrar sesión y volver a entrar
+```
+
+#### 2. API retorna HTML en lugar de JSON
+
+```
+Problema: Error PHP antes del json_encode
+Solución: Verificar logs de PHP, revisar require_once paths
+```
+
+#### 3. DataTables no carga
+
+```
+Problema: Tabla no se inicializa
+Causa: jQuery no cargado primero
+Solución: Verificar orden de scripts en header.php
+```
+
+#### 4. Error de conexión a BD
+
+```
+Problema: "Connection refused" o "Authentication failed"
+Causa: Credenciales incorrectas en env.php
+Solución: Verificar host, puerto, usuario, contraseña
+```
+
+#### 5. Funciones fun\_\* no encontradas
+
+```
+Problema: "function does not exist"
+Causa: No se ejecutaron los scripts de functions/
+Solución: Ejecutar todos los archivos en DB/functions/ en orden
+```
+
+### 💡 Tips de Desarrollo
+
+1. **Siempre probar en IE8** (o emulador) antes de deploy
+2. **Usar `var` en JavaScript**, nunca `let`/`const`
+3. **Revisar logs de PostgreSQL** para errores de funciones
+4. **Probar APIs con Postman** antes de integrar
+5. **Documentar cambios** en español siguiendo el estilo existente
+
+### Debugging
+
+```php
+// Habilitar errores en desarrollo
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+// Log personalizado
+error_log("Debug: " . print_r($variable, true));
+
+// Ver query ejecutado
+$stmt->debugDumpParams();
+```
+
+```javascript
+// Console legacy-safe
+if (window.console && console.log) {
+  console.log("Debug:", variable);
+}
+```
+
+---
+
+## 📚 Referencias Rápidas
+
+### Rutas Importantes
+
+| Ruta                | Descripción                  |
+| ------------------- | ---------------------------- |
+| `/public/login.php` | Página de login              |
+| `/public/index.php` | Dashboard principal          |
+| `/api/*.php`        | Endpoints REST               |
+| `/auth/auth.php`    | Incluir para autenticación   |
+| `/env/env.php`      | Configuración (NO commitear) |
+
+### Comandos Útiles
+
+```bash
+# Reiniciar BD (¡CUIDADO! Borra todo)
+psql -d dedumsoft -f DB/nuke_functions.sql
+psql -d dedumsoft -f DB/install.sql
+
+# Ver logs PostgreSQL
+tail -f /var/log/postgresql/postgresql-17-main.log
+
+# Verificar sintaxis PHP
+php -l archivo.php
+```
+
+### Contacto
+
+Para dudas sobre el sistema, revisar primero:
+
+1. Este documento
+2. Comentarios en el código fuente
+3. Archivos en `DB/migrations/README.md`
+
+---
+
+_Última actualización: Enero 2026_
