@@ -97,7 +97,7 @@ try {
     // Llamar función de registro de pieza terminada
     // La función calcula costos, actualiza estado y genera métricas
     $stmt = $connLogic->prepare(
-        'SELECT * FROM fun_registrar_pieza_terminada(:orden_id, :peso_final, :tiempo_real, :calidad_id, :observaciones)'
+        'SELECT success, mensaje, creacion_id, costo_materiales FROM fun_registrar_pieza_terminada(:orden_id, :peso_final, :tiempo_real, :calidad_id, :observaciones)'
     );
     $stmt->bindValue(':orden_id', $orden_id, PDO::PARAM_INT);
     $stmt->bindValue(':peso_final', $peso_final, PDO::PARAM_STR);

@@ -37,7 +37,7 @@ try {
     $connLogic->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Establecer search_path para no tener que calificar tablas
-    // Ejemplo: SELECT * FROM productos (en vez de joyeria.productos)
+    // Ejemplo: SELECT id, nombre FROM productos (en vez de joyeria.productos)
     $connLogic->exec("SET search_path TO joyeria, seguridad, public");
 
 } catch (Exception $e) {

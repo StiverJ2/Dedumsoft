@@ -78,12 +78,12 @@ $month_end = date('Y-m-t');
 try {
     // Inventario: suma de las tres tablas de inventario
     $inventario_total = (int) $connLogic
-        ->query('SELECT (SELECT COUNT(*) FROM inventario_oro) + (SELECT COUNT(*) FROM inventario_insumos) + (SELECT COUNT(*) FROM inventario_maquinaria) AS total')
+        ->query('SELECT (SELECT COUNT(1) FROM inventario_oro) + (SELECT COUNT(1) FROM inventario_insumos) + (SELECT COUNT(1) FROM inventario_maquinaria) AS total')
         ->fetchColumn();
 
     // Stock bajo: usa la función de reporte
     $inventario_stock_bajo = (int) $connLogic
-        ->query('SELECT COUNT(*) FROM fun_reporte_inventario()')
+        ->query('SELECT COUNT(1) FROM fun_reporte_inventario()')
         ->fetchColumn();
 
     // Ventas del mes: suma de creaciones vendidas
@@ -95,12 +95,12 @@ try {
 
     // Órdenes activas: estados distintos de terminada/cancelada
     $ordenes_activas = (int) $connLogic
-        ->query("SELECT COUNT(*) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre NOT IN ('terminada', 'cancelada')")
+        ->query("SELECT COUNT(1) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre NOT IN ('terminada', 'cancelada')")
         ->fetchColumn();
 
     // Órdenes completadas este mes
     $stmt = $connLogic->prepare(
-        "SELECT COUNT(*) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre = 'terminada' AND op.fecha_fin_real IS NOT NULL AND op.fecha_fin_real::date BETWEEN :desde AND :hasta"
+        "SELECT COUNT(1) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre = 'terminada' AND op.fecha_fin_real IS NOT NULL AND op.fecha_fin_real::date BETWEEN :desde AND :hasta"
     );
     $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
     $ordenes_completadas_mes = (int) $stmt->fetchColumn();
@@ -120,7 +120,7 @@ try {
 
     // Datos para gráfico de órdenes por estado
     $ordenes_estado = $connLogic
-        ->query('SELECT eo.nombre AS estado, COUNT(*) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY eo.nombre ORDER BY eo.nombre')
+        ->query('SELECT eo.nombre AS estado, COUNT(1) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY eo.nombre ORDER BY eo.nombre')
         ->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     // En caso de error, mantener valores en cero

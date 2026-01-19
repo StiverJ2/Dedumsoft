@@ -149,7 +149,7 @@ try {
             break;
         case 'usuarios':
             $rows = dedumsoft_query(
-                'SELECT rol, COUNT(*) AS total FROM seguridad.fun_reporte_usuarios() GROUP BY rol ORDER BY rol',
+                'SELECT rol, COUNT(1) AS total FROM seguridad.fun_reporte_usuarios() GROUP BY rol ORDER BY rol',
                 []
             );
             dedumsoft_render_bar_chart($rows, 'rol', 'total', 'Usuarios', $width, $height);

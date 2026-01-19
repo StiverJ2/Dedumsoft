@@ -22,7 +22,7 @@
 -- - Usan solo ID como identificador (¡no códigos!)
 --
 -- EJEMPLO DE USO:
---   SELECT * FROM fun_obtener_tipos_oro();
+--   SELECT id, nombre, kilates, pureza_porcentaje, descripcion, orden FROM fun_obtener_tipos_oro();
 --   -- Retorna: id, nombre, kilates, pureza_porcentaje, descripcion, orden
 --
 -- ============================================================================

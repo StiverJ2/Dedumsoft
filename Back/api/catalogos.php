@@ -77,7 +77,7 @@ if ($method === 'GET') {
     try {
         // Consulta directa a la tabla del catálogo
         // NOTA: $catalog está validado contra lista blanca, seguro para interpolación
-        $stmt = $connLogic->prepare("SELECT * FROM {$catalog} WHERE activo = true ORDER BY orden, nombre");
+        $stmt = $connLogic->prepare("SELECT id, nombre, descripcion, orden, activo FROM {$catalog} WHERE activo = true ORDER BY orden, nombre");
         $stmt->execute();
         $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

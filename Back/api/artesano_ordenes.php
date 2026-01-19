@@ -69,7 +69,7 @@ if ($method === 'GET') {
     try {
         // Llamar función PostgreSQL que retorna órdenes filtradas por artesano
         $stmt = $connLogic->prepare(
-            'SELECT * FROM fun_obtener_ordenes_artesano(:artesano_id, :offset, :limit)'
+            'SELECT id, producto_id, producto_nombre, cantidad, estado_id, estado, prioridad_id, prioridad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, observaciones FROM fun_obtener_ordenes_artesano(:artesano_id, :offset, :limit)'
         );
         $stmt->bindValue(':artesano_id', $artesano_id, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -124,7 +124,7 @@ if ($method === 'PUT') {
     try {
         // Llamar función de actualización de estado
         // La función valida transiciones válidas y permisos
-        $stmt = $connLogic->prepare('SELECT * FROM fun_actualizar_estado_orden(:orden_id, :estado_id)');
+        $stmt = $connLogic->prepare('SELECT success, mensaje, rows_affected FROM fun_actualizar_estado_orden(:orden_id, :estado_id)');
         $stmt->bindValue(':orden_id', $id, PDO::PARAM_INT);
         $stmt->bindValue(':estado_id', $estado_id, PDO::PARAM_INT);
         $stmt->execute();

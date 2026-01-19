@@ -109,7 +109,7 @@ try {
     // Llamar función de registro de consumo
     // La función valida stock disponible y descuenta del inventario
     $stmt = $connLogic->prepare(
-        'SELECT * FROM fun_registrar_consumo_material(:orden_id, :tipo_material, :material_id, :cantidad, :usuario_id)'
+        'SELECT success, mensaje, consumo_id FROM fun_registrar_consumo_material(:orden_id, :tipo_material, :material_id, :cantidad, :usuario_id)'
     );
     $stmt->bindValue(':orden_id', $orden_id, PDO::PARAM_INT);
     $stmt->bindValue(':tipo_material', $tipo_material, PDO::PARAM_STR);
