@@ -24,7 +24,7 @@ $rep_usuarios = [];
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(
-            'SELECT codigo_orden, producto, cantidad, artesano, estado FROM fun_reporte_produccion(:desde, :hasta)'
+            'SELECT id, producto, cantidad, artesano, estado FROM fun_reporte_produccion(:desde, :hasta)'
         );
         $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
         $rep_produccion = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -64,7 +64,7 @@ if ($legacy) {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT codigo_pieza, producto_id, fecha_venta, precio_venta, utilidad FROM fun_reporte_ventas(:desde, :hasta)'
+            'SELECT id, producto_id, fecha_venta, precio_venta, utilidad FROM fun_reporte_ventas(:desde, :hasta)'
         );
         $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
         $rep_ventas = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -141,7 +141,7 @@ include __DIR__ . '/partials/nav.php';
             <table id="rep-produccion" class="table table-sm">
             <thead>
                 <tr>
-                    <th>Orden</th>
+                    <th>Id</th>
                     <th>Producto</th>
                     <th>Cantidad</th>
                     <th>Artesano</th>
@@ -156,7 +156,7 @@ include __DIR__ . '/partials/nav.php';
                     <?php foreach ($rep_produccion as $row): ?>
                         <?php $estado_label = strtoupper(str_replace('_', ' ', (string)($row['estado'] ?? ''))); ?>
                         <tr>
-                            <td><?php echo htmlspecialchars((string)$row['codigo_orden']); ?></td>
+                            <td><?php echo htmlspecialchars((string) ($row['id'] ?? '')); ?></td>
                             <td><?php echo htmlspecialchars((string)$row['producto']); ?></td>
                             <td><?php echo htmlspecialchars((string)$row['cantidad']); ?></td>
                             <td><?php echo htmlspecialchars((string)($row['artesano'] ?? '')); ?></td>
@@ -302,7 +302,7 @@ include __DIR__ . '/partials/nav.php';
             <table id="rep-ventas" class="table table-sm">
             <thead>
                 <tr>
-                    <th>Pieza</th>
+                    <th>Id</th>
                     <th>Producto</th>
                     <th>Fecha</th>
                     <th>Precio</th>
@@ -317,7 +317,7 @@ include __DIR__ . '/partials/nav.php';
                     <?php foreach ($rep_ventas as $row): ?>
                         <?php $fecha = $row['fecha_venta'] ? date('Y-m-d', strtotime((string)$row['fecha_venta'])) : ''; ?>
                         <tr>
-                            <td><?php echo htmlspecialchars((string)$row['codigo_pieza']); ?></td>
+                            <td><?php echo htmlspecialchars((string) ($row['id'] ?? '')); ?></td>
                             <td><?php echo htmlspecialchars((string)$row['producto_id']); ?></td>
                             <td><?php echo htmlspecialchars($fecha); ?></td>
                             <td><?php echo htmlspecialchars((string)$row['precio_venta']); ?></td>
@@ -638,7 +638,7 @@ const buildLineOptions = (seriesLabel) => {
 
 const loadAllReports = async () => {
     const produccionRows = await loadReport('../api/reportes_produccion.php', '#rep-produccion', row =>
-        `<td>${row.codigo_orden}</td><td>${row.producto}</td><td>${row.cantidad}</td><td>${row.artesano || ''}</td><td>${formatStatus(row.estado)}</td>`,
+        `<td>${row.id}</td><td>${row.producto}</td><td>${row.cantidad}</td><td>${row.artesano || ''}</td><td>${formatStatus(row.estado)}</td>`,
         5
     );
     const inventarioRows = await loadReport('../api/reportes_inventario.php', '#rep-inventario', row =>
@@ -654,7 +654,7 @@ const loadAllReports = async () => {
         5
     );
     const ventasRows = await loadReport('../api/reportes_ventas.php', '#rep-ventas', row =>
-        `<td>${row.codigo_pieza}</td><td>${row.producto_id}</td><td>${formatDateTime(row.fecha_venta)}</td><td>${formatNumber(row.precio_venta)}</td><td>${formatNumber(row.utilidad)}</td>`,
+        `<td>${row.id}</td><td>${row.producto_id}</td><td>${formatDateTime(row.fecha_venta)}</td><td>${formatNumber(row.precio_venta)}</td><td>${formatNumber(row.utilidad)}</td>`,
         5
     );
     const comprasRows = await loadReport('../api/reportes_compras.php', '#rep-compras', row =>

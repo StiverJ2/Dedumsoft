@@ -403,6 +403,8 @@ include __DIR__ . '/partials/nav.php';
         });
     </script>
 <?php elseif ($legacy): ?>
+    <script src="assets/table-sort.js"></script>
+    <script src="assets/crud-legacy.js"></script>
     <script>
         (function () {
             if (window.DedumTableSort) DedumTableSort.init('ubicaciones-table');
@@ -500,10 +502,6 @@ include __DIR__ . '/partials/nav.php';
             });
         })();
     </script>
-<?php else: ?>
-    <!-- Legacy scripts -->
-    <script src="assets/table-sort.js"></script>
-    <script src="assets/crud-legacy.js"></script>
 <?php endif; ?>
 </body>
 

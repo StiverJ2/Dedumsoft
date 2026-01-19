@@ -1,10 +1,16 @@
 -- ============================================
--- FUNCIONES PARA UBICACIONES
+-- FUNCIONES DE UBICACIONES
+-- Fecha: 2026-01-18
 -- ============================================
 
 SET search_path TO joyeria, seguridad, public;
 
--- Obtener ubicaciones
+-- ============================================
+-- OBTENER UBICACIONES
+-- ============================================
+
+DROP FUNCTION IF EXISTS fun_obtener_ubicaciones(int, int, int, boolean);
+
 CREATE OR REPLACE FUNCTION fun_obtener_ubicaciones(
     par_offset int DEFAULT 0,
     par_limit int DEFAULT 100,
@@ -39,11 +45,14 @@ AS $$
     LIMIT par_limit;
 $$;
 
--- Crear ubicación
+-- ============================================
+-- CREAR UBICACIÓN
+-- ============================================
+
 CREATE OR REPLACE FUNCTION fun_crear_ubicacion(
     par_nombre text,
     par_descripcion text DEFAULT NULL,
-    par_area_id int DEFAULT 1
+    par_area_id int DEFAULT NULL
 )
 RETURNS int
 LANGUAGE plpgsql
@@ -56,13 +65,13 @@ BEGIN
     RETURNING id INTO v_id;
     
     RETURN v_id;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al crear ubicación.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
--- Actualizar ubicación
+-- ============================================
+-- ACTUALIZAR UBICACIÓN
+-- ============================================
+
 CREATE OR REPLACE FUNCTION fun_actualizar_ubicacion(
     par_id int,
     par_nombre text DEFAULT NULL,
@@ -88,84 +97,47 @@ BEGIN
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al actualizar ubicación.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
--- Eliminar (soft-delete) ubicación
+-- ============================================
+-- ELIMINAR UBICACIÓN (soft-delete)
+-- ============================================
+
 CREATE OR REPLACE FUNCTION fun_eliminar_ubicacion(par_id int)
 RETURNS boolean
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    UPDATE ubicaciones SET activo = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = par_id AND activo = TRUE;
+    UPDATE ubicaciones 
+    SET activo = FALSE, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = par_id AND activo = TRUE;
     
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Ubicación no encontrada.' USING ERRCODE = 'P0002';
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al eliminar ubicación.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
--- Actualizar función de maquinaria para incluir ubicacion_nombre y tipo_maquinaria
-DROP FUNCTION IF EXISTS fun_obtener_inventario_maquinaria(int, int, text);
-DROP FUNCTION IF EXISTS fun_obtener_inventario_maquinaria(int, int, text, boolean);
+-- ============================================
+-- OBTENER ÁREAS
+-- ============================================
 
-CREATE OR REPLACE FUNCTION fun_obtener_inventario_maquinaria(
-    par_offset int DEFAULT 0,
-    par_limit int DEFAULT 50,
-    par_estado text DEFAULT NULL,
-    par_activo boolean DEFAULT TRUE
-)
+DROP FUNCTION IF EXISTS fun_obtener_areas();
+
+CREATE OR REPLACE FUNCTION fun_obtener_areas()
 RETURNS TABLE (
     id int,
     nombre text,
-    tipo_maquinaria_id int,
-    tipo_nombre text,
-    marca text,
-    modelo text,
-    numero_serie text,
-    fecha_compra date,
-    valor_compra numeric,
-    estado text,
-    ultima_mantenimiento date,
-    proxima_mantenimiento date,
-    ubicacion_id int,
-    ubicacion_nombre text,
-    fecha_registro timestamp,
-    activo boolean
+    descripcion text,
+    orden int
 )
 LANGUAGE sql
 AS $$
-    SELECT
-        im.id,
-        im.nombre::text,
-        im.tipo_maquinaria_id,
-        tm.nombre::text AS tipo_nombre,
-        im.marca::text,
-        im.modelo::text,
-        im.numero_serie::text,
-        im.fecha_compra,
-        im.valor_compra,
-        im.estado::text,
-        im.ultima_mantenimiento,
-        im.proxima_mantenimiento,
-        im.ubicacion_id,
-        u.nombre::text AS ubicacion_nombre,
-        im.fecha_registro,
-        im.activo
-    FROM inventario_maquinaria im
-    LEFT JOIN ubicaciones u ON im.ubicacion_id = u.id
-    LEFT JOIN tipos_maquinaria tm ON im.tipo_maquinaria_id = tm.id
-    WHERE (par_estado IS NULL OR im.estado = par_estado)
-      AND (par_activo IS NULL OR im.activo = par_activo)
-    ORDER BY im.fecha_registro DESC
-    OFFSET par_offset
-    LIMIT par_limit;
+    SELECT a.id, a.nombre::text, a.descripcion::text, a.orden
+    FROM areas a
+    WHERE a.activo = TRUE
+    ORDER BY a.orden, a.nombre;
 $$;

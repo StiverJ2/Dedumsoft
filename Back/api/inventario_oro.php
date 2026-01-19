@@ -28,7 +28,7 @@ if ($method === 'GET') {
         $id = (int) $_GET['id'];
         try {
             $stmt = $connLogic->prepare(
-                'SELECT id, tipo_oro_id, tipo_oro_nombre, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(0, 1000, NULL, NULL) WHERE id = :id'
+                'SELECT id, tipo_oro_id, tipo_oro_nombre, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(0, 1000, NULL, NULL) WHERE id = :id'
             );
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
             $stmt->execute();
@@ -53,7 +53,7 @@ if ($method === 'GET') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, tipo_oro_id, tipo_oro_nombre, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(:offset, :limit, :tipo_id::int, :activo)'
+            'SELECT id, tipo_oro_id, tipo_oro_nombre, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, fecha_registro, valor_total, proveedor_nombre, activo FROM fun_obtener_inventario_oro(:offset, :limit, :tipo_id::int, :activo)'
         );
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -96,7 +96,7 @@ if ($method === 'POST') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_crear_inventario_oro(:tipo_oro_id, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza, :lote)'
+            'SELECT fun_crear_inventario_oro(:tipo_oro_id, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza)'
         );
         $stmt->bindValue(':tipo_oro_id', (int) $input['tipo_oro_id'], PDO::PARAM_INT);
         $stmt->bindValue(':peso_gramos', $input['peso_gramos']);
@@ -105,7 +105,6 @@ if ($method === 'POST') {
         $stmt->bindValue(':fecha_ingreso', $input['fecha_ingreso'] ?? date('Y-m-d'), PDO::PARAM_STR);
         $stmt->bindValue(':ubicacion', $input['ubicacion'] ?? null, isset($input['ubicacion']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':pureza', $input['pureza'] ?? null);
-        $stmt->bindValue(':lote', $input['lote'] ?? null, isset($input['lote']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->execute();
         $result = $stmt->fetchColumn();
 
@@ -133,7 +132,7 @@ if ($method === 'PUT') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_actualizar_inventario_oro(:id, :tipo_oro_id, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza, :lote)'
+            'SELECT fun_actualizar_inventario_oro(:id, :tipo_oro_id, :peso_gramos, :precio_gramo, :proveedor_id, :fecha_ingreso, :ubicacion, :pureza)'
         );
         $stmt->bindValue(':id', (int) $input['id'], PDO::PARAM_INT);
         $stmt->bindValue(':tipo_oro_id', isset($input['tipo_oro_id']) ? (int) $input['tipo_oro_id'] : null, isset($input['tipo_oro_id']) ? PDO::PARAM_INT : PDO::PARAM_NULL);
@@ -143,7 +142,6 @@ if ($method === 'PUT') {
         $stmt->bindValue(':fecha_ingreso', $input['fecha_ingreso'] ?? null, isset($input['fecha_ingreso']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':ubicacion', $input['ubicacion'] ?? null, isset($input['ubicacion']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':pureza', $input['pureza'] ?? null);
-        $stmt->bindValue(':lote', $input['lote'] ?? null, isset($input['lote']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->execute();
 
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Registro actualizado.']);

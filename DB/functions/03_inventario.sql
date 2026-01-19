@@ -1,8 +1,16 @@
 -- ============================================
 -- FUNCIONES DE INVENTARIO
+-- Fecha: 2026-01-18
+-- Normalizado: estado_id en lugar de estado varchar
 -- ============================================
 
 SET search_path TO joyeria, seguridad, public;
+
+-- ============================================
+-- INVENTARIO DE ORO
+-- ============================================
+
+DROP FUNCTION IF EXISTS fun_obtener_inventario_oro(int, int, int, boolean);
 
 CREATE OR REPLACE FUNCTION fun_obtener_inventario_oro(
     par_offset int DEFAULT 0,
@@ -17,19 +25,16 @@ RETURNS TABLE (
     peso_gramos numeric,
     precio_gramo numeric,
     proveedor_id int,
+    proveedor_nombre text,
     fecha_ingreso date,
     ubicacion text,
     pureza numeric,
-    lote text,
     fecha_registro timestamp,
     valor_total numeric,
-    proveedor_nombre text,
     activo boolean
 )
-LANGUAGE plpgsql
+LANGUAGE sql
 AS $$
-BEGIN
-    RETURN QUERY
     SELECT
         io.id,
         io.tipo_oro_id,
@@ -37,13 +42,12 @@ BEGIN
         io.peso_gramos,
         io.precio_gramo,
         io.proveedor_id,
+        p.nombre::text AS proveedor_nombre,
         io.fecha_ingreso,
         io.ubicacion::text,
         io.pureza,
-        io.lote::text,
         io.fecha_registro,
         (io.peso_gramos * io.precio_gramo) AS valor_total,
-        p.nombre::text AS proveedor_nombre,
         io.activo
     FROM inventario_oro io
     LEFT JOIN proveedores p ON io.proveedor_id = p.id
@@ -53,11 +57,13 @@ BEGIN
     ORDER BY io.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Operacion de inventario no disponible.' USING ERRCODE = SQLSTATE;
-END;
 $$;
+
+-- ============================================
+-- INVENTARIO DE INSUMOS
+-- ============================================
+
+DROP FUNCTION IF EXISTS fun_obtener_inventario_insumos(int, int, text, boolean, boolean);
 
 CREATE OR REPLACE FUNCTION fun_obtener_inventario_insumos(
     par_offset int DEFAULT 0,
@@ -76,16 +82,14 @@ RETURNS TABLE (
     precio_unitario numeric,
     stock_minimo numeric,
     proveedor_id int,
+    proveedor_nombre text,
     ubicacion_id int,
     ubicacion_nombre text,
     fecha_registro timestamp,
-    proveedor_nombre text,
     activo boolean
 )
-LANGUAGE plpgsql
+LANGUAGE sql
 AS $$
-BEGIN
-    RETURN QUERY
     SELECT
         ii.id,
         ii.nombre::text,
@@ -96,10 +100,10 @@ BEGIN
         ii.precio_unitario,
         ii.stock_minimo,
         ii.proveedor_id,
+        p.nombre::text AS proveedor_nombre,
         ii.ubicacion_id,
         u.nombre::text AS ubicacion_nombre,
         ii.fecha_registro,
-        p.nombre::text AS proveedor_nombre,
         ii.activo
     FROM inventario_insumos ii
     LEFT JOIN proveedores p ON ii.proveedor_id = p.id
@@ -110,28 +114,33 @@ BEGIN
     ORDER BY ii.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Operacion de inventario no disponible.' USING ERRCODE = SQLSTATE;
-END;
 $$;
+
+-- ============================================
+-- INVENTARIO DE MAQUINARIA (normalizado con estado_id)
+-- ============================================
+
+DROP FUNCTION IF EXISTS fun_obtener_inventario_maquinaria(int, int, text, boolean);
+DROP FUNCTION IF EXISTS fun_obtener_inventario_maquinaria(int, int, int, boolean);
 
 CREATE OR REPLACE FUNCTION fun_obtener_inventario_maquinaria(
     par_offset int DEFAULT 0,
     par_limit int DEFAULT 50,
-    par_estado text DEFAULT NULL,
+    par_estado_id int DEFAULT NULL,
     par_activo boolean DEFAULT TRUE
 )
 RETURNS TABLE (
     id int,
     nombre text,
-    tipo text,
+    tipo_maquinaria_id int,
+    tipo_nombre text,
     marca text,
     modelo text,
-    numero_serie text,
     fecha_compra date,
     valor_compra numeric,
-    estado text,
+    estado_id int,
+    estado_nombre text,
+    estado_color text,
     ultima_mantenimiento date,
     proxima_mantenimiento date,
     ubicacion_id int,
@@ -139,20 +148,20 @@ RETURNS TABLE (
     fecha_registro timestamp,
     activo boolean
 )
-LANGUAGE plpgsql
+LANGUAGE sql
 AS $$
-BEGIN
-    RETURN QUERY
     SELECT
         im.id,
         im.nombre::text,
-        im.tipo::text,
+        im.tipo_maquinaria_id,
+        tm.nombre::text AS tipo_nombre,
         im.marca::text,
         im.modelo::text,
-        im.numero_serie::text,
         im.fecha_compra,
         im.valor_compra,
-        im.estado::text,
+        im.estado_id,
+        em.nombre::text AS estado_nombre,
+        em.color::text AS estado_color,
         im.ultima_mantenimiento,
         im.proxima_mantenimiento,
         im.ubicacion_id,
@@ -161,30 +170,45 @@ BEGIN
         im.activo
     FROM inventario_maquinaria im
     LEFT JOIN ubicaciones u ON im.ubicacion_id = u.id
-    WHERE (par_estado IS NULL OR im.estado = par_estado)
+    LEFT JOIN tipos_maquinaria tm ON im.tipo_maquinaria_id = tm.id
+    LEFT JOIN estados_maquinaria em ON im.estado_id = em.id
+    WHERE (par_estado_id IS NULL OR im.estado_id = par_estado_id)
       AND (par_activo IS NULL OR im.activo = par_activo)
     ORDER BY im.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Operacion de inventario no disponible.' USING ERRCODE = SQLSTATE;
-END;
 $$;
 
 -- ============================================
--- FUNCIONES CRUD PARA INVENTARIO_ORO
+-- OBTENER ESTADOS DE MAQUINARIA (para dropdowns)
+-- ============================================
+
+CREATE OR REPLACE FUNCTION fun_obtener_estados_maquinaria()
+RETURNS TABLE (
+    id int,
+    nombre text,
+    descripcion text,
+    color text
+)
+LANGUAGE sql
+AS $$
+    SELECT em.id, em.nombre::text, em.descripcion::text, em.color::text
+    FROM estados_maquinaria em
+    WHERE em.activo = TRUE
+    ORDER BY em.orden;
+$$;
+
+-- ============================================
+-- CRUD INVENTARIO ORO
 -- ============================================
 
 CREATE OR REPLACE FUNCTION fun_crear_inventario_oro(
-    par_tipo_oro_id int DEFAULT 1,
-    par_peso_gramos numeric DEFAULT 0,
-    par_precio_gramo numeric DEFAULT 0,
+    par_tipo_oro_id int,
+    par_peso_gramos numeric,
+    par_precio_gramo numeric,
     par_proveedor_id int DEFAULT NULL,
-    par_fecha_ingreso date DEFAULT CURRENT_DATE,
     par_ubicacion text DEFAULT NULL,
-    par_pureza numeric DEFAULT NULL,
-    par_lote text DEFAULT NULL
+    par_pureza numeric DEFAULT NULL
 )
 RETURNS int
 LANGUAGE plpgsql
@@ -192,14 +216,11 @@ AS $$
 DECLARE
     v_id int;
 BEGIN
-    INSERT INTO inventario_oro (tipo_oro_id, peso_gramos, precio_gramo, proveedor_id, fecha_ingreso, ubicacion, pureza, lote, activo)
-    VALUES (par_tipo_oro_id, par_peso_gramos, par_precio_gramo, par_proveedor_id, par_fecha_ingreso, par_ubicacion, par_pureza, par_lote, TRUE)
+    INSERT INTO inventario_oro (tipo_oro_id, peso_gramos, precio_gramo, proveedor_id, ubicacion, pureza)
+    VALUES (par_tipo_oro_id, par_peso_gramos, par_precio_gramo, par_proveedor_id, par_ubicacion, par_pureza)
     RETURNING id INTO v_id;
     
     RETURN v_id;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al crear registro de oro.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -209,10 +230,9 @@ CREATE OR REPLACE FUNCTION fun_actualizar_inventario_oro(
     par_peso_gramos numeric DEFAULT NULL,
     par_precio_gramo numeric DEFAULT NULL,
     par_proveedor_id int DEFAULT NULL,
-    par_fecha_ingreso date DEFAULT NULL,
     par_ubicacion text DEFAULT NULL,
     par_pureza numeric DEFAULT NULL,
-    par_lote text DEFAULT NULL
+    par_activo boolean DEFAULT NULL
 )
 RETURNS boolean
 LANGUAGE plpgsql
@@ -224,20 +244,16 @@ BEGIN
         peso_gramos = COALESCE(par_peso_gramos, peso_gramos),
         precio_gramo = COALESCE(par_precio_gramo, precio_gramo),
         proveedor_id = COALESCE(par_proveedor_id, proveedor_id),
-        fecha_ingreso = COALESCE(par_fecha_ingreso, fecha_ingreso),
         ubicacion = COALESCE(par_ubicacion, ubicacion),
         pureza = COALESCE(par_pureza, pureza),
-        lote = COALESCE(par_lote, lote)
-    WHERE id = par_id AND activo = TRUE;
+        activo = COALESCE(par_activo, activo)
+    WHERE id = par_id;
     
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Registro de oro no encontrado.' USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Registro no encontrado.' USING ERRCODE = 'P0002';
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al actualizar registro de oro.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -249,27 +265,24 @@ BEGIN
     UPDATE inventario_oro SET activo = FALSE WHERE id = par_id AND activo = TRUE;
     
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Registro de oro no encontrado.' USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Registro no encontrado.' USING ERRCODE = 'P0002';
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al eliminar registro de oro.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
 -- ============================================
--- FUNCIONES CRUD PARA INVENTARIO_INSUMOS
+-- CRUD INVENTARIO INSUMOS
 -- ============================================
 
-CREATE OR REPLACE FUNCTION fun_crear_inventario_insumos(
+CREATE OR REPLACE FUNCTION fun_crear_inventario_insumo(
     par_nombre text,
-    par_categoria text,
-    par_unidad_medida text,
-    par_precio_unitario numeric,
+    par_categoria text DEFAULT NULL,
     par_descripcion text DEFAULT NULL,
     par_cantidad numeric DEFAULT 0,
+    par_unidad_medida text DEFAULT 'unidad',
+    par_precio_unitario numeric DEFAULT 0,
     par_stock_minimo numeric DEFAULT 0,
     par_proveedor_id int DEFAULT NULL,
     par_ubicacion_id int DEFAULT NULL
@@ -280,18 +293,15 @@ AS $$
 DECLARE
     v_id int;
 BEGIN
-    INSERT INTO inventario_insumos (nombre, categoria, descripcion, cantidad, unidad_medida, precio_unitario, stock_minimo, proveedor_id, ubicacion_id, activo)
-    VALUES (par_nombre, par_categoria, par_descripcion, par_cantidad, par_unidad_medida, par_precio_unitario, par_stock_minimo, par_proveedor_id, par_ubicacion_id, TRUE)
+    INSERT INTO inventario_insumos (nombre, categoria, descripcion, cantidad, unidad_medida, precio_unitario, stock_minimo, proveedor_id, ubicacion_id)
+    VALUES (par_nombre, par_categoria, par_descripcion, par_cantidad, par_unidad_medida, par_precio_unitario, par_stock_minimo, par_proveedor_id, par_ubicacion_id)
     RETURNING id INTO v_id;
     
     RETURN v_id;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al crear insumo.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION fun_actualizar_inventario_insumos(
+CREATE OR REPLACE FUNCTION fun_actualizar_inventario_insumo(
     par_id int,
     par_nombre text DEFAULT NULL,
     par_categoria text DEFAULT NULL,
@@ -301,7 +311,8 @@ CREATE OR REPLACE FUNCTION fun_actualizar_inventario_insumos(
     par_precio_unitario numeric DEFAULT NULL,
     par_stock_minimo numeric DEFAULT NULL,
     par_proveedor_id int DEFAULT NULL,
-    par_ubicacion_id int DEFAULT NULL
+    par_ubicacion_id int DEFAULT NULL,
+    par_activo boolean DEFAULT NULL
 )
 RETURNS boolean
 LANGUAGE plpgsql
@@ -317,21 +328,19 @@ BEGIN
         precio_unitario = COALESCE(par_precio_unitario, precio_unitario),
         stock_minimo = COALESCE(par_stock_minimo, stock_minimo),
         proveedor_id = COALESCE(par_proveedor_id, proveedor_id),
-        ubicacion_id = COALESCE(par_ubicacion_id, ubicacion_id)
-    WHERE id = par_id AND activo = TRUE;
+        ubicacion_id = COALESCE(par_ubicacion_id, ubicacion_id),
+        activo = COALESCE(par_activo, activo)
+    WHERE id = par_id;
     
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Insumo no encontrado.' USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Registro no encontrado.' USING ERRCODE = 'P0002';
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al actualizar insumo.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION fun_eliminar_inventario_insumos(par_id int)
+CREATE OR REPLACE FUNCTION fun_eliminar_inventario_insumo(par_id int)
 RETURNS boolean
 LANGUAGE plpgsql
 AS $$
@@ -339,31 +348,25 @@ BEGIN
     UPDATE inventario_insumos SET activo = FALSE WHERE id = par_id AND activo = TRUE;
     
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Insumo no encontrado.' USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Registro no encontrado.' USING ERRCODE = 'P0002';
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al eliminar insumo.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
 -- ============================================
--- FUNCIONES CRUD PARA INVENTARIO_MAQUINARIA
+-- CRUD INVENTARIO MAQUINARIA (normalizado)
 -- ============================================
 
 CREATE OR REPLACE FUNCTION fun_crear_inventario_maquinaria(
     par_nombre text,
-    par_tipo text,
-    par_fecha_compra date,
-    par_valor_compra numeric,
+    par_tipo_maquinaria_id int DEFAULT NULL,
     par_marca text DEFAULT NULL,
     par_modelo text DEFAULT NULL,
-    par_numero_serie text DEFAULT NULL,
-    par_estado text DEFAULT 'operativa',
-    par_ultima_mantenimiento date DEFAULT NULL,
-    par_proxima_mantenimiento date DEFAULT NULL,
+    par_fecha_compra date DEFAULT NULL,
+    par_valor_compra numeric DEFAULT NULL,
+    par_estado_id int DEFAULT 1,
     par_ubicacion_id int DEFAULT NULL
 )
 RETURNS int
@@ -372,30 +375,27 @@ AS $$
 DECLARE
     v_id int;
 BEGIN
-    INSERT INTO inventario_maquinaria (nombre, tipo, marca, modelo, numero_serie, fecha_compra, valor_compra, estado, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, activo)
-    VALUES (par_nombre, par_tipo, par_marca, par_modelo, par_numero_serie, par_fecha_compra, par_valor_compra, par_estado, par_ultima_mantenimiento, par_proxima_mantenimiento, par_ubicacion_id, TRUE)
+    INSERT INTO inventario_maquinaria (nombre, tipo_maquinaria_id, marca, modelo, fecha_compra, valor_compra, estado_id, ubicacion_id)
+    VALUES (par_nombre, par_tipo_maquinaria_id, par_marca, par_modelo, par_fecha_compra, par_valor_compra, par_estado_id, par_ubicacion_id)
     RETURNING id INTO v_id;
     
     RETURN v_id;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al crear maquinaria.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
 CREATE OR REPLACE FUNCTION fun_actualizar_inventario_maquinaria(
     par_id int,
     par_nombre text DEFAULT NULL,
-    par_tipo text DEFAULT NULL,
+    par_tipo_maquinaria_id int DEFAULT NULL,
     par_marca text DEFAULT NULL,
     par_modelo text DEFAULT NULL,
-    par_numero_serie text DEFAULT NULL,
     par_fecha_compra date DEFAULT NULL,
     par_valor_compra numeric DEFAULT NULL,
-    par_estado text DEFAULT NULL,
+    par_estado_id int DEFAULT NULL,
     par_ultima_mantenimiento date DEFAULT NULL,
     par_proxima_mantenimiento date DEFAULT NULL,
-    par_ubicacion_id int DEFAULT NULL
+    par_ubicacion_id int DEFAULT NULL,
+    par_activo boolean DEFAULT NULL
 )
 RETURNS boolean
 LANGUAGE plpgsql
@@ -404,26 +404,23 @@ BEGIN
     UPDATE inventario_maquinaria
     SET 
         nombre = COALESCE(par_nombre, nombre),
-        tipo = COALESCE(par_tipo, tipo),
+        tipo_maquinaria_id = COALESCE(par_tipo_maquinaria_id, tipo_maquinaria_id),
         marca = COALESCE(par_marca, marca),
         modelo = COALESCE(par_modelo, modelo),
-        numero_serie = COALESCE(par_numero_serie, numero_serie),
         fecha_compra = COALESCE(par_fecha_compra, fecha_compra),
         valor_compra = COALESCE(par_valor_compra, valor_compra),
-        estado = COALESCE(par_estado, estado),
+        estado_id = COALESCE(par_estado_id, estado_id),
         ultima_mantenimiento = COALESCE(par_ultima_mantenimiento, ultima_mantenimiento),
         proxima_mantenimiento = COALESCE(par_proxima_mantenimiento, proxima_mantenimiento),
-        ubicacion_id = COALESCE(par_ubicacion_id, ubicacion_id)
-    WHERE id = par_id AND activo = TRUE;
+        ubicacion_id = COALESCE(par_ubicacion_id, ubicacion_id),
+        activo = COALESCE(par_activo, activo)
+    WHERE id = par_id;
     
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Maquinaria no encontrada.' USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Registro no encontrado.' USING ERRCODE = 'P0002';
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al actualizar maquinaria.' USING ERRCODE = SQLSTATE;
 END;
 $$;
 
@@ -435,12 +432,9 @@ BEGIN
     UPDATE inventario_maquinaria SET activo = FALSE WHERE id = par_id AND activo = TRUE;
     
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Maquinaria no encontrada.' USING ERRCODE = 'P0002';
+        RAISE EXCEPTION 'Registro no encontrado.' USING ERRCODE = 'P0002';
     END IF;
     
     RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error al eliminar maquinaria.' USING ERRCODE = SQLSTATE;
 END;
 $$;

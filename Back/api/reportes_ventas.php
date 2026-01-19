@@ -20,7 +20,7 @@ $hasta = $_GET['hasta'] ?? date('Y-m-t');
 
 try {
     $stmt = $connLogic->prepare(
-        'SELECT codigo_pieza, producto_id, fecha_venta, precio_venta, costo_total, utilidad FROM fun_reporte_ventas(:desde, :hasta)'
+        'SELECT id, producto_id, fecha_venta, precio_venta, costo_total, utilidad FROM fun_reporte_ventas(:desde, :hasta)'
     );
     $stmt->execute([':desde' => $desde, ':hasta' => $hasta]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

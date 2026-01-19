@@ -87,7 +87,7 @@ try {
             break;
         case 'ordenes_estado':
             $rows = dedumsoft_query(
-                'SELECT estado, COUNT(*) AS total FROM ordenes_produccion GROUP BY estado ORDER BY estado',
+                'SELECT COALESCE(eo.nombre, \'sin_estado\') AS estado, COUNT(*) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY COALESCE(eo.nombre, \'sin_estado\') ORDER BY COALESCE(eo.nombre, \'sin_estado\')',
                 []
             );
             dedumsoft_render_bar_chart($rows, 'estado', 'total', 'Ordenes', $width, $height);

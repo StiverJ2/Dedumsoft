@@ -7,11 +7,12 @@ require_once __DIR__ . '/../connection/connectionLogic.php';
 require_login('login.php');
 
 $legacy = dedumsoft_is_legacy_browser();
-$maq_estado = $_GET['maq_estado'] ?? '';
+$maq_estado_id = isset($_GET['maq_estado_id']) && $_GET['maq_estado_id'] !== '' ? (int) $_GET['maq_estado_id'] : null;
 $maq_rows = [];
 $proveedor_options = [];
 $ubicacion_options = [];
 $tipo_maquinaria_options = [];
+$maq_estado_options = [];
 
 function format_maq_tipo_badge($tipo)
 {
@@ -35,13 +36,20 @@ function format_maq_tipo_badge($tipo)
     return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars($label) . '</span>';
 }
 
-function format_maq_estado_badge($estado)
+function format_maq_estado_badge($estado_nombre, $estado_color = null)
 {
-    $estado = trim((string) $estado);
+    $estado = trim((string) $estado_nombre);
     if ($estado === '')
         return '';
     $key = strtolower($estado);
     $label = ucwords(str_replace('_', ' ', $estado));
+
+    // Si tenemos color de la BD, usarlo
+    if ($estado_color) {
+        return '<span class="ds-badge" style="background-color:' . htmlspecialchars($estado_color) . '">' . htmlspecialchars($label) . '</span>';
+    }
+
+    // Fallback a clases CSS
     $cls = 'ds-badge--neutral';
     if ($key === 'operativa')
         $cls = 'ds-badge--success';
@@ -49,7 +57,7 @@ function format_maq_estado_badge($estado)
         $cls = 'ds-badge--warning';
     elseif ($key === 'averiada')
         $cls = 'ds-badge--danger';
-    elseif ($key === 'fuera_servicio' || strpos($key, 'fuera') !== false)
+    elseif ($key === 'fuera de servicio' || strpos($key, 'fuera') !== false)
         $cls = 'ds-badge--muted';
     return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars($label) . '</span>';
 }
@@ -75,25 +83,22 @@ try {
     error_log('inventario tipos_maquinaria error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 }
 
-// Obtener opciones de estados de maquinaria (valores por defecto)
-$maq_estado_options = [];
-if ($legacy) {
-    $maq_estado_options = [
-        ['value' => 'operativa', 'label' => 'Operativa'],
-        ['value' => 'mantenimiento', 'label' => 'Mantenimiento'],
-        ['value' => 'averiada', 'label' => 'Averiada'],
-        ['value' => 'fuera_servicio', 'label' => 'Fuera de servicio']
-    ];
+// Obtener opciones de estados de maquinaria desde la BD
+try {
+    $stmt = $connLogic->query("SELECT id, nombre, color FROM estados_maquinaria WHERE activo = TRUE ORDER BY orden");
+    $maq_estado_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log('inventario estados_maquinaria error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 }
 
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, tipo_maquinaria_id, tipo_nombre, estado, ubicacion_id, ubicacion_nombre FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado, :activo)'
+            'SELECT id, nombre, tipo_maquinaria_id, tipo_nombre, estado_id, estado_nombre, estado_color, ubicacion_id, ubicacion_nombre FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado_id, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
         $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
-        $stmt->bindValue(':estado', $maq_estado !== '' ? $maq_estado : null, $maq_estado !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':estado_id', $maq_estado_id, $maq_estado_id !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $maq_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -122,17 +127,14 @@ include __DIR__ . '/partials/nav.php';
             <form method="get" action="inventario_maquinaria.php#inv-maquinaria"
                 class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
-                    <label class="form-label muted" for="maq-estado">Estado</label>
-                    <select id="maq-estado" name="maq_estado" class="form-select form-select-sm ds-field">
+                    <label class="form-label muted" for="maq-estado-id">Estado</label>
+                    <select id="maq-estado-id" name="maq_estado_id" class="form-select form-select-sm ds-field">
                         <option value="">Todos</option>
-                        <option value="operativa" <?php echo $maq_estado === 'operativa' ? 'selected' : ''; ?>>Operativa
-                        </option>
-                        <option value="mantenimiento" <?php echo $maq_estado === 'mantenimiento' ? 'selected' : ''; ?>>
-                            Mantenimiento</option>
-                        <option value="averiada" <?php echo $maq_estado === 'averiada' ? 'selected' : ''; ?>>Averiada
-                        </option>
-                        <option value="fuera_servicio" <?php echo $maq_estado === 'fuera_servicio' ? 'selected' : ''; ?>>
-                            Fuera de servicio</option>
+                        <?php foreach ($maq_estado_options as $est): ?>
+                            <option value="<?php echo (int) $est['id']; ?>" <?php echo $maq_estado_id === (int) $est['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($est['nombre']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <button class="btn btn-sm" type="submit">Actualizar</button>
@@ -158,7 +160,8 @@ include __DIR__ . '/partials/nav.php';
                                 <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
                                 <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
                                 <td><?php echo format_maq_tipo_badge($row['tipo_nombre'] ?? ''); ?></td>
-                                <td><?php echo format_maq_estado_badge($row['estado']); ?></td>
+                                <td><?php echo format_maq_estado_badge($row['estado_nombre'] ?? '', $row['estado_color'] ?? null); ?>
+                                </td>
                                 <td><?php echo htmlspecialchars((string) ($row['ubicacion_nombre'] ?? '')); ?></td>
                                 <td class="ds-actions-col"></td>
                             </tr>
@@ -192,17 +195,20 @@ include __DIR__ . '/partials/nav.php';
             return '<span class="ds-badge ' + cls + '">' + label + '</span>';
         }
 
-        function formatMaqEstado(estado) {
-            if (!estado) return '';
-            var key = estado.toLowerCase();
-            var label = estado.replace(/_/g, ' ').replace(/\b\w/g, function (c) {
+        function formatMaqEstado(estadoNombre, estadoColor) {
+            if (!estadoNombre) return '';
+            var label = estadoNombre.replace(/_/g, ' ').replace(/\b\w/g, function (c) {
                 return c.toUpperCase();
             });
+            if (estadoColor) {
+                return '<span class="ds-badge" style="background-color:' + estadoColor + '">' + label + '</span>';
+            }
+            var key = estadoNombre.toLowerCase();
             var cls = 'ds-badge--neutral';
             if (key === 'operativa') cls = 'ds-badge--success';
             else if (key === 'mantenimiento') cls = 'ds-badge--warning';
             else if (key === 'averiada') cls = 'ds-badge--danger';
-            else if (key === 'fuera_servicio' || key.indexOf('fuera') > -1) cls = 'ds-badge--muted';
+            else if (key === 'fuera de servicio' || key.indexOf('fuera') > -1) cls = 'ds-badge--muted';
             return '<span class="ds-badge ' + cls + '">' + label + '</span>';
         }
 
@@ -223,27 +229,15 @@ include __DIR__ . '/partials/nav.php';
                 axios.get('../api/ubicaciones.php?limit=500'),
                 axios.get('../api/tipos_maquinaria.php')
             ]).then(([resEstados, resProv, resUbi, resTipos]) => {
-                maqEstadoOptions = resEstados.data.DATOS || [{
-                    value: 'operativa',
-                    label: 'Operativa'
-                },
-                {
-                    value: 'mantenimiento',
-                    label: 'Mantenimiento'
-                },
-                {
-                    value: 'averiada',
-                    label: 'Averiada'
-                },
-                {
-                    value: 'fuera_servicio',
-                    label: 'Fuera de servicio'
-                }
-                ];
+                maqEstadoOptions = (resEstados.data.DATOS || []).map(e => ({
+                    value: e.value,
+                    label: e.label,
+                    color: e.color
+                }));
 
                 proveedoresCache = (resProv.data.DATOS || []).map(p => ({
                     value: p.id,
-                    label: `${p.nombre} (${p.tipo})`
+                    label: `${p.nombre} (${p.tipo_nombre || p.tipo || ''})`
                 }));
 
                 ubicacionesCache = (resUbi.data.DATOS || []).map(u => ({
@@ -259,24 +253,6 @@ include __DIR__ . '/partials/nav.php';
                 initMaqTable();
             }).catch(error => {
                 console.error('Error cargando datos:', error);
-                // Usar valores por defecto y continuar
-                maqEstadoOptions = [{
-                    value: 'operativa',
-                    label: 'Operativa'
-                },
-                {
-                    value: 'mantenimiento',
-                    label: 'Mantenimiento'
-                },
-                {
-                    value: 'averiada',
-                    label: 'Averiada'
-                },
-                {
-                    value: 'fuera_servicio',
-                    label: 'Fuera de servicio'
-                }
-                ];
                 initMaqTable();
             });
 
@@ -311,10 +287,10 @@ include __DIR__ . '/partials/nav.php';
                         required: true
                     }) +
                     DsCrud.field({
-                        name: 'estado',
+                        name: 'estado_id',
                         label: 'Estado',
                         type: 'select',
-                        value: data.estado,
+                        value: data.estado_id,
                         options: maqEstadoOptions,
                         required: true
                     }) +
@@ -423,8 +399,10 @@ include __DIR__ . '/partials/nav.php';
                         render: formatMaqTipo
                     },
                     {
-                        data: 'estado',
-                        render: formatMaqEstado
+                        data: null,
+                        render: function (data, type, row) {
+                            return formatMaqEstado(row.estado_nombre, row.estado_color);
+                        }
                     },
                     {
                         data: 'ubicacion_nombre',
@@ -478,7 +456,9 @@ include __DIR__ . '/partials/nav.php';
                 return ['value' => $t['id'], 'label' => $t['nombre']];
             }, $tipo_maquinaria_options)); ?>;
 
-            var maqEstadoOptions = <?php echo json_encode($maq_estado_options); ?>;
+            var maqEstadoOptions = <?php echo json_encode(array_map(function ($e) {
+                return ['value' => $e['id'], 'label' => $e['nombre']];
+            }, $maq_estado_options)); ?>;
 
             function esc(s) {
                 if (s === null || s === undefined) return '';
@@ -513,7 +493,7 @@ include __DIR__ . '/partials/nav.php';
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Tipo <span style="color:red">*</span></label>' +
                     selectHtml('tipo_maquinaria_id', d.tipo_maquinaria_id || '', tipoMaquinariaOptions, true) + '</div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Estado <span style="color:red">*</span></label>' +
-                    selectHtml('estado', d.estado || 'operativa', maqEstadoOptions, true) + '</div>' +
+                    selectHtml('estado_id', d.estado_id || 1, maqEstadoOptions, true) + '</div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Ubicacion</label>' +
                     selectHtml('ubicacion_id', d.ubicacion_id || '', ubicacionOptions, false) + '</div>' +
                     '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Proveedor</label>' +

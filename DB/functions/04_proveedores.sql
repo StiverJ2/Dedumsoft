@@ -67,9 +67,14 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_id int;
+    v_tipo text;
 BEGIN
-    INSERT INTO proveedores (nombre, tipo_proveedor_id, contacto, telefono, email, direccion, activo)
-    VALUES (par_nombre, par_tipo_proveedor_id, par_contacto, par_telefono, par_email, par_direccion, TRUE)
+    SELECT lower(t.nombre)::text INTO v_tipo
+    FROM tipos_proveedor t
+    WHERE t.id = par_tipo_proveedor_id;
+
+    INSERT INTO proveedores (nombre, tipo_proveedor_id, tipo, contacto, telefono, email, direccion, activo)
+    VALUES (par_nombre, par_tipo_proveedor_id, v_tipo, par_contacto, par_telefono, par_email, par_direccion, TRUE)
     RETURNING id INTO v_id;
     
     RETURN v_id;
@@ -97,6 +102,12 @@ BEGIN
     SET 
         nombre = COALESCE(par_nombre, nombre),
         tipo_proveedor_id = COALESCE(par_tipo_proveedor_id, tipo_proveedor_id),
+        tipo = CASE
+            WHEN par_tipo_proveedor_id IS NOT NULL THEN (
+                SELECT lower(t.nombre)::text FROM tipos_proveedor t WHERE t.id = par_tipo_proveedor_id
+            )
+            ELSE tipo
+        END,
         contacto = COALESCE(par_contacto, contacto),
         telefono = COALESCE(par_telefono, telefono),
         email = COALESCE(par_email, email),

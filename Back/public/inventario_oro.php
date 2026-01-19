@@ -64,7 +64,7 @@ include __DIR__ . '/partials/nav.php';
 <div class="content">
     <div class="content-header">
         <h1>Inventario de oro</h1>
-        <p>Control de metales y lotes</p>
+        <p>Control de metales</p>
     </div>
 
     <div class="card" id="inv-oro">

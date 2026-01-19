@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION fun_reporte_produccion(
     par_hasta date
 )
 RETURNS TABLE (
-    codigo_orden text,
+    id int,
     producto text,
     cantidad int,
     artesano text,
@@ -22,15 +22,16 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        op.codigo_orden::text,
+        op.id,
         pr.nombre::text AS producto,
         op.cantidad,
         a.nombre || ' ' || a.apellido AS artesano,
-        op.estado::text,
+        eo.nombre::text AS estado,
         op.fecha_inicio,
         op.fecha_fin_real
     FROM ordenes_produccion op
     INNER JOIN productos pr ON op.producto_id = pr.id
+    LEFT JOIN estados_orden eo ON op.estado_id = eo.id
     LEFT JOIN artesanos a ON op.artesano_id = a.id
     WHERE op.fecha_creacion::date BETWEEN par_desde AND par_hasta
     ORDER BY op.fecha_creacion DESC;
@@ -97,7 +98,7 @@ BEGIN
             co.inventario_oro_id AS material_id,
             ('Oro ' || COALESCE(tor.nombre, 'Sin tipo'))::text AS material_nombre,
             SUM(co.cantidad_consumida) AS cantidad_total,
-            SUM(co.cantidad_consumida * COALESCE(co.costo_unitario, 0)) AS costo_total
+            SUM(co.cantidad_consumida * COALESCE(io.precio_gramo, 0)) AS costo_total
         FROM consumo_oro co
         INNER JOIN inventario_oro io ON co.inventario_oro_id = io.id
         LEFT JOIN tipos_oro tor ON io.tipo_oro_id = tor.id
@@ -109,7 +110,7 @@ BEGIN
             ci.inventario_insumos_id AS material_id,
             ii.nombre::text AS material_nombre,
             SUM(ci.cantidad_consumida) AS cantidad_total,
-            SUM(ci.cantidad_consumida * COALESCE(ci.costo_unitario, 0)) AS costo_total
+            SUM(ci.cantidad_consumida * COALESCE(ii.precio_unitario, 0)) AS costo_total
         FROM consumo_insumos ci
         INNER JOIN inventario_insumos ii ON ci.inventario_insumos_id = ii.id
         WHERE ci.fecha_consumo::date BETWEEN par_desde AND par_hasta
@@ -157,7 +158,7 @@ CREATE OR REPLACE FUNCTION fun_reporte_ventas(
     par_hasta date
 )
 RETURNS TABLE (
-    codigo_pieza text,
+    id int,
     producto_id int,
     fecha_venta timestamp,
     precio_venta numeric,
@@ -169,7 +170,7 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        ct.codigo_pieza::text,
+        ct.id,
         ct.producto_id,
         ct.fecha_venta,
         ct.precio_venta_real AS precio_venta,

@@ -13,7 +13,7 @@ $ordenes_rows = [];
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(
-            'SELECT codigo_orden, producto_nombre, artesano_nombre, estado, fecha_inicio FROM fun_obtener_ordenes(:offset, :limit, :estado)'
+            'SELECT id, producto_nombre, artesano_nombre, estado, fecha_inicio FROM fun_obtener_ordenes(:offset, :limit, :estado)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
         $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
@@ -58,7 +58,7 @@ include __DIR__ . '/partials/nav.php';
             <table id="ordenes-table" class="table table-sm">
                 <thead>
                     <tr>
-                        <th>Codigo</th>
+                        <th>Id</th>
                         <th>Producto</th>
                         <th>Artesano</th>
                         <th>Estado</th>
@@ -74,7 +74,7 @@ include __DIR__ . '/partials/nav.php';
                             $fecha_inicio = $row['fecha_inicio'] ? date('Y-m-d H:i', strtotime((string) $row['fecha_inicio'])) : '';
                             ?>
                             <tr>
-                                <td><?php echo htmlspecialchars((string) $row['codigo_orden']); ?></td>
+                                <td><?php echo htmlspecialchars((string) ($row['id'] ?? '')); ?></td>
                                 <td><?php echo htmlspecialchars((string) $row['producto_nombre']); ?></td>
                                 <td><?php echo htmlspecialchars((string) ($row['artesano_nombre'] ?? '')); ?></td>
                                 <td><?php echo htmlspecialchars($estado_label); ?></td>
@@ -108,7 +108,7 @@ include __DIR__ . '/partials/nav.php';
                 $('#ordenes-table').DataTable({
                     data: data.DATOS || [],
                     columns: [
-                        { data: 'codigo_orden' },
+                        { data: 'id' },
                         { data: 'producto_nombre' },
                         { data: 'artesano_nombre', defaultContent: '' },
                         { data: 'estado', render: formatStatus },

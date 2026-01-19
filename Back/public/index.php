@@ -11,7 +11,7 @@ $load_uplot = !$legacy;
 
 try {
     $stmt = $connLogic->prepare(
-        'SELECT id, codigo_orden, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones FROM fun_obtener_ordenes(:offset, :limit, :estado)'
+        'SELECT id, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones FROM fun_obtener_ordenes(:offset, :limit, :estado)'
     );
     $stmt->execute([':offset' => 0, ':limit' => 5, ':estado' => null]);
     $ordenes = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -44,11 +44,11 @@ try {
     $ventas_mes_total = (float) $stmt->fetchColumn();
 
     $ordenes_activas = (int) $connLogic
-        ->query("SELECT COUNT(*) FROM ordenes_produccion WHERE estado NOT IN ('terminada', 'cancelada')")
+        ->query("SELECT COUNT(*) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre NOT IN ('terminada', 'cancelada')")
         ->fetchColumn();
 
     $stmt = $connLogic->prepare(
-        "SELECT COUNT(*) FROM ordenes_produccion WHERE estado = 'terminada' AND fecha_fin_real IS NOT NULL AND fecha_fin_real::date BETWEEN :desde AND :hasta"
+        "SELECT COUNT(*) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre = 'terminada' AND op.fecha_fin_real IS NOT NULL AND op.fecha_fin_real::date BETWEEN :desde AND :hasta"
     );
     $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
     $ordenes_completadas_mes = (int) $stmt->fetchColumn();
@@ -66,7 +66,7 @@ try {
     }
 
     $ordenes_estado = $connLogic
-        ->query('SELECT estado, COUNT(*) AS total FROM ordenes_produccion GROUP BY estado ORDER BY estado')
+        ->query('SELECT eo.nombre AS estado, COUNT(*) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY eo.nombre ORDER BY eo.nombre')
         ->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $inventario_total = 0;
@@ -214,7 +214,7 @@ if ($legacy) {
             <table class="table table-sm">
                 <thead>
                     <tr>
-                        <th>Codigo</th>
+                                    <th>Id</th>
                         <th>Producto</th>
                         <th>Estado</th>
                         <th>Fecha</th>
@@ -228,7 +228,7 @@ if ($legacy) {
                     <?php else: ?>
                         <?php foreach ($ordenes as $orden): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($orden['codigo_orden'] ?? ''); ?></td>
+                                <td><?php echo htmlspecialchars((string) ($orden['id'] ?? '')); ?></td>
                                 <td><?php echo htmlspecialchars($orden['producto_nombre'] ?? ''); ?></td>
                                 <td><?php echo dedumsoft_format_status_badge($orden['estado'] ?? ''); ?></td>
                                 <td><?php echo htmlspecialchars(dedumsoft_format_datetime($orden['fecha_creacion'] ?? '')); ?>
