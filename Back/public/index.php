@@ -276,7 +276,10 @@ if ($legacy) {
                     <?php
                     $estado_summary = [];
                     foreach ($ordenes_estado as $est) {
-                        $estado_summary[] = ucfirst(str_replace('_', ' ', $est['estado'])) . ': ' . $est['total'];
+                        // XSS: Escapar datos de BD antes de mostrar
+                        $estado_label = htmlspecialchars(ucfirst(str_replace('_', ' ', $est['estado'])), ENT_QUOTES, 'UTF-8');
+                        $estado_total = (int) $est['total'];
+                        $estado_summary[] = $estado_label . ': ' . $estado_total;
                     }
                     echo implode(' | ', $estado_summary) ?: 'Sin datos';
                     ?>
