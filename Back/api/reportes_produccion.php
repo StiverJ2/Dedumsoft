@@ -14,6 +14,7 @@ if (!validateHttpMethod('GET')) {
 if (!require_api_auth()) {
     exit;
 }
+require_menu_access(4);
 
 $desde = $_GET['desde'] ?? date('Y-m-01');
 $hasta = $_GET['hasta'] ?? date('Y-m-t');

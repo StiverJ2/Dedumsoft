@@ -14,6 +14,7 @@ if (!validateHttpMethod('GET')) {
 if (!require_api_auth()) {
     exit;
 }
+require_menu_access(4);
 
 try {
     $stmt = $connLogic->prepare(

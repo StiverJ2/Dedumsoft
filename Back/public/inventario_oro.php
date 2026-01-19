@@ -5,6 +5,7 @@ require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
+require_menu_access(2);
 
 $legacy = dedumsoft_is_legacy_browser();
 $oro_tipo = $_GET['oro_tipo'] ?? '';
@@ -72,6 +73,7 @@ include __DIR__ . '/partials/nav.php';
             <strong>Inventario de oro</strong>
             <div class="ds-toolbar-actions">
                 <button type="button" class="btn-add" id="btn-add-oro">+ Nuevo Oro</button>
+                <button type="button" class="btn-add" id="btn-compra-oro">+ Registrar Compra</button>
             </div>
         </div>
         <?php if ($legacy): ?>
@@ -167,10 +169,8 @@ include __DIR__ . '/partials/nav.php';
 
                 proveedoresCache = (resProv.data.DATOS || []).map(p => ({
                     value: p.id,
-                    label: `${p.nombre} (${p.tipo})`
+                    label: `${p.nombre} (${p.tipo_nombre})`
                 }));
-
-                initOroTable();
             }).catch(error => {
                 console.error('Error cargando datos:', error);
                 // Usar valores por defecto y continuar
@@ -195,10 +195,9 @@ include __DIR__ . '/partials/nav.php';
                     label: '24k'
                 }
                 ];
-                initOroTable();
             });
 
-            const initOroTable = () => {
+            function buildOroForm(data) {
                 data = data || {};
                 var provOpts = [{
                     value: '',
@@ -311,6 +310,93 @@ include __DIR__ . '/partials/nav.php';
                 });
             };
 
+            function buildCompraOroForm(options, data) {
+                data = data || {};
+                return DsCrud.field({
+                    name: 'item_id',
+                    label: 'Inventario de oro',
+                    type: 'select',
+                    value: data.item_id,
+                    options: options,
+                    required: true
+                }) +
+                    DsCrud.field({
+                        name: 'cantidad',
+                        label: 'Cantidad (gramos)',
+                        type: 'number',
+                        value: data.cantidad,
+                        required: true,
+                        attrs: 'step="0.01" min="0"'
+                    }) +
+                    DsCrud.field({
+                        name: 'motivo',
+                        label: 'Motivo',
+                        value: data.motivo || 'Compra proveedor'
+                    }) +
+                    DsCrud.field({
+                        name: 'referencia',
+                        label: 'Referencia',
+                        value: data.referencia
+                    }) +
+                    DsCrud.field({
+                        name: 'fecha',
+                        label: 'Fecha',
+                        type: 'datetime-local',
+                        value: data.fecha
+                    });
+            }
+
+            function openOroCompra() {
+                axios.get('../api/inventario_oro.php?limit=500').then(function (res) {
+                    var items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
+                    if (!items.length) {
+                        DsCrud.toast('No hay inventario de oro disponible', 'warning');
+                        return;
+                    }
+                    var options = [{
+                        value: '',
+                        label: '-- Seleccione --'
+                    }].concat(items.map(function (it) {
+                        var label = (it.tipo_oro_nombre || 'Oro') + ' #' + it.id;
+                        return {
+                            value: it.id,
+                            label: label
+                        };
+                    }));
+
+                    DsCrud.openModal({
+                        title: 'Registrar compra de oro',
+                        body: '<form id="frm-compra-oro">' + buildCompraOroForm(options) + '</form>',
+                        onSave: function (m) {
+                            var f = m.querySelector('#frm-compra-oro');
+                            if (!f.checkValidity()) {
+                                f.reportValidity();
+                                return;
+                            }
+                            var fd = new FormData(f),
+                                payload = {
+                                    tipo_inventario: 'oro'
+                                };
+                            fd.forEach(function (v, k) {
+                                payload[k] = v;
+                            });
+                            if (payload.fecha) {
+                                payload.fecha = payload.fecha.replace('T', ' ');
+                            }
+                            DsCrud.api('../api/compras.php', 'POST', payload, function () {
+                                DsCrud.toast('Compra registrada', 'success');
+                                oroTable.ajax.reload();
+                                DsCrud.closeModal();
+                            }, function (e) {
+                                DsCrud.toast(e, 'error');
+                            });
+                        }
+                    });
+                }).catch(function () {
+                    DsCrud.toast('Error cargando inventario', 'error');
+                });
+            }
+
             oroTable = $('#oro-table').DataTable({
                 ajax: {
                     url: '../api/inventario_oro.php?limit=500',
@@ -346,6 +432,7 @@ include __DIR__ . '/partials/nav.php';
             });
 
             $('#btn-add-oro').on('click', openOroCreate);
+            $('#btn-compra-oro').on('click', openOroCompra);
             $('#oro-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
                 openOroEdit(oroTable.row($(this).closest('tr')).data());
             });
@@ -369,6 +456,12 @@ include __DIR__ . '/partials/nav.php';
             )); ?>;
 
             var oroTipoOptions = <?php echo json_encode($oro_tipo_options); ?>;
+            var oroInventoryOptions = <?php echo json_encode(array_map(function ($row) {
+                return [
+                    'value' => $row['id'],
+                    'label' => ($row['tipo_oro_nombre'] ?? 'Oro') . ' #' . $row['id']
+                ];
+            }, $oro_rows)); ?>;
 
             function esc(s) {
                 if (s === null || s === undefined) return '';
@@ -408,6 +501,21 @@ include __DIR__ . '/partials/nav.php';
                     selectHtml('proveedor_id', d.proveedor_id || '', oroProveedores, false) + '</div>';
             }
 
+            function buildCompraOroFormHtml(d) {
+                d = d || {};
+                var invOpts = [{ value: '', label: '-- Seleccione --' }].concat(oroInventoryOptions);
+                return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Inventario de oro <span style="color:red">*</span></label>' +
+                    selectHtml('item_id', d.item_id || '', invOpts, true) + '</div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Cantidad (gramos) <span style="color:red">*</span></label><input type="text" name="cantidad" value="' +
+                    esc(d.cantidad || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Motivo</label><input type="text" name="motivo" value="' +
+                    esc(d.motivo || 'Compra proveedor') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Referencia</label><input type="text" name="referencia" value="' +
+                    esc(d.referencia || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Fecha</label><input type="datetime-local" name="fecha" value="' +
+                    esc(d.fecha || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>';
+            }
+
             DsCrud.addEvent(DsCrud.getById('btn-add-oro'), 'click', function () {
                 DsCrud.openModal({
                     title: 'Nuevo Inventario Oro',
@@ -417,6 +525,32 @@ include __DIR__ . '/partials/nav.php';
                         var data = DsCrud.getFormData(modal);
                         DsCrud.api('../api/inventario_oro.php', 'POST', data, function () {
                             DsCrud.toast('Oro creado', 'success');
+                            DsCrud.closeModal();
+                            location.reload();
+                        }, function (e) {
+                            DsCrud.toast(e, 'error');
+                        });
+                    }
+                });
+            });
+
+            DsCrud.addEvent(DsCrud.getById('btn-compra-oro'), 'click', function () {
+                if (!oroInventoryOptions.length) {
+                    DsCrud.toast('No hay inventario de oro disponible', 'error');
+                    return;
+                }
+                DsCrud.openModal({
+                    title: 'Registrar compra de oro',
+                    body: '<form id="frm-compra-oro">' + buildCompraOroFormHtml() + '</form>',
+                    onSave: function (modal) {
+                        if (!DsCrud.validateForm(modal)) return;
+                        var data = DsCrud.getFormData(modal);
+                        data.tipo_inventario = 'oro';
+                        if (data.fecha) {
+                            data.fecha = data.fecha.replace('T', ' ');
+                        }
+                        DsCrud.api('../api/compras.php', 'POST', data, function () {
+                            DsCrud.toast('Compra registrada', 'success');
                             DsCrud.closeModal();
                             location.reload();
                         }, function (e) {

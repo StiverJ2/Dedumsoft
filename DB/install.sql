@@ -24,6 +24,7 @@
 \i functions/06_reportes.sql
 \i functions/07_ubicaciones.sql
 \i functions/08_catalog_functions.sql
+\i functions/09_artesano.sql
 
 \echo ''
 \echo '3. Cargando datos iniciales...'
@@ -32,6 +33,8 @@
 \echo ''
 \echo '============================================'
 \echo 'Instalación completada exitosamente!'
-\echo 'Usuario: admin'
-\echo 'Password: Admin123!'
+\echo ''
+\echo 'Usuarios creados:'
+\echo '  - admin / Admin123! (ADMIN)'
+\echo '  - artesano / Artesano123! (OPERADOR)'
 \echo '============================================'

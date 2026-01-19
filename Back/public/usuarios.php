@@ -5,6 +5,7 @@ require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
+require_menu_access(5);
 
 $legacy = dedumsoft_is_legacy_browser();
 $rol_filter = $_GET['rol'] ?? '';

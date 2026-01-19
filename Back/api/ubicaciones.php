@@ -12,6 +12,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if (!require_api_auth()) {
     exit;
 }
+require_menu_access(2);
 
 if ($method === 'GET') {
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;

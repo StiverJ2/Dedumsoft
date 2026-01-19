@@ -239,9 +239,10 @@ CREATE TABLE IF NOT EXISTS proveedores (
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Artesanos
+-- Artesanos (todos los usuarios con rol OPERADOR son artesanos)
 CREATE TABLE IF NOT EXISTS artesanos (
     id SERIAL PRIMARY KEY,
+    usuario_id INTEGER UNIQUE REFERENCES seguridad.seg_usuario(id_usuario) ON DELETE SET NULL,
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
     especialidad VARCHAR(100),
@@ -280,7 +281,8 @@ CREATE TABLE IF NOT EXISTS inventario_oro (
 
 -- Inventario de Maquinaria (estado normalizado)
 CREATE TABLE IF NOT EXISTS inventario_maquinaria (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
+    sku VARCHAR(100) NOT NULL,
     nombre VARCHAR(200) NOT NULL,
     tipo_maquinaria_id INTEGER REFERENCES tipos_maquinaria(id),
     marca VARCHAR(100),
@@ -292,7 +294,10 @@ CREATE TABLE IF NOT EXISTS inventario_maquinaria (
     proxima_mantenimiento DATE,
     ubicacion_id INTEGER REFERENCES ubicaciones(id),
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    activo BOOLEAN DEFAULT TRUE
+    activo BOOLEAN DEFAULT TRUE,
+    PRIMARY KEY (id, sku),
+    UNIQUE (id),
+    UNIQUE (sku)
 );
 
 -- Inventario de Insumos

@@ -5,6 +5,7 @@ require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
+require_menu_access(7);
 
 $mode_override = dedumsoft_ui_mode_override();
 $ua_legacy = dedumsoft_is_legacy_ua();

@@ -131,6 +131,7 @@ CREATE OR REPLACE FUNCTION fun_obtener_inventario_maquinaria(
 )
 RETURNS TABLE (
     id int,
+    sku text,
     nombre text,
     tipo_maquinaria_id int,
     tipo_nombre text,
@@ -152,6 +153,7 @@ LANGUAGE sql
 AS $$
     SELECT
         im.id,
+        im.sku::text AS sku,
         im.nombre::text,
         im.tipo_maquinaria_id,
         tm.nombre::text AS tipo_nombre,
@@ -361,6 +363,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION fun_crear_inventario_maquinaria(
     par_nombre text,
+    par_sku text,
     par_tipo_maquinaria_id int DEFAULT NULL,
     par_marca text DEFAULT NULL,
     par_modelo text DEFAULT NULL,
@@ -375,8 +378,8 @@ AS $$
 DECLARE
     v_id int;
 BEGIN
-    INSERT INTO inventario_maquinaria (nombre, tipo_maquinaria_id, marca, modelo, fecha_compra, valor_compra, estado_id, ubicacion_id)
-    VALUES (par_nombre, par_tipo_maquinaria_id, par_marca, par_modelo, par_fecha_compra, par_valor_compra, par_estado_id, par_ubicacion_id)
+    INSERT INTO inventario_maquinaria (nombre, sku, tipo_maquinaria_id, marca, modelo, fecha_compra, valor_compra, estado_id, ubicacion_id)
+    VALUES (par_nombre, par_sku, par_tipo_maquinaria_id, par_marca, par_modelo, par_fecha_compra, par_valor_compra, par_estado_id, par_ubicacion_id)
     RETURNING id INTO v_id;
     
     RETURN v_id;
@@ -386,6 +389,7 @@ $$;
 CREATE OR REPLACE FUNCTION fun_actualizar_inventario_maquinaria(
     par_id int,
     par_nombre text DEFAULT NULL,
+    par_sku text DEFAULT NULL,
     par_tipo_maquinaria_id int DEFAULT NULL,
     par_marca text DEFAULT NULL,
     par_modelo text DEFAULT NULL,
@@ -404,6 +408,7 @@ BEGIN
     UPDATE inventario_maquinaria
     SET 
         nombre = COALESCE(par_nombre, nombre),
+        sku = COALESCE(par_sku, sku),
         tipo_maquinaria_id = COALESCE(par_tipo_maquinaria_id, tipo_maquinaria_id),
         marca = COALESCE(par_marca, marca),
         modelo = COALESCE(par_modelo, modelo),
@@ -436,5 +441,132 @@ BEGIN
     END IF;
     
     RETURN TRUE;
+END;
+$$;
+
+-- ============================================
+-- REGISTRAR COMPRAS (ENTRADAS)
+-- ============================================
+
+CREATE OR REPLACE FUNCTION fun_registrar_compra_oro(
+    par_inventario_oro_id int,
+    par_cantidad numeric,
+    par_motivo text DEFAULT 'Compra proveedor',
+    par_referencia text DEFAULT NULL,
+    par_usuario_id int DEFAULT NULL,
+    par_fecha timestamp DEFAULT NULL
+)
+RETURNS int
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_mov_id int;
+BEGIN
+    IF par_cantidad IS NULL OR par_cantidad <= 0 THEN
+        RAISE EXCEPTION 'Cantidad invalida.' USING ERRCODE = '22000';
+    END IF;
+
+    UPDATE inventario_oro
+    SET peso_gramos = peso_gramos + par_cantidad
+    WHERE id = par_inventario_oro_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Inventario oro no encontrado.' USING ERRCODE = 'P0002';
+    END IF;
+
+    INSERT INTO movimientos_oro (inventario_oro_id, tipo_movimiento, cantidad, motivo, referencia, usuario_id, fecha)
+    VALUES (
+        par_inventario_oro_id,
+        'entrada',
+        par_cantidad,
+        COALESCE(par_motivo, 'Compra proveedor'),
+        par_referencia,
+        par_usuario_id,
+        COALESCE(par_fecha, CURRENT_TIMESTAMP)
+    )
+    RETURNING id INTO v_mov_id;
+
+    RETURN v_mov_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_registrar_compra_insumo(
+    par_inventario_insumos_id int,
+    par_cantidad numeric,
+    par_motivo text DEFAULT 'Compra proveedor',
+    par_referencia text DEFAULT NULL,
+    par_usuario_id int DEFAULT NULL,
+    par_fecha timestamp DEFAULT NULL
+)
+RETURNS int
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_mov_id int;
+BEGIN
+    IF par_cantidad IS NULL OR par_cantidad <= 0 THEN
+        RAISE EXCEPTION 'Cantidad invalida.' USING ERRCODE = '22000';
+    END IF;
+
+    UPDATE inventario_insumos
+    SET cantidad = cantidad + par_cantidad
+    WHERE id = par_inventario_insumos_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Inventario insumos no encontrado.' USING ERRCODE = 'P0002';
+    END IF;
+
+    INSERT INTO movimientos_insumos (inventario_insumos_id, tipo_movimiento, cantidad, motivo, referencia, usuario_id, fecha)
+    VALUES (
+        par_inventario_insumos_id,
+        'entrada',
+        par_cantidad,
+        COALESCE(par_motivo, 'Compra proveedor'),
+        par_referencia,
+        par_usuario_id,
+        COALESCE(par_fecha, CURRENT_TIMESTAMP)
+    )
+    RETURNING id INTO v_mov_id;
+
+    RETURN v_mov_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_registrar_compra_maquinaria(
+    par_inventario_maquinaria_id int,
+    par_cantidad int DEFAULT 1,
+    par_motivo text DEFAULT 'Compra proveedor',
+    par_referencia text DEFAULT NULL,
+    par_usuario_id int DEFAULT NULL,
+    par_fecha timestamp DEFAULT NULL
+)
+RETURNS int
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_mov_id int;
+BEGIN
+    IF par_cantidad IS NULL OR par_cantidad <= 0 THEN
+        RAISE EXCEPTION 'Cantidad invalida.' USING ERRCODE = '22000';
+    END IF;
+
+    PERFORM 1 FROM inventario_maquinaria WHERE id = par_inventario_maquinaria_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Inventario maquinaria no encontrado.' USING ERRCODE = 'P0002';
+    END IF;
+
+    INSERT INTO movimientos_maquinaria (inventario_maquinaria_id, tipo_movimiento, cantidad, motivo, referencia, usuario_id, fecha)
+    VALUES (
+        par_inventario_maquinaria_id,
+        'entrada',
+        par_cantidad,
+        COALESCE(par_motivo, 'Compra proveedor'),
+        par_referencia,
+        par_usuario_id,
+        COALESCE(par_fecha, CURRENT_TIMESTAMP)
+    )
+    RETURNING id INTO v_mov_id;
+
+    RETURN v_mov_id;
 END;
 $$;

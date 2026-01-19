@@ -18,6 +18,15 @@ if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
 if (!require_api_auth()) {
     exit;
 }
+$can_proveedores = dedumsoft_user_can_menu(6);
+$can_inventario = dedumsoft_user_can_menu(2);
+if ($method === 'GET') {
+    if (!$can_proveedores && !$can_inventario) {
+        dedumsoft_forbidden();
+    }
+} elseif (!$can_proveedores) {
+    dedumsoft_forbidden();
+}
 
 // ============================================
 // GET - Listar proveedores

@@ -5,6 +5,7 @@ require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
+require_menu_access(1);
 
 $legacy = dedumsoft_is_legacy_browser();
 $load_uplot = !$legacy;
@@ -162,7 +163,7 @@ if ($legacy) {
             </div>
         </div>
 
-        <div class="dashboard-card pearl">
+        <div class="dashboard-card pearl last">
             <div class="card-icon"><?php echo $icon_done; ?></div>
             <h3>Ordenes Completadas</h3>
             <p class="stat"><?php echo (int) $ordenes_completadas_mes; ?></p>
@@ -214,7 +215,7 @@ if ($legacy) {
             <table class="table table-sm">
                 <thead>
                     <tr>
-                                    <th>Id</th>
+                        <th>Id</th>
                         <th>Producto</th>
                         <th>Estado</th>
                         <th>Fecha</th>
@@ -263,12 +264,16 @@ if ($legacy) {
                 return;
             }
             if (!data.length || !data[0].length) {
-                container.innerHTML = `<div class="ds-chart-empty">${emptyMessage || 'Sin datos para el rango seleccionado'}</div>`;
+                container.innerHTML =
+                    `<div class="ds-chart-empty">${emptyMessage || 'Sin datos para el rango seleccionado'}</div>`;
                 return;
             }
             const width = container.clientWidth || 640;
             const height = 220;
-            const finalOpts = Object.assign({}, opts, { width, height });
+            const finalOpts = Object.assign({}, opts, {
+                width,
+                height
+            });
             container.innerHTML = '';
             new uPlot(finalOpts, data, container);
         }
@@ -286,29 +291,43 @@ if ($legacy) {
                 }
             });
             const opts = {
-                scales: { x: { time: true } },
-                axes: [
-                    {
-                        size: 50,
-                        gap: 5,
-                        values: (u, ticks) => ticks.map(t => formatShortDate(t)),
-                        grid: { show: true, stroke: '#eee', width: 1 }
-                    },
-                    {
-                        size: 50,
-                        gap: 5,
-                        grid: { show: true, stroke: '#eee', width: 1 }
+                scales: {
+                    x: {
+                        time: true
                     }
+                },
+                axes: [{
+                    size: 50,
+                    gap: 5,
+                    values: (u, ticks) => ticks.map(t => formatShortDate(t)),
+                    grid: {
+                        show: true,
+                        stroke: '#eee',
+                        width: 1
+                    }
+                },
+                {
+                    size: 50,
+                    gap: 5,
+                    grid: {
+                        show: true,
+                        stroke: '#eee',
+                        width: 1
+                    }
+                }
                 ],
-                series: [
-                    {},
-                    {
-                        label: 'Ventas',
-                        stroke: '#d4af37',
-                        width: 2,
-                        fill: 'rgba(212, 175, 55, 0.15)',
-                        points: { show: true, size: 6, fill: '#d4af37' }
+                series: [{},
+                {
+                    label: 'Ventas',
+                    stroke: '#d4af37',
+                    width: 2,
+                    fill: 'rgba(212, 175, 55, 0.15)',
+                    points: {
+                        show: true,
+                        size: 6,
+                        fill: '#d4af37'
                     }
+                }
                 ],
                 padding: [10, 10, 0, 0]
             };
@@ -338,35 +357,45 @@ if ($legacy) {
                         range: (u, min, max) => [0, max * 1.1]
                     }
                 },
-                axes: [
-                    {
-                        size: 40,
-                        gap: 5,
-                        splits: (u) => labels.map((_, i) => i),
-                        values: (u, splits) => splits.map(i => labels[i] || ''),
-                        ticks: { show: false },
-                        grid: { show: false }
+                axes: [{
+                    size: 40,
+                    gap: 5,
+                    splits: (u) => labels.map((_, i) => i),
+                    values: (u, splits) => splits.map(i => labels[i] || ''),
+                    ticks: {
+                        show: false
                     },
-                    {
-                        size: 50,
-                        gap: 5,
-                        grid: { show: true, stroke: '#eee', width: 1 }
+                    grid: {
+                        show: false
                     }
+                },
+                {
+                    size: 50,
+                    gap: 5,
+                    grid: {
+                        show: true,
+                        stroke: '#eee',
+                        width: 1
+                    }
+                }
                 ],
-                series: [
-                    {},
-                    {
-                        label: 'Ordenes',
-                        stroke: '#b59d5d',
-                        fill: 'rgba(212, 175, 55, 0.6)',
-                        width: 0,
-                        points: { show: false }
+                series: [{},
+                {
+                    label: 'Ordenes',
+                    stroke: '#b59d5d',
+                    fill: 'rgba(212, 175, 55, 0.6)',
+                    width: 0,
+                    points: {
+                        show: false
                     }
+                }
                 ],
                 padding: [10, 20, 0, 20]
             };
             if (window.uPlot && uPlot.paths && uPlot.paths.bars) {
-                opts.series[1].paths = uPlot.paths.bars({ size: [0.65, 100] });
+                opts.series[1].paths = uPlot.paths.bars({
+                    size: [0.65, 100]
+                });
             }
             renderChart('#chart-ordenes-estado', opts, [labels.map((_, idx) => idx), values]);
         }

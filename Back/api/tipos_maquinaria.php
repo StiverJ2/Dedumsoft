@@ -17,6 +17,7 @@ if ($method !== 'GET') {
 if (!require_api_auth()) {
     exit;
 }
+require_menu_access(2);
 
 // ============================================
 // GET - Listar tipos de maquinaria

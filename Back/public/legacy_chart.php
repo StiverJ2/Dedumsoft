@@ -8,6 +8,9 @@ $user = get_session_user();
 if (!$user) {
     dedumsoft_output_empty_png();
 }
+if (!dedumsoft_user_can_menu(4, $user)) {
+    dedumsoft_output_empty_png();
+}
 
 $chart = strtolower(trim($_GET['chart'] ?? ''));
 $width = dedumsoft_clamp((int) ($_GET['w'] ?? 580), 320, 800);
@@ -23,6 +26,20 @@ if ($desde > $hasta) {
     $hasta = $tmp;
 }
 
+// Validación temprana de tipo de gráfico
+if (!in_array($chart, ['produccion', 'inventario', 'eficiencia', 'materiales', 'ventas', 'compras', 'usuarios', 'ventas_mes', 'ordenes_estado'], true)) {
+    dedumsoft_render_empty_chart('Sin datos', $width, $height);
+}
+
+// ETag para caché del navegador
+$etag_data = $chart . $width . $height . $desde . $hasta . date('Y-m-d-H');
+$etag = '"' . md5($etag_data) . '"';
+$GLOBALS['etag'] = $etag;
+if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] === $etag) {
+    header('HTTP/1.1 304 Not Modified');
+    exit;
+}
+
 if (!function_exists('imagecreatetruecolor')) {
     dedumsoft_output_empty_png();
 }
@@ -31,14 +48,14 @@ try {
     switch ($chart) {
         case 'produccion':
             $rows = dedumsoft_query(
-                'SELECT estado, COUNT(*) AS total FROM fun_reporte_produccion(:desde, :hasta) GROUP BY estado ORDER BY estado',
+                'SELECT estado, COUNT(1) AS total FROM fun_reporte_produccion(:desde, :hasta) GROUP BY estado ORDER BY estado',
                 [':desde' => $desde, ':hasta' => $hasta]
             );
             dedumsoft_render_bar_chart($rows, 'estado', 'total', 'Produccion', $width, $height);
             break;
         case 'inventario':
             $rows = dedumsoft_query(
-                'SELECT tipo, COUNT(*) AS total FROM fun_reporte_inventario() GROUP BY tipo ORDER BY tipo',
+                'SELECT tipo, COUNT(1) AS total FROM fun_reporte_inventario() GROUP BY tipo ORDER BY tipo',
                 []
             );
             dedumsoft_render_bar_chart($rows, 'tipo', 'total', 'Inventario', $width, $height);
@@ -87,13 +104,10 @@ try {
             break;
         case 'ordenes_estado':
             $rows = dedumsoft_query(
-                'SELECT COALESCE(eo.nombre, \'sin_estado\') AS estado, COUNT(*) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY COALESCE(eo.nombre, \'sin_estado\') ORDER BY COALESCE(eo.nombre, \'sin_estado\')',
+                'SELECT COALESCE(eo.nombre, \'sin_estado\') AS estado, COUNT(1) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY COALESCE(eo.nombre, \'sin_estado\') ORDER BY COALESCE(eo.nombre, \'sin_estado\')',
                 []
             );
             dedumsoft_render_bar_chart($rows, 'estado', 'total', 'Ordenes', $width, $height);
-            break;
-        default:
-            dedumsoft_render_empty_chart('Sin datos', $width, $height);
             break;
     }
 } catch (PDOException $e) {
@@ -144,16 +158,23 @@ function dedumsoft_create_canvas(int $width, int $height, array &$colors)
 {
     $img = imagecreatetruecolor($width, $height);
     $colors = [
-        'bg' => imagecolorallocate($img, 255, 255, 255),
-        'axis' => imagecolorallocate($img, 90, 90, 90),
-        'grid' => imagecolorallocate($img, 220, 220, 220),
-        'bar' => imagecolorallocate($img, 212, 175, 55),
-        'bar_alt' => imagecolorallocate($img, 180, 140, 40),
-        'line' => imagecolorallocate($img, 212, 175, 55),
-        'fill' => imagecolorallocate($img, 245, 233, 200),
-        'text' => imagecolorallocate($img, 50, 50, 50),
-        'value' => imagecolorallocate($img, 30, 30, 30),
-        'muted' => imagecolorallocate($img, 120, 120, 120)
+        'bg' => imagecolorallocate($img, 248, 249, 250),
+        'axis' => imagecolorallocate($img, 52, 58, 64),
+        'grid' => imagecolorallocate($img, 206, 212, 218),
+        'bar1' => imagecolorallocate($img, 13, 110, 253),     // Azul vibrante
+        'bar2' => imagecolorallocate($img, 25, 135, 84),      // Verde
+        'bar3' => imagecolorallocate($img, 220, 53, 69),      // Rojo
+        'bar4' => imagecolorallocate($img, 255, 193, 7),      // Amarillo
+        'bar5' => imagecolorallocate($img, 111, 66, 193),     // Púrpura
+        'bar6' => imagecolorallocate($img, 13, 202, 240),     // Cyan
+        'bar_top' => imagecolorallocate($img, 255, 255, 255), // Brillo superior
+        'shadow' => imagecolorallocatealpha($img, 0, 0, 0, 90), // Sombra semi-transparente
+        'line' => imagecolorallocate($img, 13, 110, 253),
+        'line_dark' => imagecolorallocate($img, 10, 88, 202),
+        'fill' => imagecolorallocatealpha($img, 13, 110, 253, 90),
+        'text' => imagecolorallocate($img, 33, 37, 41),
+        'value' => imagecolorallocate($img, 13, 110, 253),
+        'muted' => imagecolorallocate($img, 108, 117, 125)
     ];
     imagefilledrectangle($img, 0, 0, $width - 1, $height - 1, $colors['bg']);
     if (function_exists('imageantialias')) {
@@ -242,18 +263,48 @@ function dedumsoft_render_bar_chart(array $rows, string $label_key, string $valu
         $gap = 2;
     }
 
+    $bar_gap_width = $bar_width + $gap;
+    $plot_height = $plot['height'];
+    $plot_left = $plot['left'];
+    $plot_bottom = $plot['bottom'];
+
     for ($i = 0; $i < $count; $i++) {
-        $bar_height = (int) (($values[$i] / $max) * $plot['height']);
+        $bar_height = (int) (($values[$i] / $max) * $plot_height);
         if ($bar_height < 1 && $values[$i] > 0) {
             $bar_height = 1;
         }
-        $x1 = $plot['left'] + $gap + ($bar_width + $gap) * $i;
-        $y1 = $plot['bottom'] - $bar_height;
+        $x1 = $plot_left + $gap + $bar_gap_width * $i;
+        $y1 = $plot_bottom - $bar_height;
         $x2 = $x1 + $bar_width;
 
-        // Draw bar with slight 3D effect
-        imagefilledrectangle($img, $x1, $y1, $x2, $plot['bottom'] - 1, $colors['bar']);
-        imageline($img, $x1, $y1, $x2, $y1, $colors['bar_alt']);
+        // Seleccionar color de barra (rotar entre 6 colores)
+        $bar_color = $colors['bar' . (($i % 6) + 1)];
+
+        // Dibujar sombra (offset de 3px)
+        if ($bar_height > 3) {
+            imagefilledrectangle($img, $x1 + 3, $y1 + 3, $x2 + 3, $plot_bottom, $colors['shadow']);
+        }
+
+        // Dibujar barra principal
+        imagefilledrectangle($img, $x1, $y1, $x2, $plot_bottom - 1, $bar_color);
+
+        // Agregar gradiente sutil (líneas blancas semi-transparentes en la parte superior)
+        if ($bar_height > 8) {
+            $gradient_height = min(10, (int) ($bar_height / 3));
+            for ($g = 0; $g < $gradient_height; $g++) {
+                $alpha = (int) (100 - ($g * 8));
+                if ($alpha < 0)
+                    $alpha = 0;
+                $grad_color = imagecolorallocatealpha($img, 255, 255, 255, $alpha);
+                imageline($img, $x1 + 1, $y1 + $g, $x2 - 1, $y1 + $g, $grad_color);
+            }
+        }
+
+        // Borde superior más prominente
+        imageline($img, $x1, $y1, $x2, $y1, $colors['bar_top']);
+        imagesetthickness($img, 2);
+        imagerectangle($img, $x1, $y1, $x2, $plot_bottom - 1, imagecolorallocatealpha($img, 0, 0, 0, 50));
+        imagesetthickness($img, 1);
 
         // Draw value on top of bar
         $value_text = dedumsoft_format_value($values[$i]);
@@ -372,10 +423,18 @@ function dedumsoft_render_line_chart(array $rows, string $label_key, string $val
         }
         $py = $plot['bottom'] - (int) (($y_val / $max_y) * $plot['height']);
         if ($prev_x !== null) {
+            // Sombra de línea
+            imagesetthickness($img, 3);
+            imageline($img, $prev_x + 1, $prev_y + 1, $px + 1, $py + 1, imagecolorallocatealpha($img, 0, 0, 0, 80));
+            // Línea principal más gruesa
             imageline($img, $prev_x, $prev_y, $px, $py, $colors['line']);
+            imagesetthickness($img, 1);
         }
-        imagefilledellipse($img, $px, $py, 6, 6, $colors['line']);
-        imageellipse($img, $px, $py, 6, 6, $colors['bar_alt']);
+        // Punto con sombra y borde
+        imagefilledellipse($img, $px + 1, $py + 1, 8, 8, imagecolorallocatealpha($img, 0, 0, 0, 80));
+        imagefilledellipse($img, $px, $py, 8, 8, $colors['line']);
+        imageellipse($img, $px, $py, 8, 8, $colors['line_dark']);
+        imagefilledellipse($img, $px, $py, 4, 4, $colors['bar_top']);
 
         // Show value for key points (first, last, max, or all if few points)
         if ($show_all_values || $point_index === 0 || $point_index === count($points) - 1 || $y_val === $max_y) {
@@ -430,9 +489,9 @@ function dedumsoft_draw_grid($img, array $plot, array $colors, float $max_value)
 
     for ($i = 0; $i <= $grid_lines; $i++) {
         $y = $plot['bottom'] - (int) ($step * $i);
-        // Draw horizontal grid line
+        // Draw horizontal grid line más visible
         if ($i > 0) {
-            imagedashedline($img, $plot['left'] + 1, $y, $plot['right'], $y, $colors['grid']);
+            imageline($img, $plot['left'] + 1, $y, $plot['right'], $y, $colors['grid']);
         }
         // Draw Y-axis label
         $label_value = $value_step * $i;
@@ -471,9 +530,13 @@ function dedumsoft_trim_label(string $label, int $max_len): string
 
 function dedumsoft_output_image($img): void
 {
+    if (isset($GLOBALS['etag'])) {
+        header('ETag: ' . $GLOBALS['etag']);
+        header('Cache-Control: public, max-age=300'); // 5 minutos
+    } else {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    }
     header('Content-Type: image/png');
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-    imagepng($img);
-    imagedestroy($img);
+    imagepng($img, null, 6); // Compresión nivel 6 (balance entre tamaño y velocidad)
     exit;
 }

@@ -93,13 +93,8 @@ INSERT INTO seguridad.seg_menurol (abrir, guardar, editar, eliminar, rolid, menu
 (TRUE, TRUE, TRUE, TRUE, 1, 5),
 (TRUE, TRUE, TRUE, TRUE, 1, 6),
 (TRUE, TRUE, TRUE, TRUE, 1, 7),
-(TRUE, FALSE, FALSE, FALSE, 2, 1),
-(TRUE, TRUE, TRUE, FALSE, 2, 2),
-(TRUE, TRUE, TRUE, FALSE, 2, 3),
-(TRUE, FALSE, FALSE, FALSE, 2, 4),
-(FALSE, FALSE, FALSE, FALSE, 2, 5),
-(TRUE, TRUE, TRUE, FALSE, 2, 6),
-(FALSE, FALSE, FALSE, FALSE, 2, 7),
+(TRUE, FALSE, FALSE, FALSE, 2, 3),
+(TRUE, FALSE, FALSE, FALSE, 2, 7),
 (TRUE, FALSE, FALSE, FALSE, 3, 1),
 (TRUE, FALSE, FALSE, FALSE, 3, 2),
 (TRUE, FALSE, FALSE, FALSE, 3, 3),
@@ -111,15 +106,27 @@ ON CONFLICT (rolid, menuid) DO UPDATE
 SET abrir = EXCLUDED.abrir, guardar = EXCLUDED.guardar, editar = EXCLUDED.editar, eliminar = EXCLUDED.eliminar;
 
 -- ============================================
--- USUARIO ADMIN POR DEFECTO (legacy)
--- Password: Admin-2026
+-- USUARIOS POR DEFECTO (legacy)
 -- ============================================
+
+-- ADMIN: admin / Admin123!
 INSERT INTO seguridad.seg_usuario (username, nombre, clave, rolid)
 VALUES (
     'admin',
     'Administrador',
     '$argon2id$v=19$m=65536,t=4,p=1$MGQvRTBneVJhQlJFTGhmeg$V0Z6bsVV2cABUX7qo/joYRYmp0ovvxMNW0p3zFo32Aw',
     1
+)
+ON CONFLICT (username) DO NOTHING;
+
+-- ARTESANO: artesano / Artesano123!
+-- Password hash generado con: php -r "echo password_hash('Artesano123!', PASSWORD_ARGON2ID);"
+INSERT INTO seguridad.seg_usuario (username, nombre, clave, rolid)
+VALUES (
+    'artesano',
+    'Roberto Martinez',
+    '$argon2id$v=19$m=65536,t=4,p=1$TTFaYTV4MGcwenJrOVF1RA$buFX9PtJrw6NAAFNp7cDFzwdajRkyM2iyCcpfB05NiI',
+    2
 )
 ON CONFLICT (username) DO NOTHING;
 
@@ -216,12 +223,13 @@ SELECT setval('proveedores_id_seq', (SELECT MAX(id) FROM proveedores));
 
 -- ============================================
 -- ARTESANOS DE EJEMPLO
+-- Vinculados con usuarios OPERADOR via usuario_id
 -- ============================================
-INSERT INTO artesanos (id, nombre, apellido, especialidad, telefono, email, fecha_ingreso, activo) VALUES
-(1, 'Roberto', 'Martinez', 'Joyeria fina', '555-1111', 'roberto@dedumsoft.com', '2020-01-15', TRUE),
-(2, 'Ana', 'Sanchez', 'Grabado y detalle', '555-2222', 'ana@dedumsoft.com', '2021-03-20', TRUE),
-(3, 'Miguel', 'Torres', 'Fundicion', '555-3333', 'miguel@dedumsoft.com', '2019-06-10', TRUE)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO artesanos (id, usuario_id, nombre, apellido, especialidad, telefono, email, fecha_ingreso, activo) VALUES
+(1, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'artesano'), 'Roberto', 'Martinez', 'Joyeria fina', '555-1111', 'roberto@dedumsoft.com', '2020-01-15', TRUE),
+(2, NULL, 'Ana', 'Sanchez', 'Grabado y detalle', '555-2222', 'ana@dedumsoft.com', '2021-03-20', TRUE),
+(3, NULL, 'Miguel', 'Torres', 'Fundicion', '555-3333', 'miguel@dedumsoft.com', '2019-06-10', TRUE)
+ON CONFLICT (id) DO UPDATE SET usuario_id = EXCLUDED.usuario_id;
 
 SELECT setval('artesanos_id_seq', (SELECT MAX(id) FROM artesanos));
 
@@ -302,12 +310,12 @@ SELECT setval('inventario_oro_id_seq', (SELECT MAX(id) FROM inventario_oro));
 -- ============================================
 -- MAQUINARIA INICIAL
 -- ============================================
-INSERT INTO inventario_maquinaria (id, nombre, tipo_maquinaria_id, marca, modelo, fecha_compra, valor_compra, estado_id, ubicacion_id, activo) VALUES
-(1, 'Horno de Fundicion', 1, 'Kerr', 'Electromelt', '2020-03-15', 45000.00, 1, 5, TRUE),
-(2, 'Pulidora Industrial', 3, 'Foredom', 'SR-500', '2021-06-20', 15000.00, 1, 6, TRUE),
-(3, 'Sierra de Joyero', 2, 'Knew Concepts', 'MK4', '2019-11-10', 3500.00, 1, 4, TRUE),
-(4, 'Soldador Laser', 4, 'Orion', 'LZR-150', '2022-02-28', 85000.00, 1, 4, TRUE),
-(5, 'Balanza de Precision', 5, 'Ohaus', 'PA224', '2020-07-05', 12000.00, 1, 4, TRUE)
+INSERT INTO inventario_maquinaria (id, sku, nombre, tipo_maquinaria_id, marca, modelo, fecha_compra, valor_compra, estado_id, ubicacion_id, activo) VALUES
+(1, 'SN-MAQ-0001', 'Horno de Fundicion', 1, 'Kerr', 'Electromelt', '2020-03-15', 45000.00, 1, 5, TRUE),
+(2, 'SN-MAQ-0002', 'Pulidora Industrial', 3, 'Foredom', 'SR-500', '2021-06-20', 15000.00, 1, 6, TRUE),
+(3, 'SN-MAQ-0003', 'Sierra de Joyero', 2, 'Knew Concepts', 'MK4', '2019-11-10', 3500.00, 1, 4, TRUE),
+(4, 'SN-MAQ-0004', 'Soldador Laser', 4, 'Orion', 'LZR-150', '2022-02-28', 85000.00, 1, 4, TRUE),
+(5, 'SN-MAQ-0005', 'Balanza de Precision', 5, 'Ohaus', 'PA224', '2020-07-05', 12000.00, 1, 4, TRUE)
 ON CONFLICT (id) DO NOTHING;
 
 SELECT setval('inventario_maquinaria_id_seq', (SELECT MAX(id) FROM inventario_maquinaria));
@@ -373,6 +381,8 @@ COMMIT;
 DO $$
 BEGIN
     RAISE NOTICE 'Seed completado exitosamente.';
-    RAISE NOTICE 'Usuario admin creado: admin / Admin123!';
+    RAISE NOTICE 'Usuarios creados:';
+    RAISE NOTICE '  - admin / Admin123! (ADMIN)';
+    RAISE NOTICE '  - artesano / Artesano123! (OPERADOR)';
 END;
 $$;

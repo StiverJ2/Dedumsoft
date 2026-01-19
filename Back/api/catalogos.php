@@ -12,6 +12,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if (!require_api_auth()) {
     exit;
 }
+require_menu_access(7);
 
 // Determinar qué catálogo se está solicitando
 $catalog = $_GET['catalog'] ?? 'areas';

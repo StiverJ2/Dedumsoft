@@ -18,6 +18,7 @@ if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
 if (!require_api_auth()) {
     exit;
 }
+require_menu_access(2);
 
 // ============================================
 // GET - Listar inventario de maquinaria
@@ -28,7 +29,7 @@ if ($method === 'GET') {
         $id = (int) $_GET['id'];
         try {
             $stmt = $connLogic->prepare(
-                'SELECT id, nombre, tipo_maquinaria_id, tipo_nombre, marca, modelo, fecha_compra, valor_compra, estado_id, estado_nombre, estado_color, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(0, 1000, NULL, NULL) WHERE id = :id'
+                'SELECT id, sku, nombre, tipo_maquinaria_id, tipo_nombre, marca, modelo, fecha_compra, valor_compra, estado_id, estado_nombre, estado_color, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(0, 1000, NULL, NULL) WHERE id = :id'
             );
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
             $stmt->execute();
@@ -53,7 +54,7 @@ if ($method === 'GET') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, tipo_maquinaria_id, tipo_nombre, marca, modelo, fecha_compra, valor_compra, estado_id, estado_nombre, estado_color, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado_id, :activo)'
+            'SELECT id, sku, nombre, tipo_maquinaria_id, tipo_nombre, marca, modelo, fecha_compra, valor_compra, estado_id, estado_nombre, estado_color, ultima_mantenimiento, proxima_mantenimiento, ubicacion_id, ubicacion_nombre, fecha_registro, activo FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado_id, :activo)'
         );
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -85,7 +86,7 @@ if ($method === 'POST') {
     }
 
     // Validar campos requeridos
-    $required = ['nombre', 'tipo_maquinaria_id'];
+    $required = ['nombre', 'sku', 'tipo_maquinaria_id'];
     foreach ($required as $field) {
         if (!isset($input[$field]) || $input[$field] === '') {
             http_response_code(400);
@@ -96,9 +97,10 @@ if ($method === 'POST') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_crear_inventario_maquinaria(:nombre, :tipo_maquinaria_id, :marca, :modelo, :fecha_compra, :valor_compra, :estado_id, :ubicacion_id)'
+            'SELECT fun_crear_inventario_maquinaria(:nombre, :sku, :tipo_maquinaria_id, :marca, :modelo, :fecha_compra, :valor_compra, :estado_id, :ubicacion_id)'
         );
         $stmt->bindValue(':nombre', $input['nombre'], PDO::PARAM_STR);
+        $stmt->bindValue(':sku', $input['sku'], PDO::PARAM_STR);
         $stmt->bindValue(':tipo_maquinaria_id', (int) $input['tipo_maquinaria_id'], PDO::PARAM_INT);
         $stmt->bindValue(':marca', $input['marca'] ?? null, isset($input['marca']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':modelo', $input['modelo'] ?? null, isset($input['modelo']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
@@ -133,10 +135,11 @@ if ($method === 'PUT') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT fun_actualizar_inventario_maquinaria(:id, :nombre, :tipo_maquinaria_id, :marca, :modelo, :fecha_compra, :valor_compra, :estado_id, :ultima_mantenimiento, :proxima_mantenimiento, :ubicacion_id, :activo)'
+            'SELECT fun_actualizar_inventario_maquinaria(:id, :nombre, :sku, :tipo_maquinaria_id, :marca, :modelo, :fecha_compra, :valor_compra, :estado_id, :ultima_mantenimiento, :proxima_mantenimiento, :ubicacion_id, :activo)'
         );
         $stmt->bindValue(':id', (int) $input['id'], PDO::PARAM_INT);
         $stmt->bindValue(':nombre', $input['nombre'] ?? null, isset($input['nombre']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':sku', $input['sku'] ?? null, isset($input['sku']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':tipo_maquinaria_id', isset($input['tipo_maquinaria_id']) ? (int) $input['tipo_maquinaria_id'] : null, isset($input['tipo_maquinaria_id']) ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':marca', $input['marca'] ?? null, isset($input['marca']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':modelo', $input['modelo'] ?? null, isset($input['modelo']) ? PDO::PARAM_STR : PDO::PARAM_NULL);

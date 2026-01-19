@@ -5,6 +5,7 @@ require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
 require_login('login.php');
+require_menu_access(2);
 
 $legacy = dedumsoft_is_legacy_browser();
 $insumo_categoria = $_GET['insumo_categoria'] ?? '';
@@ -75,6 +76,7 @@ include __DIR__ . '/partials/nav.php';
             <strong>Insumos</strong>
             <div class="ds-toolbar-actions">
                 <button type="button" class="btn-add" id="btn-add-insumo">+ Nuevo Insumo</button>
+                <button type="button" class="btn-add" id="btn-compra-insumo">+ Registrar Compra</button>
             </div>
         </div>
         <?php if ($legacy): ?>
@@ -213,9 +215,10 @@ $(function() {
     }
 
     function openInsumoCreate() {
+        var compraToggle = '<div class="ds-form-group"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
         DsCrud.openModal({
             title: 'Nuevo Insumo',
-            body: '<form id="frm-insumo">' + buildInsumoForm() + '</form>',
+            body: '<form id="frm-insumo">' + buildInsumoForm() + compraToggle + '</form>',
             onSave: function(m) {
                 var f = m.querySelector('#frm-insumo');
                 if (!f.checkValidity()) {
@@ -227,10 +230,39 @@ $(function() {
                 fd.forEach(function(v, k) {
                     payload[k] = v;
                 });
-                DsCrud.api('../api/inventario_insumos.php', 'POST', payload, function() {
-                    DsCrud.toast('Insumo creado', 'success');
-                    insumosTable.ajax.reload();
-                    DsCrud.closeModal();
+                var registrarCompra = payload.registrar_compra === 'on';
+                delete payload.registrar_compra;
+
+                var compraCantidad = parseFloat(payload.cantidad || 0);
+                if (registrarCompra) {
+                    if (!isFinite(compraCantidad) || compraCantidad <= 0) {
+                        DsCrud.toast('Cantidad debe ser mayor a 0 para registrar compra', 'error');
+                        return;
+                    }
+                    payload.cantidad = 0;
+                }
+
+                DsCrud.api('../api/inventario_insumos.php', 'POST', payload, function(success, resp) {
+                    if (!registrarCompra) {
+                        DsCrud.toast('Insumo creado', 'success');
+                        insumosTable.ajax.reload();
+                        DsCrud.closeModal();
+                        return;
+                    }
+                    var compraPayload = {
+                        tipo_inventario: 'insumos',
+                        item_id: resp.ID,
+                        cantidad: compraCantidad
+                    };
+                    DsCrud.api('../api/compras.php', 'POST', compraPayload, function() {
+                        DsCrud.toast('Insumo creado y compra registrada', 'success');
+                        insumosTable.ajax.reload();
+                        DsCrud.closeModal();
+                    }, function(e) {
+                        DsCrud.toast('Insumo creado, pero no se pudo registrar la compra: ' + e, 'error');
+                        insumosTable.ajax.reload();
+                        DsCrud.closeModal();
+                    });
                 }, function(e) {
                     DsCrud.toast(e, 'error');
                 });
@@ -278,6 +310,89 @@ $(function() {
         });
     }
 
+    function buildCompraInsumoForm(options, data) {
+        data = data || {};
+        return DsCrud.field({
+                name: 'item_id',
+                label: 'Insumo',
+                type: 'select',
+                value: data.item_id,
+                options: options,
+                required: true
+            }) +
+            DsCrud.field({
+                name: 'cantidad',
+                label: 'Cantidad',
+                type: 'number',
+                value: data.cantidad,
+                required: true,
+                attrs: 'step="0.01" min="0"'
+            }) +
+            DsCrud.field({
+                name: 'motivo',
+                label: 'Motivo',
+                value: data.motivo || 'Compra proveedor'
+            }) +
+            DsCrud.field({
+                name: 'referencia',
+                label: 'Referencia',
+                value: data.referencia
+            }) +
+            DsCrud.field({
+                name: 'fecha',
+                label: 'Fecha',
+                type: 'datetime-local',
+                value: data.fecha
+            });
+    }
+
+    function openInsumoCompra() {
+        axios.get('../api/inventario_insumos.php?limit=500').then(function(res) {
+            var items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
+            if (!items.length) {
+                DsCrud.toast('No hay insumos disponibles', 'warning');
+                return;
+            }
+            var options = [{ value: '', label: '-- Seleccione --' }].concat(items.map(function(it) {
+                var label = it.nombre || ('Insumo #' + it.id);
+                if (it.categoria) {
+                    label += ' (' + it.categoria + ')';
+                }
+                label += ' #' + it.id;
+                return { value: it.id, label: label };
+            }));
+
+            DsCrud.openModal({
+                title: 'Registrar compra de insumos',
+                body: '<form id="frm-compra-insumo">' + buildCompraInsumoForm(options) + '</form>',
+                onSave: function(m) {
+                    var f = m.querySelector('#frm-compra-insumo');
+                    if (!f.checkValidity()) {
+                        f.reportValidity();
+                        return;
+                    }
+                    var fd = new FormData(f),
+                        payload = { tipo_inventario: 'insumos' };
+                    fd.forEach(function(v, k) {
+                        payload[k] = v;
+                    });
+                    if (payload.fecha) {
+                        payload.fecha = payload.fecha.replace('T', ' ');
+                    }
+                    DsCrud.api('../api/compras.php', 'POST', payload, function() {
+                        DsCrud.toast('Compra registrada', 'success');
+                        insumosTable.ajax.reload();
+                        DsCrud.closeModal();
+                    }, function(e) {
+                        DsCrud.toast(e, 'error');
+                    });
+                }
+            });
+        }).catch(function() {
+            DsCrud.toast('Error cargando inventario', 'error');
+        });
+    }
+
     insumosTable = $('#insumos-table').DataTable({
         ajax: {
             url: '../api/inventario_insumos.php?limit=500',
@@ -303,6 +418,7 @@ $(function() {
     });
 
     $('#btn-add-insumo').on('click', openInsumoCreate);
+    $('#btn-compra-insumo').on('click', openInsumoCompra);
     $('#insumos-table').on('click', '.ds-action-btn[data-action="edit"]', function() {
         openInsumoEdit(insumosTable.row($(this).closest('tr')).data());
     });
@@ -329,6 +445,12 @@ $(function() {
         }, $proveedor_options)
     )); ?>;
 
+    var insumoInventoryOptions = <?php echo json_encode(array_map(function($row) {
+        $label = $row['nombre'] ?? ('Insumo #' . $row['id']);
+        $label .= ' #' . $row['id'];
+        return ['value' => $row['id'], 'label' => $label];
+    }, $insumo_rows)); ?>;
+
     function esc(s) {
         if (s === null || s === undefined) return '';
         var div = document.createElement('div');
@@ -347,7 +469,7 @@ $(function() {
         return h;
     }
 
-    function buildInsumoFormHtml(d) {
+    function buildInsumoFormHtml(d, showCompra) {
         d = d || {};
         var catOpts = [{ value: '', label: '-- Seleccionar --' }].concat(categoriaOptions);
         var insProveedores = [];
@@ -358,7 +480,7 @@ $(function() {
         }
         if (insProveedores.length === 1) insProveedores = proveedorOptions;
 
-        return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' +
+        var html = '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' +
             esc(d.nombre || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
             '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Categoria <span style="color:red">*</span></label>' +
             selectHtml('categoria', d.categoria || '', catOpts, true) + '</div>' +
@@ -366,17 +488,91 @@ $(function() {
             esc(d.cantidad || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
             '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Proveedor</label>' +
             selectHtml('proveedor_id', d.proveedor_id || '', insProveedores, false) + '</div>';
+        if (showCompra) {
+            html += '<div style="margin-bottom:12px;"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
+        }
+        return html;
+    }
+
+    function buildCompraInsumoFormHtml(d) {
+        d = d || {};
+        var invOpts = [{ value: '', label: '-- Seleccione --' }].concat(insumoInventoryOptions);
+        return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Insumo <span style="color:red">*</span></label>' +
+            selectHtml('item_id', d.item_id || '', invOpts, true) + '</div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Cantidad <span style="color:red">*</span></label><input type="text" name="cantidad" value="' +
+            esc(d.cantidad || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Motivo</label><input type="text" name="motivo" value="' +
+            esc(d.motivo || 'Compra proveedor') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Referencia</label><input type="text" name="referencia" value="' +
+            esc(d.referencia || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Fecha</label><input type="datetime-local" name="fecha" value="' +
+            esc(d.fecha || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>';
     }
 
     DsCrud.addEvent(DsCrud.getById('btn-add-insumo'), 'click', function() {
         DsCrud.openModal({
             title: 'Nuevo Insumo',
-            body: '<form id="frm-insumo">' + buildInsumoFormHtml() + '</form>',
+            body: '<form id="frm-insumo">' + buildInsumoFormHtml({}, true) + '</form>',
             onSave: function(modal) {
                 if (!DsCrud.validateForm(modal)) return;
                 var data = DsCrud.getFormData(modal);
-                DsCrud.api('../api/inventario_insumos.php', 'POST', data, function() {
-                    DsCrud.toast('Insumo creado', 'success');
+                var registrarCompra = data.registrar_compra === true;
+                delete data.registrar_compra;
+
+                var compraCantidad = parseFloat(data.cantidad || 0);
+                if (registrarCompra) {
+                    if (!isFinite(compraCantidad) || compraCantidad <= 0) {
+                        DsCrud.toast('Cantidad debe ser mayor a 0 para registrar compra', 'error');
+                        return;
+                    }
+                    data.cantidad = 0;
+                }
+
+                DsCrud.api('../api/inventario_insumos.php', 'POST', data, function(res) {
+                    if (!registrarCompra) {
+                        DsCrud.toast('Insumo creado', 'success');
+                        DsCrud.closeModal();
+                        location.reload();
+                        return;
+                    }
+                    var compraPayload = {
+                        tipo_inventario: 'insumos',
+                        item_id: res.ID,
+                        cantidad: compraCantidad
+                    };
+                    DsCrud.api('../api/compras.php', 'POST', compraPayload, function() {
+                        DsCrud.toast('Insumo creado y compra registrada', 'success');
+                        DsCrud.closeModal();
+                        location.reload();
+                    }, function(e) {
+                        DsCrud.toast('Insumo creado, pero no se pudo registrar la compra: ' + e, 'error');
+                        DsCrud.closeModal();
+                        location.reload();
+                    });
+                }, function(e) {
+                    DsCrud.toast(e, 'error');
+                });
+            }
+        });
+    });
+
+    DsCrud.addEvent(DsCrud.getById('btn-compra-insumo'), 'click', function() {
+        if (!insumoInventoryOptions.length) {
+            DsCrud.toast('No hay insumos disponibles', 'error');
+            return;
+        }
+        DsCrud.openModal({
+            title: 'Registrar compra de insumos',
+            body: '<form id="frm-compra-insumo">' + buildCompraInsumoFormHtml() + '</form>',
+            onSave: function(modal) {
+                if (!DsCrud.validateForm(modal)) return;
+                var data = DsCrud.getFormData(modal);
+                data.tipo_inventario = 'insumos';
+                if (data.fecha) {
+                    data.fecha = data.fecha.replace('T', ' ');
+                }
+                DsCrud.api('../api/compras.php', 'POST', data, function() {
+                    DsCrud.toast('Compra registrada', 'success');
                     DsCrud.closeModal();
                     location.reload();
                 }, function(e) {
@@ -392,7 +588,7 @@ $(function() {
                 var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                 DsCrud.openModal({
                     title: 'Editar Insumo #' + id,
-                    body: '<form id="frm-insumo">' + buildInsumoFormHtml(d) + '</form>',
+                    body: '<form id="frm-insumo">' + buildInsumoFormHtml(d, false) + '</form>',
                     onSave: function(modal) {
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);

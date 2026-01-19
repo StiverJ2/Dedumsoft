@@ -18,6 +18,7 @@ if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
 if (!require_api_auth()) {
     exit;
 }
+require_menu_access(2);
 
 // ============================================
 // GET - Listar inventario de insumos
