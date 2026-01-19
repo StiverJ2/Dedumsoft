@@ -20,6 +20,7 @@
 require_once __DIR__ . '/../connection/guard.php';
 require_once __DIR__ . '/jwt.php';
 require_once __DIR__ . '/session.php';
+require_once __DIR__ . '/../connection/security_log.php';
 
 /**
  * Verifica si un token JWT está activo en la base de datos.
@@ -194,6 +195,10 @@ function dedumsoft_forbidden(string $message = 'Acceso no autorizado.'): void
 {
     $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
     $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+
+    // Log de acceso denegado
+    $user = get_session_user();
+    dedumsoft_log_access_denied($request_uri, $user['username'] ?? null);
 
     // Detectar si es una petición API
     $is_api = strpos($request_uri, '/api/') !== false;

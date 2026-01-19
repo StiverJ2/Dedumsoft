@@ -510,15 +510,60 @@ if (isIE8) {
 
 ### Medidas Implementadas
 
-| Medida              | Archivo                     | Descripción             |
-| ------------------- | --------------------------- | ----------------------- |
-| Rate Limiting       | `connection/rate_limit.php` | 60 req/min por IP       |
-| CSRF                | `auth/session.php`          | Token en formularios    |
-| Password Hashing    | `login_service.php`         | bcrypt/argon2id         |
-| Prepared Statements | Todos                       | PDO con parámetros      |
-| JWT                 | `auth/jwt.php`              | HMAC-SHA256, 24h expiry |
-| CSP Headers         | `partials/header.php`       | Content-Security-Policy |
-| Cookie HttpOnly     | `auth/session.php`          | Previene XSS            |
+| Medida              | Archivo                       | Descripción             |
+| ------------------- | ----------------------------- | ----------------------- |
+| Rate Limiting       | `connection/rate_limit.php`   | 60 req/min por IP       |
+| CSRF                | `auth/session.php`            | Token en formularios    |
+| Password Hashing    | `login_service.php`           | bcrypt/argon2id         |
+| Prepared Statements | Todos                         | PDO con parámetros      |
+| JWT                 | `auth/jwt.php`                | HMAC-SHA256, 24h expiry |
+| CSP Headers         | `partials/header.php`         | Content-Security-Policy |
+| Cookie HttpOnly     | `auth/session.php`            | Previene XSS            |
+| Security Logging    | `connection/security_log.php` | Logs en Apache/PHP      |
+
+### Logging de Seguridad
+
+El sistema registra eventos de seguridad en los **logs de Apache/PHP** usando `error_log()`.
+
+**Eventos registrados:**
+
+| Evento          | Cuándo ocurre                                  |
+| --------------- | ---------------------------------------------- |
+| `LOGIN_SUCCESS` | Usuario inicia sesión correctamente            |
+| `LOGIN_FAILED`  | Credenciales incorrectas                       |
+| `RATE_LIMITED`  | IP bloqueada por demasiados intentos           |
+| `ACCESS_DENIED` | Usuario intenta acceder a recurso no permitido |
+| `CSRF_INVALID`  | Token CSRF ausente o incorrecto                |
+
+**Formato del log:**
+
+```
+[DEDUMSOFT_SECURITY] EVENT_TYPE | IP | Username | URI | Details
+```
+
+**Ejemplo en logs de Apache:**
+
+```
+[Sun Jan 19 10:30:45 2026] [DEDUMSOFT_SECURITY] LOGIN_FAILED | 192.168.1.100 | juan | /public/login.php | Invalid password
+[Sun Jan 19 10:31:02 2026] [DEDUMSOFT_SECURITY] LOGIN_SUCCESS | 192.168.1.100 | juan | /public/login.php | OK
+[Sun Jan 19 10:35:12 2026] [DEDUMSOFT_SECURITY] ACCESS_DENIED | 192.168.1.100 | juan | /public/usuarios.php | Resource: /public/usuarios.php
+```
+
+**Ver los logs:**
+
+```bash
+# macOS
+tail -f /var/log/apache2/error_log
+
+# Linux
+tail -f /var/log/apache2/error.log
+
+# Filtrar solo eventos de seguridad
+grep "DEDUMSOFT_SECURITY" /var/log/apache2/error.log
+
+# Filtrar logins fallidos
+grep "LOGIN_FAILED" /var/log/apache2/error.log
+```
 
 ### Validación de Entrada
 

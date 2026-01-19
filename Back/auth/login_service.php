@@ -23,6 +23,7 @@ require_once __DIR__ . '/../env/env.php';
 require_once __DIR__ . '/jwt.php';
 require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/rate_limit.php';
+require_once __DIR__ . '/../connection/security_log.php';
 
 /**
  * Procesa el inicio de sesión de un usuario.
@@ -52,6 +53,7 @@ function login_user(PDO $connLogic, string $username, string $password): array
     // =========================================================================
     $rate_check = check_rate_limit();
     if (!$rate_check['allowed']) {
+        dedumsoft_log_rate_limited($rate_check['count'] ?? 0);
         $minutes = ceil($rate_check['retry_after'] / 60);
         return [
             'CODIGO' => 429,
@@ -88,6 +90,7 @@ function login_user(PDO $connLogic, string $username, string $password): array
     // Usuario no encontrado o inactivo
     if (!$row || (int) $row['codigo'] !== 200) {
         record_failed_attempt(); // Registrar intento fallido
+        dedumsoft_log_login($username, false, 'User not found or inactive');
         return ['CODIGO' => 401, 'MENSAJE' => 'Usuario o contrasena incorrectos.'];
     }
 
@@ -97,6 +100,7 @@ function login_user(PDO $connLogic, string $username, string $password): array
     // password_verify() compara de forma segura (timing-safe)
     if (!password_verify($password, $row['hash'])) {
         record_failed_attempt(); // Registrar intento fallido
+        dedumsoft_log_login($username, false, 'Invalid password');
         return ['CODIGO' => 401, 'MENSAJE' => 'Usuario o contrasena incorrectos.'];
     }
 
@@ -186,6 +190,7 @@ function login_user(PDO $connLogic, string $username, string $password): array
     // =========================================================================
     clear_rate_limit();      // Resetear contador de intentos
     dedumsoft_rotate_csrf(); // Nuevo token CSRF post-login
+    dedumsoft_log_login($username, true);
 
     return [
         'CODIGO' => 200,
