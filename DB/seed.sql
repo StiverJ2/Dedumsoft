@@ -1,4 +1,41 @@
--- ============================================
+-- ============================================================================
+-- DEDUMSOFT - DATOS INICIALES (SEED)
+-- ============================================================================
+--
+-- Carga los datos iniciales necesarios para el funcionamiento del sistema.
+-- Incluye valores de tablas lookup, usuarios por defecto y datos de prueba.
+--
+-- CONTENIDO:
+-- 1. Tablas lookup (estados, prioridades, tipos)
+-- 2. Sistema de seguridad (roles, menús, permisos)
+-- 3. Usuarios por defecto
+-- 4. Catálogos básicos (productos, áreas, tipos de oro)
+-- 5. Datos de prueba opcionales
+--
+-- USUARIOS CREADOS:
+-- +------------+---------------+----------+------------------------+
+-- | Usuario    | Contraseña    | Rol      | Acceso                 |
+-- +------------+---------------+----------+------------------------+
+-- | admin      | Admin123!     | ADMIN    | Acceso total           |
+-- | artesano   | Artesano123!  | OPERADOR | Producción y config   |
+-- +------------+---------------+----------+------------------------+
+--
+-- MENÚS DEL SISTEMA:
+-- 1. Dashboard - Panel general
+-- 2. Inventario - Gestión de inventario
+-- 3. Producción - Órdenes y control
+-- 4. Reportes - Reportes del sistema
+-- 5. Usuarios - Administración de usuarios
+-- 6. Proveedores - Gestión de proveedores
+-- 7. Configuración - Preferencias y ajustes
+--
+-- EJECUCIÓN:
+--   psql -d db_dedumsoft -f DB/seed.sql
+--
+-- NOTA:
+-- Usa ON CONFLICT para permitir re-ejecución sin errores (idempotente).
+--
+-- ============================================================================
 -- DEDUMSOFT - DATOS INICIALES (SEED)
 -- Fecha: 2026-01-18
 -- ============================================

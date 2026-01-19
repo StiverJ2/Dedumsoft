@@ -1,38 +1,79 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: CONFIGURACIÓN DEL SISTEMA
+ * ============================================================================
+ * 
+ * Página de configuración y preferencias del usuario.
+ * Permite cambiar entre modo normal y modo legacy (IE8).
+ * 
+ * Características:
+ * - Selector de modo de compatibilidad
+ * - Modo Normal: CSS moderno, ES6, DataTables, gráficos interactivos
+ * - Modo Legacy: Compatible con IE8, tablas simples, imágenes PNG
+ * - Preferencia guardada en cookie por 1 año
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 7 (Configuración)
+ * 
+ * Parámetros GET:
+ * - updated=1: Muestra mensaje de éxito
+ * - error=csrf: Muestra error de seguridad
+ * 
+ * Métodos:
+ * - GET: Muestra formulario de configuración
+ * - POST: Guarda preferencia de modo en cookie
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(7);
+require_menu_access(7); // Menú: Configuración
 
+// Determinar modo actual
 $mode_override = dedumsoft_ui_mode_override();
 $ua_legacy = dedumsoft_is_legacy_ua();
 $current_mode = $mode_override !== '' ? $mode_override : ($ua_legacy ? 'legacy' : 'normal');
 $status_msg = '';
 
+// =============================================================================
+// PROCESAMIENTO DEL FORMULARIO (POST)
+// =============================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Validar token CSRF
     if (!dedumsoft_validate_csrf($_POST['csrf_token'] ?? null)) {
         header('Location: configuracion.php?error=csrf');
         exit;
     }
+
+    // Validar modo seleccionado
     $mode = strtolower(trim($_POST['ui_mode'] ?? ''));
     if ($mode !== 'legacy' && $mode !== 'normal') {
         $mode = $current_mode;
     }
+
+    // Guardar preferencia en cookie (1 año)
     $secure = dedumsoft_cookie_secure();
     setcookie('dedumsoft_ui_mode', $mode, [
         'expires' => time() + 60 * 60 * 24 * 365,
         'path' => '/Back',
         'secure' => $secure,
-        'httponly' => false,
+        'httponly' => false,  // Necesario para leer desde JS
         'samesite' => 'Lax'
     ]);
+
     header('Location: configuracion.php?updated=1');
     exit;
 }
 
+// Mensajes de estado
 if (($_GET['updated'] ?? '') === '1') {
     $status_msg = 'Preferencia guardada.';
 } elseif (($_GET['error'] ?? '') === 'csrf') {

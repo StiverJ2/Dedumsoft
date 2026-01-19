@@ -1,13 +1,49 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: GESTIÓN DE UBICACIONES
+ * ============================================================================
+ * 
+ * Página de gestión de ubicaciones físicas del almacén.
+ * Permite visualizar, agregar, editar y eliminar ubicaciones.
+ * 
+ * Características:
+ * - Tabla de ubicaciones con filtro por área
+ * - Modal para crear/editar ubicaciones
+ * - Clasificación por área (Producción, Almacén, Ventas, etc.)
+ * - Descripción detallada de cada ubicación
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 2 (Inventario)
+ * 
+ * Parámetros GET (solo legacy):
+ * - area: Filtrar por área
+ * 
+ * APIs utilizadas:
+ * - GET /api/ubicaciones.php - Listar ubicaciones
+ * - POST /api/ubicaciones.php - Crear ubicación
+ * - PUT /api/ubicaciones.php - Actualizar ubicación
+ * - DELETE /api/ubicaciones.php - Eliminar ubicación
+ * - GET /api/opciones.php?tipo=areas - Áreas disponibles
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(2);
+require_menu_access(2); // Menú: Inventario
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+
+// Filtros de búsqueda (solo usados en modo legacy)
 $area = $_GET['area'] ?? '';
 $ubicaciones_rows = [];
 $area_options = [];
@@ -36,6 +72,13 @@ if ($legacy) {
     }
 }
 
+/**
+ * Genera un badge HTML con color según el área.
+ * Cada área tiene un color asociado para fácil identificación.
+ * 
+ * @param string $area Nombre del área
+ * @return string HTML del badge
+ */
 function format_area_badge($area)
 {
     $a = strtolower($area);
@@ -63,6 +106,12 @@ function format_area_badge($area)
     return '<span class="ds-badge ds-badge--' . $badge . '">' . htmlspecialchars($display) . '</span>';
 }
 
+/**
+ * Genera un badge de estado activo/inactivo.
+ * 
+ * @param bool $activo Estado de activación
+ * @return string HTML del badge
+ */
 function format_activo_badge($activo)
 {
     if ($activo) {
@@ -71,6 +120,7 @@ function format_activo_badge($activo)
     return '<span class="ds-badge ds-badge--muted">Inactivo</span>';
 }
 
+// Cargar datos para modo legacy
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(

@@ -1,14 +1,47 @@
 /**
- * CRUD Utilities for Dedumsoft
- * Provides modal dialogs and API helpers for Create, Update, Delete operations
+ * ============================================================================
+ * UTILIDADES CRUD PARA DEDUMSOFT
+ * ============================================================================
+ * 
+ * Biblioteca JavaScript que proporciona funcionalidades de modales y CRUD
+ * para operaciones de Crear, Actualizar y Eliminar.
+ * 
+ * COMPONENTES PRINCIPALES:
+ * - Sistema de modales dinámicos
+ * - Notificaciones toast (requiere Notyf)
+ * - Llamadas API con Axios
+ * - Generador de campos de formulario
+ * - Botones de acción para tablas
+ * 
+ * DEPENDENCIAS:
+ * - Notyf (notificaciones)
+ * - Axios (peticiones HTTP)
+ * 
+ * USO:
+ *   DsCrud.openModal({ title: 'Nuevo', body: html, onSave: fn });
+ *   DsCrud.toast('Mensaje', 'success');
+ *   DsCrud.api('/api/endpoint', 'POST', data, onSuccess, onError);
+ * 
+ * @package Dedumsoft\Assets
+ * @author  Equipo Dedumsoft
  */
 
 const DsCrud = (() => {
     'use strict';
 
-    let currentModal = null;
-    let notyf = null;
+    // Estado interno del módulo
+    let currentModal = null;  // Referencia al modal activo
+    let notyf = null;         // Instancia de Notyf
 
+    // =========================================================================
+    // SISTEMA DE NOTIFICACIONES TOAST
+    // =========================================================================
+    
+    /**
+     * Inicializa la instancia de Notyf para notificaciones.
+     * Solo se crea una vez (singleton).
+     * @returns {Notyf|null} Instancia de Notyf o null si no está disponible
+     */
     const initNotyf = () => {
         if (!notyf && window.Notyf) {
             notyf = new Notyf({
@@ -20,6 +53,11 @@ const DsCrud = (() => {
         return notyf;
     };
 
+    /**
+     * Muestra una notificación toast al usuario.
+     * @param {string} message - Mensaje a mostrar
+     * @param {string} type - Tipo: 'success' (default) o 'error'
+     */
     const toast = (message, type = 'success') => {
         const notyfInstance = initNotyf();
         if (notyfInstance) {
@@ -29,7 +67,7 @@ const DsCrud = (() => {
                 notyfInstance.success(message);
             }
         } else {
-            // Fallback to console if Notyf is not available
+            // Fallback a consola si Notyf no está disponible
             console[type === 'error' ? 'error' : 'log'](message);
         }
     };

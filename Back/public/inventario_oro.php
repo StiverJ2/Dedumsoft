@@ -1,18 +1,56 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: INVENTARIO DE ORO
+ * ============================================================================
+ * 
+ * Página de gestión del inventario de oro (metales preciosos).
+ * Permite visualizar, agregar, editar y eliminar registros de oro.
+ * 
+ * Características:
+ * - Tabla de inventario con filtros (tipo de oro)
+ * - Modal para crear/editar registros
+ * - Modal para registrar compras
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 2 (Inventario)
+ * 
+ * Parámetros GET (solo legacy):
+ * - oro_tipo: Filtrar por tipo de oro (10k, 14k, etc.)
+ * 
+ * APIs utilizadas:
+ * - GET /api/inventario_oro.php - Listar oro
+ * - POST /api/inventario_oro.php - Crear registro
+ * - PUT /api/inventario_oro.php - Actualizar registro
+ * - DELETE /api/inventario_oro.php - Eliminar registro
+ * - POST /api/compras.php - Registrar compra
+ * - GET /api/opciones.php?tipo=tipos_oro - Tipos de oro
+ * - GET /api/proveedores.php - Lista de proveedores
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(2);
+require_menu_access(2); // Menú: Inventario
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+
+// Filtros de búsqueda (solo usados en modo legacy)
 $oro_tipo = $_GET['oro_tipo'] ?? '';
 $oro_rows = [];
 $proveedor_options = [];
 $oro_tipo_options = [];
 
+// Cargar proveedores para dropdown
 try {
     $stmt = $connLogic->query("SELECT id, nombre, tipo FROM proveedores WHERE activo = TRUE ORDER BY nombre");
     $proveedor_options = $stmt->fetchAll(PDO::FETCH_ASSOC);

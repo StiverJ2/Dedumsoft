@@ -1,4 +1,38 @@
--- ============================================
+-- ============================================================================
+-- FUNCIONES: INVENTARIO
+-- ============================================================================
+--
+-- Funciones CRUD para los tres tipos de inventario:
+-- - Inventario de Oro (inventario_oro)
+-- - Inventario de Insumos (inventario_insumos)
+-- - Inventario de Maquinaria (inventario_maquinaria)
+--
+-- FUNCIONES POR MÓDULO:
+--
+-- INVENTARIO ORO:
+-- - fun_obtener_inventario_oro(offset, limit, tipo_id, activo)
+-- - fun_crear_inventario_oro(tipo_oro_id, peso, precio, proveedor_id, ...)
+-- - fun_actualizar_inventario_oro(id, tipo_oro_id, peso, precio, ...)
+-- - fun_eliminar_inventario_oro(id) - Soft delete
+--
+-- INVENTARIO INSUMOS:
+-- - fun_obtener_inventario_insumos(offset, limit, categoria, activo)
+-- - fun_crear_insumo(nombre, cantidad, unidad, proveedor_id, ...)
+-- - fun_actualizar_insumo(id, nombre, cantidad, ...)
+-- - fun_eliminar_insumo(id) - Soft delete
+--
+-- INVENTARIO MAQUINARIA:
+-- - fun_obtener_inventario_maquinaria(offset, limit, tipo_id, activo)
+-- - fun_crear_maquinaria(nombre, tipo_id, marca, modelo, ...)
+-- - fun_actualizar_maquinaria(id, nombre, estado_id, ...)
+-- - fun_eliminar_maquinaria(id) - Soft delete
+--
+-- NOTAS:
+-- - Todas las funciones usan IDs normalizados (no códigos)
+-- - El campo 'activo' implementa soft-delete
+-- - Los estados usan FK a tablas lookup
+--
+-- ============================================================================
 -- FUNCIONES DE INVENTARIO
 -- Fecha: 2026-01-18
 -- Normalizado: estado_id en lugar de estado varchar

@@ -1,19 +1,46 @@
--- ============================================
+-- ============================================================================
+-- FUNCIONES: TRIGGERS Y AUXILIARES
+-- ============================================================================
+--
+-- Define triggers automáticos para mantener la integridad de datos.
+-- Los triggers se ejecutan automáticamente en operaciones INSERT/UPDATE/DELETE.
+--
+-- TRIGGERS INCLUIDOS:
+-- - trg_registrar_consumo_oro: Registra movimientos al consumir oro
+-- - trg_registrar_consumo_insumos: Registra movimientos al consumir insumos
+-- - trg_registrar_movimiento_general_oro: Actualiza stock de oro
+--
+-- FUNCIONES AUXILIARES:
+-- - registrar_consumo_oro_movimiento(): Crea registro de salida de oro
+-- - registrar_consumo_insumos_movimiento(): Crea registro de salida de insumos
+-- - registrar_movimiento_general_oro(): Actualiza cantidad en inventario
+--
+-- TABLAS AFECTADAS:
+-- - consumo_oro -> movimientos_oro (INSERT)
+-- - consumo_insumos -> movimientos_insumos (INSERT)
+-- - movimientos_oro -> inventario_oro (UPDATE cantidad)
+--
+-- ============================================================================
 -- TRIGGERS Y FUNCIONES AUXILIARES
 -- ============================================
 
 SET search_path TO joyeria, seguridad, public;
 
+-- -----------------------------------------------------------------------------
+-- TRIGGER: Registrar consumo de oro como movimiento
+-- Se ejecuta después de INSERT en consumo_oro
+-- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION registrar_consumo_oro_movimiento()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- Insertar movimiento de salida en la tabla de movimientos
     INSERT INTO movimientos_oro (inventario_oro_id, tipo_movimiento, cantidad, motivo, referencia, usuario_id)
     VALUES (
         NEW.inventario_oro_id,
         'salida',
         NEW.cantidad_consumida,
         'Consumo en produccion',
-        'OP-' || NEW.orden_produccion_id,
+        'OP-' || NEW.orden_produccion_id,  -- Referencia a la orden
         NEW.usuario_id
     );
     RETURN NEW;

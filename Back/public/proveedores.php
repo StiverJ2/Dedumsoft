@@ -1,13 +1,49 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: GESTIÓN DE PROVEEDORES
+ * ============================================================================
+ * 
+ * Página de gestión de proveedores de materiales.
+ * Permite visualizar, agregar, editar y eliminar proveedores.
+ * 
+ * Características:
+ * - Tabla de proveedores con filtro por tipo
+ * - Modal para crear/editar proveedores
+ * - Clasificación por tipo (Oro, Insumos, Maquinaria)
+ * - Datos de contacto (nombre, teléfono)
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 6 (Proveedores)
+ * 
+ * Parámetros GET (solo legacy):
+ * - tipo: Filtrar por tipo de proveedor
+ * 
+ * APIs utilizadas:
+ * - GET /api/proveedores.php - Listar proveedores
+ * - POST /api/proveedores.php - Crear proveedor
+ * - PUT /api/proveedores.php - Actualizar proveedor
+ * - DELETE /api/proveedores.php - Eliminar proveedor
+ * - GET /api/opciones.php?tipo=tipos_proveedor - Tipos de proveedor
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(6);
+require_menu_access(6); // Menú: Proveedores
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+
+// Filtros de búsqueda (solo usados en modo legacy)
 $tipo = $_GET['tipo'] ?? '';
 $proveedores_rows = [];
 $tipo_proveedor_options = [];
@@ -33,6 +69,7 @@ if ($legacy) {
     }
 }
 
+// Cargar datos para modo legacy
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(

@@ -1,4 +1,37 @@
--- ============================================
+-- ============================================================================
+-- FUNCIONES: ARTESANO
+-- ============================================================================
+--
+-- Funciones específicas para el módulo de artesano.
+-- Permiten a los artesanos gestionar sus órdenes asignadas.
+--
+-- FUNCIONES INCLUIDAS:
+--
+-- GESTIÓN DE ÓRDENES:
+-- - fun_obtener_ordenes_artesano(artesano_id, offset, limit)
+-- - fun_actualizar_estado_orden(orden_id, estado_id)
+--
+-- CONSUMO DE MATERIALES:
+-- - fun_registrar_consumo_oro(orden_id, inventario_oro_id, cantidad, usuario_id)
+-- - fun_registrar_consumo_insumo(orden_id, inventario_insumos_id, cantidad, usuario_id)
+-- - fun_obtener_consumos_orden(orden_id)
+--
+-- CREACIONES TERMINADAS:
+-- - fun_registrar_creacion_terminada(orden_id, descripcion, peso_final, ...)
+-- - fun_obtener_creaciones_artesano(artesano_id, offset, limit)
+--
+-- FLUJO TÍPICO:
+-- 1. Artesano ve sus órdenes (fun_obtener_ordenes_artesano)
+-- 2. Inicia trabajo (fun_actualizar_estado_orden -> en_proceso)
+-- 3. Registra consumos (fun_registrar_consumo_*)
+-- 4. Termina trabajo (fun_registrar_creacion_terminada)
+-- 5. Cierra orden (fun_actualizar_estado_orden -> terminada)
+--
+-- SEGURIDAD:
+-- El artesano solo puede ver/modificar sus propias órdenes.
+-- La validación de propiedad se hace en PHP.
+--
+-- ============================================================================
 -- FUNCIONES DE ARTESANO
 -- Fecha: 2026-01-19
 -- Funciones para el módulo de artesano

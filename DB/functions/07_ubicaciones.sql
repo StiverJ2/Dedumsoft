@@ -1,4 +1,26 @@
--- ============================================
+-- ============================================================================
+-- FUNCIONES: UBICACIONES
+-- ============================================================================
+--
+-- Funciones CRUD para la gestión de ubicaciones físicas.
+-- Las ubicaciones definen dónde se almacena el inventario.
+--
+-- FUNCIONES INCLUIDAS:
+-- - fun_obtener_ubicaciones(offset, limit, area_id, activo)
+-- - fun_crear_ubicacion(nombre, descripcion, area_id)
+-- - fun_actualizar_ubicacion(id, nombre, descripcion, area_id)
+-- - fun_eliminar_ubicacion(id) - Soft delete
+--
+-- ESTRUCTURA:
+-- Las ubicaciones pertenecen a áreas (tabla 'areas').
+-- Ejemplo: Área "Taller" -> Ubicaciones "Mesa 1", "Mesa 2", "Vitrina"
+--
+-- USO:
+-- - Inventario de oro: Registra ubicación como texto
+-- - Inventario de insumos: Referencia a ubicación por ID
+-- - Inventario de maquinaria: Referencia a ubicación por ID
+--
+-- ============================================================================
 -- FUNCIONES DE UBICACIONES
 -- Fecha: 2026-01-18
 -- ============================================

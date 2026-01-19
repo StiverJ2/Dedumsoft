@@ -1,17 +1,57 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: GESTIÓN DE USUARIOS
+ * ============================================================================
+ * 
+ * Página de administración de usuarios del sistema.
+ * Permite visualizar y gestionar usuarios y sus roles.
+ * 
+ * Características:
+ * - Tabla de usuarios con filtros (rol, estado activo)
+ * - Visualización de roles con badges de color
+ * - Filtrado por rol (Administrador, Operador, Lectura)
+ * - Filtrado por estado activo/inactivo
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 5 (Usuarios)
+ * 
+ * Parámetros GET (solo legacy):
+ * - rol: Filtrar por nombre de rol
+ * - activo: Filtrar por estado (1=activo, 0=inactivo)
+ * 
+ * APIs utilizadas:
+ * - GET /api/reportes_usuarios.php - Listar usuarios
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(5);
+require_menu_access(5); // Menú: Usuarios
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+
+// Filtros de búsqueda (solo usados en modo legacy)
 $rol_filter = $_GET['rol'] ?? '';
 $activo_filter = $_GET['activo'] ?? '';
 $usuarios_rows = [];
 
+/**
+ * Genera un badge HTML con color según el rol.
+ * Cada rol tiene un color asociado para fácil identificación.
+ * 
+ * @param string $rol Nombre del rol
+ * @return string HTML del badge
+ */
 function format_rol_badge($rol)
 {
     $rol = trim((string) $rol);
@@ -19,16 +59,25 @@ function format_rol_badge($rol)
         return '';
     $key = strtolower($rol);
     $label = ucwords($rol);
+
+    // Asignar color según nivel de acceso
     $cls = 'ds-badge--neutral';
     if ($key === 'administrador')
-        $cls = 'ds-badge--danger';
+        $cls = 'ds-badge--danger';    // Rojo: acceso total
     elseif ($key === 'operador')
-        $cls = 'ds-badge--info';
+        $cls = 'ds-badge--info';      // Azul: acceso operativo
     elseif ($key === 'lectura')
-        $cls = 'ds-badge--muted';
+        $cls = 'ds-badge--muted';     // Gris: solo lectura
+
     return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars($label) . '</span>';
 }
 
+/**
+ * Genera un badge de estado activo/inactivo.
+ * 
+ * @param bool $activo Estado de activación
+ * @return string HTML del badge
+ */
 function format_activo_badge($activo)
 {
     if ($activo) {
@@ -37,6 +86,7 @@ function format_activo_badge($activo)
     return '<span class="ds-badge ds-badge--muted">Inactivo</span>';
 }
 
+// Cargar datos para modo legacy
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(
@@ -45,7 +95,7 @@ if ($legacy) {
         $stmt->execute();
         $all_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Filter in PHP for legacy mode
+        // Filtrar en PHP para modo legacy (la función no acepta parámetros)
         foreach ($all_rows as $row) {
             if ($rol_filter !== '' && strtolower($row['rol']) !== strtolower($rol_filter)) {
                 continue;

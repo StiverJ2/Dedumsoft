@@ -1,15 +1,56 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: DASHBOARD PRINCIPAL
+ * ============================================================================
+ * 
+ * Página de inicio para usuarios administradores.
+ * Muestra un resumen ejecutivo del estado del sistema.
+ * 
+ * Indicadores mostrados:
+ * - Inventario: Total de items y cantidad en stock bajo
+ * - Ventas: Total del mes actual
+ * - Órdenes: Cantidad de órdenes activas
+ * - Completadas: Órdenes terminadas este mes
+ * 
+ * Gráficos:
+ * - Ventas del mes: Gráfico de líneas temporal
+ * - Órdenes por estado: Gráfico de barras
+ * 
+ * Características:
+ * - Consultas optimizadas con un solo acceso a BD
+ * - Soporte dual: uPlot (moderno) o PNG via GD (legacy)
+ * - Íconos adaptables: emoji (moderno) o PNG Fatcow (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 1 (Dashboard)
+ * 
+ * APIs internas:
+ * - fun_obtener_ordenes(): Órdenes recientes
+ * - fun_reporte_inventario(): Conteo de inventario
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(1);
+require_menu_access(1); // Menú: Dashboard
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
-$load_uplot = !$legacy;
+$load_uplot = !$legacy;  // uPlot solo para navegadores modernos
 
+// =============================================================================
+// CARGA DE DATOS PARA EL DASHBOARD
+// =============================================================================
+
+// Cargar órdenes recientes (límite: 5)
 try {
     $stmt = $connLogic->prepare(
         'SELECT id, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones FROM fun_obtener_ordenes(:offset, :limit, :estado)'
@@ -19,6 +60,8 @@ try {
 } catch (PDOException $e) {
     $ordenes = [];
 }
+
+// Inicializar contadores
 $inventario_total = 0;
 $inventario_stock_bajo = 0;
 $ventas_mes_total = 0.0;
@@ -26,34 +69,43 @@ $ordenes_activas = 0;
 $ordenes_completadas_mes = 0;
 $ventas_chart = [];
 $ordenes_estado = [];
+
+// Rango del mes actual
 $month_start = date('Y-m-01');
 $month_end = date('Y-m-t');
 
+// Cargar métricas del dashboard
 try {
+    // Inventario: suma de las tres tablas de inventario
     $inventario_total = (int) $connLogic
         ->query('SELECT (SELECT COUNT(*) FROM inventario_oro) + (SELECT COUNT(*) FROM inventario_insumos) + (SELECT COUNT(*) FROM inventario_maquinaria) AS total')
         ->fetchColumn();
 
+    // Stock bajo: usa la función de reporte
     $inventario_stock_bajo = (int) $connLogic
         ->query('SELECT COUNT(*) FROM fun_reporte_inventario()')
         ->fetchColumn();
 
+    // Ventas del mes: suma de creaciones vendidas
     $stmt = $connLogic->prepare(
         'SELECT COALESCE(SUM(ct.precio_venta_real), 0) FROM creaciones_terminadas ct WHERE ct.vendida = TRUE AND ct.fecha_venta::date BETWEEN :desde AND :hasta'
     );
     $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
     $ventas_mes_total = (float) $stmt->fetchColumn();
 
+    // Órdenes activas: estados distintos de terminada/cancelada
     $ordenes_activas = (int) $connLogic
         ->query("SELECT COUNT(*) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre NOT IN ('terminada', 'cancelada')")
         ->fetchColumn();
 
+    // Órdenes completadas este mes
     $stmt = $connLogic->prepare(
         "SELECT COUNT(*) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre = 'terminada' AND op.fecha_fin_real IS NOT NULL AND op.fecha_fin_real::date BETWEEN :desde AND :hasta"
     );
     $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
     $ordenes_completadas_mes = (int) $stmt->fetchColumn();
 
+    // Datos para gráfico de ventas (serie temporal)
     $stmt = $connLogic->prepare(
         'SELECT fecha_venta::date AS dia, COALESCE(SUM(precio_venta_real), 0) AS total FROM creaciones_terminadas WHERE vendida = TRUE AND fecha_venta::date BETWEEN :desde AND :hasta GROUP BY dia ORDER BY dia'
     );
@@ -66,10 +118,12 @@ try {
         ];
     }
 
+    // Datos para gráfico de órdenes por estado
     $ordenes_estado = $connLogic
         ->query('SELECT eo.nombre AS estado, COUNT(*) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY eo.nombre ORDER BY eo.nombre')
         ->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
+    // En caso de error, mantener valores en cero
     $inventario_total = 0;
     $inventario_stock_bajo = 0;
     $ventas_mes_total = 0.0;
@@ -82,6 +136,12 @@ try {
 include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 
+/**
+ * Formatea una fecha/hora para visualización.
+ * 
+ * @param string|null $value Fecha en formato ISO 8601
+ * @return string Fecha formateada (Y-m-d H:i) o cadena vacía
+ */
 if (!function_exists('dedumsoft_format_datetime')) {
     function dedumsoft_format_datetime(?string $value): string
     {
@@ -92,11 +152,25 @@ if (!function_exists('dedumsoft_format_datetime')) {
             $dt = new DateTime($value);
             return $dt->format('Y-m-d H:i');
         } catch (Exception $e) {
+            // Fallback: eliminar microsegundos
             return preg_replace('/\.\d+/', '', $value);
         }
     }
 }
 
+/**
+ * Genera un badge HTML con color según el estado de la orden.
+ * 
+ * Colores:
+ * - pendiente: Amarillo (warning)
+ * - en_proceso: Azul (info)
+ * - terminada: Verde (success)
+ * - cancelada: Rojo (danger)
+ * - pausada: Gris (muted)
+ * 
+ * @param string|null $value Estado de la orden
+ * @return string HTML del badge
+ */
 if (!function_exists('dedumsoft_format_status_badge')) {
     function dedumsoft_format_status_badge(?string $value): string
     {
@@ -117,16 +191,18 @@ if (!function_exists('dedumsoft_format_status_badge')) {
         return '<span class="ds-badge ' . $class . '">' . htmlspecialchars($label) . '</span>';
     }
 }
+
+// Definir íconos según modo (emoji vs PNG)
 if ($legacy) {
     $icon_inventory = '<img src="assets/icons/fatcow/32/box.png" alt="Inventario">';
     $icon_sales = '<img src="assets/icons/fatcow/32/cash_stack.png" alt="Ventas">';
     $icon_orders = '<img src="assets/icons/fatcow/32/application_view_list.png" alt="Ordenes">';
     $icon_done = '<img src="assets/icons/fatcow/32/tick.png" alt="Completadas">';
 } else {
-    $icon_inventory = '&#128230;';
-    $icon_sales = '&#128176;';
-    $icon_orders = '&#128203;';
-    $icon_done = '&#9989;';
+    $icon_inventory = '&#128230;';  // 📦
+    $icon_sales = '&#128176;';      // 💰
+    $icon_orders = '&#128203;';     // 📋
+    $icon_done = '&#9989;';         // ✅
 }
 ?>
 <div class="content">

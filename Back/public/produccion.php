@@ -1,17 +1,52 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: GESTIÓN DE PRODUCCIÓN
+ * ============================================================================
+ * 
+ * Página de gestión de órdenes de producción.
+ * Permite visualizar y asignar órdenes a artesanos.
+ * 
+ * Características:
+ * - Tabla de órdenes con filtro por estado
+ * - Asignación de artesanos a órdenes
+ * - Seguimiento de estado de producción
+ * - Fechas de inicio y fin estimada
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 3 (Producción)
+ * 
+ * Parámetros GET (solo legacy):
+ * - estado: Filtrar por estado de la orden
+ * 
+ * APIs utilizadas:
+ * - GET /api/ordenes.php - Listar órdenes
+ * - PUT /api/ordenes.php - Asignar artesano a orden
+ * - GET /api/opciones.php - Estados, prioridades, artesanos
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(3);
+require_menu_access(3); // Menú: Producción
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+
+// Filtros de búsqueda (solo usados en modo legacy)
 $estado = $_GET['estado'] ?? '';
 $ordenes_rows = [];
 $artesanos_options = [];
 
+// Cargar datos para modo legacy
 if ($legacy) {
     try {
         $stmt = $connLogic->prepare(
@@ -26,6 +61,7 @@ if ($legacy) {
         error_log('produccion legacy error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 
+    // Cargar artesanos para dropdown de asignación
     try {
         $stmt = $connLogic->query("SELECT id, nombre, apellido FROM artesanos WHERE activo = TRUE ORDER BY nombre, apellido");
         $artesanos_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -65,25 +101,26 @@ include __DIR__ . '/partials/nav.php';
         <?php endif; ?>
         <div class="table-responsive">
             <table id="ordenes-table" class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Id</th>
-                            <th>Producto</th>
-                            <th>Artesano</th>
-                            <th>Estado</th>
-                            <th>Fecha inicio</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if ($legacy): ?>
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Producto</th>
+                        <th>Artesano</th>
+                        <th>Estado</th>
+                        <th>Fecha inicio</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($legacy): ?>
                         <?php foreach ($ordenes_rows as $row): ?>
                             <?php
                             $estado_raw = (string) ($row['estado'] ?? '');
                             $estado_label = strtoupper(str_replace('_', ' ', $estado_raw));
                             $fecha_inicio = $row['fecha_inicio'] ? date('Y-m-d H:i', strtotime((string) $row['fecha_inicio'])) : '';
                             ?>
-                            <tr data-id="<?php echo (int) $row['id']; ?>" data-artesano-id="<?php echo (int) ($row['artesano_id'] ?? 0); ?>">
+                            <tr data-id="<?php echo (int) $row['id']; ?>"
+                                data-artesano-id="<?php echo (int) ($row['artesano_id'] ?? 0); ?>">
                                 <td><?php echo htmlspecialchars((string) ($row['id'] ?? '')); ?></td>
                                 <td><?php echo htmlspecialchars((string) $row['producto_nombre']); ?></td>
                                 <td><?php echo htmlspecialchars((string) ($row['artesano_nombre'] ?? '')); ?></td>
@@ -97,7 +134,7 @@ include __DIR__ . '/partials/nav.php';
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
-                    </tbody>
+                </tbody>
             </table>
         </div>
     </div>

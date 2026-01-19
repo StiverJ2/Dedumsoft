@@ -1,4 +1,29 @@
--- ============================================
+-- ============================================================================
+-- DEDUMSOFT - SCRIPT DE INSTALACIÓN COMPLETA
+-- ============================================================================
+--
+-- Instala todo el sistema de base de datos desde cero.
+-- Ejecuta los scripts en el orden correcto para evitar dependencias rotas.
+--
+-- PREREQUISITOS:
+-- 1. PostgreSQL 17+ instalado y corriendo
+-- 2. Base de datos creada: createdb db_dedumsoft
+-- 3. Usuario con permisos de creación de esquemas y tablas
+--
+-- EJECUCIÓN:
+--   cd DB
+--   psql -d db_dedumsoft -f install.sql
+--
+-- ORDEN DE EJECUCIÓN:
+-- 1. db_schema.sql - Crea esquemas y tablas
+-- 2. functions/*.sql - Instala funciones almacenadas
+-- 3. seed.sql - Carga datos iniciales
+--
+-- USUARIOS CREADOS:
+-- - admin / Admin123! (rol ADMIN - acceso total)
+-- - artesano / Artesano123! (rol OPERADOR - producción)
+--
+-- ============================================================================
 -- DEDUMSOFT - INSTALACIÓN COMPLETA
 -- Fecha: 2026-01-18
 -- ============================================

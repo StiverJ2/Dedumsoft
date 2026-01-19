@@ -1,4 +1,35 @@
--- ============================================
+-- ============================================================================
+-- DEDUMSOFT - ESQUEMA DE BASE DE DATOS
+-- ============================================================================
+-- 
+-- Sistema de Gestión para Joyería "Joyas Van"
+-- Base de Datos: PostgreSQL 17+
+-- Fecha: 2026-01-18
+-- 
+-- DESCRIPCIÓN:
+-- Define la estructura completa de la base de datos incluyendo:
+-- - Esquemas (joyeria, seguridad)
+-- - Tablas lookup (estados, prioridades, tipos)
+-- - Tablas de catálogo (productos, proveedores, artesanos)
+-- - Tablas de inventario (oro, insumos, maquinaria)
+-- - Tablas de producción (órdenes, consumos, creaciones)
+-- - Tablas de seguridad (usuarios, roles, permisos)
+-- 
+-- DISEÑO:
+-- - Completamente normalizado (3FN)
+-- - Sin columnas 'codigo' redundantes (usar id)
+-- - Sin CHECK constraints con valores hardcoded (usar tablas lookup)
+-- - Soft-delete con campo 'activo' o 'deleted_at'
+-- 
+-- ESQUEMAS:
+-- - joyeria: Tablas de negocio (inventario, producción, ventas)
+-- - seguridad: Tablas de autenticación y autorización
+-- - public: Extensiones y funciones globales
+-- 
+-- EJECUCIÓN:
+--   psql -d db_dedumsoft -f DB/db_schema.sql
+-- 
+-- ============================================================================
 -- DEDUMSOFT - SISTEMA DE GESTIÓN PARA JOYERÍA
 -- Base de Datos: PostgreSQL 17+
 -- Fecha: 2026-01-18

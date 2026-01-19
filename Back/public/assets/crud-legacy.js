@@ -1,13 +1,45 @@
 /**
- * CRUD Utilities for Dedumsoft - Legacy/IE8 Compatible Version
- * Uses only features available in IE8+
+ * ============================================================================
+ * UTILIDADES CRUD PARA DEDUMSOFT - VERSIÓN LEGACY (IE8+)
+ * ============================================================================
+ * 
+ * Versión compatible con Internet Explorer 8+ de la biblioteca CRUD.
+ * Usa solo características disponibles en navegadores antiguos.
+ * 
+ * DIFERENCIAS CON VERSIÓN MODERNA:
+ * - Sin arrow functions (usa function)
+ * - Sin let/const (usa var)
+ * - Sin template literals (usa concatenación)
+ * - Sin classList (usa funciones helper)
+ * - Sin fetch/axios (usa XMLHttpRequest)
+ * - Sin Notyf (sistema de toast propio)
+ * 
+ * COMPATIBILIDAD:
+ * - IE8, IE9, IE10, IE11
+ * - Navegadores antiguos sin ES6
+ * 
+ * DEPENDENCIAS:
+ * - json2.min.js (polyfill JSON para IE8)
+ * 
+ * @package Dedumsoft\Assets
+ * @author  Equipo Dedumsoft
  */
 
 var DsCrud = (function() {
-    var toastContainer = null;
-    var currentModal = null;
+    // Estado del módulo
+    var toastContainer = null;  // Contenedor de notificaciones
+    var currentModal = null;    // Modal activo
 
-    // IE8 compatible event listener
+    // =========================================================================
+    // HELPERS DE COMPATIBILIDAD IE8
+    // =========================================================================
+    
+    /**
+     * Agrega un event listener de forma compatible con IE8.
+     * @param {HTMLElement} el - Elemento destino
+     * @param {string} type - Tipo de evento (click, change, etc.)
+     * @param {Function} fn - Función callback
+     */
     function addEvent(el, type, fn) {
         if (el.addEventListener) {
             el.addEventListener(type, fn, false);
@@ -16,35 +48,58 @@ var DsCrud = (function() {
         }
     }
 
-    // IE8 compatible class check
+    /**
+     * Verifica si un elemento tiene una clase CSS.
+     * @param {HTMLElement} el - Elemento a verificar
+     * @param {string} cls - Nombre de la clase
+     * @returns {boolean} true si tiene la clase
+     */
     function hasClass(el, cls) {
         return (' ' + el.className + ' ').indexOf(' ' + cls + ' ') > -1;
     }
 
-    // IE8 compatible class add
+    /**
+     * Agrega una clase CSS a un elemento.
+     * @param {HTMLElement} el - Elemento destino
+     * @param {string} cls - Clase a agregar
+     */
     function addClass(el, cls) {
         if (!hasClass(el, cls)) {
             el.className = el.className ? el.className + ' ' + cls : cls;
         }
     }
 
-    // IE8 compatible class remove
+    /**
+     * Remueve una clase CSS de un elemento.
+     * @param {HTMLElement} el - Elemento destino
+     * @param {string} cls - Clase a remover
+     */
     function removeClass(el, cls) {
         el.className = el.className.replace(new RegExp('(^|\\s)' + cls + '(\\s|$)', 'g'), ' ').replace(/^\s+|\s+$/g, '');
     }
 
-    // Get element by id
+    /**
+     * Obtiene un elemento por su ID.
+     * @param {string} id - ID del elemento
+     * @returns {HTMLElement|null}
+     */
     function getById(id) {
         return document.getElementById(id);
     }
 
-    // Query selector fallback for IE8
+    /**
+     * Selector simple compatible con IE8.
+     * Soporta selectores de clase (.clase).
+     * @param {string} selector - Selector CSS simple
+     * @param {HTMLElement} parent - Elemento padre (opcional)
+     * @returns {HTMLElement|null}
+     */
     function query(selector, parent) {
         parent = parent || document;
         if (parent.querySelector) {
             return parent.querySelector(selector);
         }
-        // Basic fallback for class selectors
+        // Fallback básico para selectores de clase
         if (selector.charAt(0) === '.') {
             var cls = selector.substring(1);
             var all = parent.getElementsByTagName('*');
@@ -55,26 +110,40 @@ var DsCrud = (function() {
         return null;
     }
 
+    // =========================================================================
+    // SISTEMA DE NOTIFICACIONES TOAST (PROPIO PARA IE8)
+    // =========================================================================
+    
+    /**
+     * Crea el contenedor de notificaciones si no existe.
+     * Actualiza posición considerando scroll.
+     * @returns {HTMLElement} Contenedor de toasts
+     */
     function ensureToastContainer() {
         if (!toastContainer) {
             toastContainer = document.createElement('div');
             toastContainer.className = 'ds-toast-container';
-            // IE8 compatible positioning
+            // Posicionamiento compatible con IE8
             toastContainer.style.cssText = 'position:absolute;top:10px;right:10px;width:280px;z-index:2000;';
             document.body.appendChild(toastContainer);
         }
-        // Update position on each call (for scroll)
+        // Actualizar posición en cada llamada (para scroll)
         var scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
         toastContainer.style.top = (scrollTop + 10) + 'px';
         return toastContainer;
     }
 
+    /**
+     * Muestra una notificación toast.
+     * @param {string} message - Mensaje a mostrar
+     * @param {string} type - Tipo: 'success' (default) o 'error'
+     */
     function toast(message, type) {
         type = type || 'success';
         var container = ensureToastContainer();
         var el = document.createElement('div');
         el.className = 'ds-toast ds-toast--' + type;
-        // IE8 compatible inline styles
+        // Estilos inline para IE8
         var bgColor = type === 'error' ? '#a94442' : '#4a7c4e';
         el.style.cssText = 'padding:10px 15px;margin-bottom:8px;background:' + bgColor + ';color:#fff;font-size:13px;border:1px solid #000;';
         if (el.textContent !== undefined) {
@@ -83,8 +152,8 @@ var DsCrud = (function() {
             el.innerText = message;
         }
         container.appendChild(el);
+        // Auto-remover después de 3 segundos
         setTimeout(function() {
-            // IE8 doesn't support opacity transitions, just remove
             if (el.parentNode) el.parentNode.removeChild(el);
         }, 3000);
     }
@@ -306,13 +375,13 @@ var DsCrud = (function() {
         }
     }
 
-    // Simple JSON parse for IE8
+    // Simple JSON parse for IE8 (uses json2.min.js polyfill)
     function parseJSON(str) {
         if (window.JSON && JSON.parse) {
             return JSON.parse(str);
         }
-        // Fallback - use eval with some safety (not ideal but works for IE8)
-        return eval('(' + str + ')');
+        // json2.min.js polyfill should be loaded for IE8
+        throw new Error('JSON.parse not available');
     }
 
     // Simple JSON stringify for IE8

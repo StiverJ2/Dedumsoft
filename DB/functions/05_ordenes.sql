@@ -1,4 +1,43 @@
--- ============================================
+-- ============================================================================
+-- FUNCIONES: ÓRDENES DE PRODUCCIÓN
+-- ============================================================================
+--
+-- Funciones para la gestión del ciclo de vida de órdenes de producción.
+-- Las órdenes representan trabajos de fabricación de joyas.
+--
+-- FUNCIONES INCLUIDAS:
+-- - fun_obtener_ordenes(offset, limit, estado): Listar órdenes
+-- - fun_crear_orden(producto_id, cantidad, artesano_id, prioridad_id, ...)
+-- - fun_actualizar_orden(id, estado_id, fecha_inicio, ...)
+-- - fun_asignar_artesano(orden_id, artesano_id)
+-- - fun_cambiar_estado_orden(orden_id, estado_id)
+--
+-- ESTADOS DE ORDEN (tabla estados_orden):
+-- +----+------------+----------------------------------+
+-- | ID | Nombre     | Descripción                      |
+-- +----+------------+----------------------------------+
+-- | 1  | pendiente  | Creada, esperando inicio         |
+-- | 2  | en_proceso | En fabricación                   |
+-- | 3  | terminada  | Completada exitosamente          |
+-- | 4  | cancelada  | Cancelada                        |
+-- | 5  | pausada    | Pausada temporalmente            |
+-- +----+------------+----------------------------------+
+--
+-- PRIORIDADES (tabla prioridades):
+-- +----+---------+
+-- | ID | Nombre  |
+-- +----+---------+
+-- | 1  | baja    |
+-- | 2  | media   |
+-- | 3  | alta    |
+-- | 4  | urgente |
+-- +----+---------+
+--
+-- FECHAS AUTOMÁTICAS:
+-- - fecha_inicio: Se establece al cambiar a 'en_proceso'
+-- - fecha_fin_real: Se establece al cambiar a 'terminada'
+--
+-- ============================================================================
 -- FUNCIONES DE ORDENES DE PRODUCCION
 -- Fecha: 2024-01-18
 -- Normalizado: estado_id y prioridad_id en lugar de varchar

@@ -1,13 +1,52 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: INVENTARIO DE MAQUINARIA
+ * ============================================================================
+ * 
+ * Página de gestión del inventario de maquinaria (equipos y herramientas).
+ * Permite visualizar, agregar, editar y eliminar registros de maquinaria.
+ * 
+ * Características:
+ * - Tabla de inventario con filtros (estado de maquinaria)
+ * - Modal para crear/editar registros
+ * - Modal para registrar compras
+ * - Control de mantenimiento y estado operativo
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 2 (Inventario)
+ * 
+ * Parámetros GET (solo legacy):
+ * - maq_estado_id: Filtrar por estado de maquinaria
+ * 
+ * APIs utilizadas:
+ * - GET /api/inventario_maquinaria.php - Listar maquinaria
+ * - POST /api/inventario_maquinaria.php - Crear registro
+ * - PUT /api/inventario_maquinaria.php - Actualizar registro
+ * - DELETE /api/inventario_maquinaria.php - Eliminar registro
+ * - POST /api/compras.php - Registrar compra
+ * - GET /api/opciones.php - Estados y tipos de maquinaria
+ * - GET /api/proveedores.php - Lista de proveedores
+ * - GET /api/ubicaciones.php - Ubicaciones disponibles
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(2);
+require_menu_access(2); // Menú: Inventario
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+
+// Filtros de búsqueda (solo usados en modo legacy)
 $maq_estado_id = isset($_GET['maq_estado_id']) && $_GET['maq_estado_id'] !== '' ? (int) $_GET['maq_estado_id'] : null;
 $maq_rows = [];
 $proveedor_options = [];
@@ -15,6 +54,13 @@ $ubicacion_options = [];
 $tipo_maquinaria_options = [];
 $maq_estado_options = [];
 
+/**
+ * Genera un badge HTML con color según el tipo de maquinaria.
+ * Cada tipo tiene un color asociado para fácil identificación.
+ * 
+ * @param string $tipo Nombre del tipo de maquinaria
+ * @return string HTML del badge
+ */
 function format_maq_tipo_badge($tipo)
 {
     $tipo = trim((string) $tipo);
@@ -25,6 +71,8 @@ function format_maq_tipo_badge($tipo)
     $sinAcentos = ['a', 'e', 'i', 'o', 'u', 'n', 'a', 'e', 'i', 'o', 'u', 'n'];
     $key = strtolower(str_replace($acentos, $sinAcentos, $tipo));
     $label = ucwords(str_replace('_', ' ', $tipo));
+
+    // Asignar color según tipo
     $cls = 'ds-badge--neutral';
     if (strpos($key, 'corte') !== false || strpos($key, 'sierra') !== false)
         $cls = 'ds-badge--danger';
@@ -34,9 +82,18 @@ function format_maq_tipo_badge($tipo)
         $cls = 'ds-badge--warning';
     elseif (strpos($key, 'soldadura') !== false)
         $cls = 'ds-badge--success';
+
     return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars($label) . '</span>';
 }
 
+/**
+ * Genera un badge HTML con color según el estado de la maquinaria.
+ * Usa el color de BD si está disponible, sino usa clases CSS.
+ * 
+ * @param string $estado_nombre Nombre del estado
+ * @param string|null $estado_color Color hex de la BD (opcional)
+ * @return string HTML del badge
+ */
 function format_maq_estado_badge($estado_nombre, $estado_color = null)
 {
     $estado = trim((string) $estado_nombre);
@@ -60,9 +117,11 @@ function format_maq_estado_badge($estado_nombre, $estado_color = null)
         $cls = 'ds-badge--danger';
     elseif ($key === 'fuera de servicio' || strpos($key, 'fuera') !== false)
         $cls = 'ds-badge--muted';
+
     return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars($label) . '</span>';
 }
 
+// Cargar proveedores para dropdown
 try {
     $stmt = $connLogic->query("SELECT id, nombre, tipo FROM proveedores WHERE activo = TRUE ORDER BY nombre");
     $proveedor_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -70,6 +129,7 @@ try {
     error_log('inventario proveedores error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 }
 
+// Cargar ubicaciones para dropdown
 try {
     $stmt = $connLogic->query("SELECT id, nombre FROM ubicaciones WHERE activo = TRUE ORDER BY nombre");
     $ubicacion_options = $stmt->fetchAll(PDO::FETCH_ASSOC);

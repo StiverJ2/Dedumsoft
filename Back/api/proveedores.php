@@ -1,4 +1,34 @@
 <?php
+/**
+ * ============================================================================
+ * API REST: PROVEEDORES
+ * ============================================================================
+ * 
+ * Endpoint CRUD para gestión de proveedores de la joyería.
+ * Incluye información de contacto y tipo de proveedor.
+ * 
+ * Métodos soportados:
+ * - GET: Listar proveedores (paginado, filtrable por tipo)
+ * - POST: Crear nuevo proveedor
+ * - PUT: Actualizar proveedor existente
+ * - DELETE: Eliminar proveedor (soft-delete)
+ * 
+ * Autenticación: Requerida (JWT en sesión)
+ * Autorización: 
+ * - GET: Menú 6 (Proveedores) o Menú 2 (Inventario)
+ * - POST/PUT/DELETE: Menú 6 (Proveedores)
+ * 
+ * Campos principales:
+ * - nombre: Razón social o nombre del proveedor
+ * - tipo_proveedor_id: Tipo de proveedor (del catálogo)
+ * - contacto: Nombre de la persona de contacto
+ * - telefono/email: Datos de comunicación
+ * - direccion: Dirección física
+ * 
+ * @package Dedumsoft\API
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../connection/connectionLogic.php';
@@ -9,15 +39,21 @@ header('Content-Type: application/json');
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Validar métodos HTTP permitidos
 if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
     http_response_code(405);
     echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
     exit;
 }
 
+// Verificar autenticación
 if (!require_api_auth()) {
     exit;
 }
+
+// Control de acceso especial:
+// - GET: Accesible desde Proveedores (6) o Inventario (2)
+// - POST/PUT/DELETE: Solo desde Proveedores (6)
 $can_proveedores = dedumsoft_user_can_menu(6);
 $can_inventario = dedumsoft_user_can_menu(2);
 if ($method === 'GET') {
@@ -28,13 +64,24 @@ if ($method === 'GET') {
     dedumsoft_forbidden();
 }
 
-// ============================================
-// GET - Listar proveedores
-// ============================================
+// =============================================================================
+// GET: Listar proveedores
+// =============================================================================
+// Parámetros:
+//   - offset (int): Inicio de paginación (default: 0)
+//   - limit (int): Cantidad de registros (default: 50)
+//   - tipo_id (int): Filtrar por tipo de proveedor (opcional)
+//   - activo (bool): Filtrar por estado activo/inactivo (default: true)
+//
+// Respuesta: { CODIGO: 200, DATOS: [...] }
 if ($method === 'GET') {
+    // Parsear parámetros de paginación y filtros
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
     $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
     $tipo_id = isset($_GET['tipo_id']) && $_GET['tipo_id'] !== '' ? (int) $_GET['tipo_id'] : null;
+
+    // Manejo especial del parámetro 'activo'
+    // null = sin parámetro (default true), string = parsear booleano
     $activo_raw = $_GET['activo'] ?? null;
     if ($activo_raw === null) {
         $activo = true;
@@ -43,6 +90,7 @@ if ($method === 'GET') {
     }
 
     try {
+        // Llamar función PostgreSQL con JOINs automáticos
         $stmt = $connLogic->prepare(
             'SELECT id, nombre, tipo_proveedor_id, tipo_nombre, contacto, telefono, email, direccion, activo, fecha_registro FROM fun_obtener_proveedores(:offset, :limit, :tipo_id::int, :activo)'
         );
@@ -63,10 +111,20 @@ if ($method === 'GET') {
     exit;
 }
 
-// ============================================
-// POST - Crear nuevo proveedor
-// ============================================
+// =============================================================================
+// POST: Crear nuevo proveedor
+// =============================================================================
+// Body JSON:
+//   - nombre (string, requerido): Razón social o nombre
+//   - tipo_proveedor_id (int, requerido): ID del tipo de proveedor
+//   - contacto (string, opcional): Nombre de la persona de contacto
+//   - telefono (string, opcional): Teléfono de contacto
+//   - email (string, opcional): Correo electrónico
+//   - direccion (string, opcional): Dirección física
+//
+// Respuesta: { CODIGO: 201, MENSAJE: 'Proveedor creado.', ID: <new_id> }
 if ($method === 'POST') {
+    // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
     if (!$input) {
@@ -86,6 +144,7 @@ if ($method === 'POST') {
     }
 
     try {
+        // Llamar función de creación en PostgreSQL
         $stmt = $connLogic->prepare(
             'SELECT fun_crear_proveedor(:nombre, :tipo_proveedor_id, :contacto, :telefono, :email, :direccion)'
         );
@@ -96,6 +155,8 @@ if ($method === 'POST') {
         $stmt->bindValue(':email', $input['email'] ?? null, isset($input['email']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':direccion', $input['direccion'] ?? null, isset($input['direccion']) ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->execute();
+
+        // Obtener ID del nuevo registro
         $result = $stmt->fetchColumn();
 
         http_response_code(201);
@@ -108,10 +169,23 @@ if ($method === 'POST') {
     exit;
 }
 
-// ============================================
-// PUT - Actualizar proveedor
-// ============================================
+// =============================================================================
+// PUT: Actualizar proveedor existente
+// =============================================================================
+// Body JSON:
+//   - id (int, requerido): ID del proveedor a actualizar
+//   - nombre (string, opcional): Nuevo nombre
+//   - tipo_proveedor_id (int, opcional): Nuevo tipo
+//   - contacto (string, opcional): Nuevo contacto
+//   - telefono (string, opcional): Nuevo teléfono
+//   - email (string, opcional): Nuevo email
+//   - direccion (string, opcional): Nueva dirección
+//   - activo (bool, opcional): Estado de activación
+//
+// Nota: Solo se actualizan los campos proporcionados (PATCH parcial)
+// Respuesta: { CODIGO: 200, MENSAJE: 'Proveedor actualizado.' }
 if ($method === 'PUT') {
+    // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
     if (!$input || !isset($input['id'])) {
@@ -121,6 +195,7 @@ if ($method === 'PUT') {
     }
 
     try {
+        // Llamar función de actualización en PostgreSQL
         $stmt = $connLogic->prepare(
             'SELECT fun_actualizar_proveedor(:id, :nombre, :tipo_proveedor_id, :contacto, :telefono, :email, :direccion, :activo)'
         );
@@ -137,6 +212,8 @@ if ($method === 'PUT') {
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Proveedor actualizado.']);
     } catch (PDOException $e) {
         error_log('proveedores PUT error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+
+        // Detectar si el error es porque no se encontró el proveedor
         $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
         http_response_code($code);
         echo json_encode(['CODIGO' => $code, 'MENSAJE' => $code === 404 ? 'Proveedor no encontrado.' : 'Error al actualizar.']);
@@ -144,10 +221,18 @@ if ($method === 'PUT') {
     exit;
 }
 
-// ============================================
-// DELETE - Eliminar (soft-delete) proveedor
-// ============================================
+// =============================================================================
+// DELETE: Eliminar proveedor (soft-delete)
+// =============================================================================
+// El registro no se elimina físicamente, solo se marca como inactivo (activo=false)
+// Esto preserva las referencias de compras históricas
+//
+// Entrada (JSON body o query string):
+//   - id (int, requerido): ID del proveedor a eliminar
+//
+// Respuesta: { CODIGO: 200, MENSAJE: 'Proveedor eliminado.' }
 if ($method === 'DELETE') {
+    // Obtener ID de body JSON o query string (flexibilidad para clientes REST)
     $input = json_decode(file_get_contents('php://input'), true);
     $id = $input['id'] ?? ($_GET['id'] ?? null);
 
@@ -158,6 +243,7 @@ if ($method === 'DELETE') {
     }
 
     try {
+        // Llamar función de eliminación lógica
         $stmt = $connLogic->prepare('SELECT fun_eliminar_proveedor(:id)');
         $stmt->bindValue(':id', (int) $id, PDO::PARAM_INT);
         $stmt->execute();
@@ -165,6 +251,8 @@ if ($method === 'DELETE') {
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Proveedor eliminado.']);
     } catch (PDOException $e) {
         error_log('proveedores DELETE error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+
+        // Detectar si el error es porque no se encontró el proveedor
         $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
         http_response_code($code);
         echo json_encode(['CODIGO' => $code, 'MENSAJE' => $code === 404 ? 'Proveedor no encontrado.' : 'Error al eliminar.']);

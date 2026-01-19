@@ -1,34 +1,83 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: INVENTARIO DE INSUMOS
+ * ============================================================================
+ * 
+ * Página de gestión del inventario de insumos (materiales consumibles).
+ * Permite visualizar, agregar, editar y eliminar registros de insumos.
+ * 
+ * Características:
+ * - Tabla de inventario con filtros (categoría, stock bajo)
+ * - Modal para crear/editar registros
+ * - Modal para registrar compras
+ * - Alertas de stock bajo
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 2 (Inventario)
+ * 
+ * Parámetros GET (solo legacy):
+ * - insumo_categoria: Filtrar por categoría
+ * - insumo_stock_bajo: Mostrar solo items con stock bajo
+ * 
+ * APIs utilizadas:
+ * - GET /api/inventario_insumos.php - Listar insumos
+ * - POST /api/inventario_insumos.php - Crear registro
+ * - PUT /api/inventario_insumos.php - Actualizar registro
+ * - DELETE /api/inventario_insumos.php - Eliminar registro
+ * - POST /api/compras.php - Registrar compra
+ * - GET /api/proveedores.php - Lista de proveedores
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(2);
+require_menu_access(2); // Menú: Inventario
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+
+// Filtros de búsqueda (solo usados en modo legacy)
 $insumo_categoria = $_GET['insumo_categoria'] ?? '';
 $insumo_stock_bajo = isset($_GET['insumo_stock_bajo']) && $_GET['insumo_stock_bajo'] !== '0';
 $insumo_rows = [];
 $categoria_options = [];
 $proveedor_options = [];
 
+/**
+ * Genera un badge HTML con color según la categoría.
+ * Cada categoría tiene un color asociado para fácil identificación.
+ * 
+ * @param string $cat Nombre de la categoría
+ * @return string HTML del badge
+ */
 function format_categoria_badge($cat)
 {
     $cat = trim((string)$cat);
     if ($cat === '') return '';
     $key = strtolower($cat);
     $label = ucwords(str_replace('_', ' ', $cat));
+    
+    // Asignar color según tipo de categoría
     $cls = 'ds-badge--neutral';
     if (strpos($key, 'piedra') !== false || strpos($key, 'gema') !== false) $cls = 'ds-badge--info';
     elseif (strpos($key, 'metal') !== false || strpos($key, 'oro') !== false) $cls = 'ds-badge--warning';
     elseif (strpos($key, 'herramienta') !== false || strpos($key, 'equipo') !== false) $cls = 'ds-badge--muted';
     elseif (strpos($key, 'quimico') !== false || strpos($key, 'limpieza') !== false) $cls = 'ds-badge--danger';
     elseif (strpos($key, 'empaque') !== false || strpos($key, 'caja') !== false) $cls = 'ds-badge--success';
+    
     return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars($label) . '</span>';
 }
 
+// Cargar opciones de categorías (valores distintos en BD)
 try {
     $stmt = $connLogic->query(
         "SELECT DISTINCT categoria FROM inventario_insumos WHERE categoria IS NOT NULL AND categoria <> '' ORDER BY categoria"
@@ -38,6 +87,7 @@ try {
     error_log('inventario categorias error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 }
 
+// Cargar proveedores para dropdown
 try {
     $stmt = $connLogic->query("SELECT id, nombre, tipo FROM proveedores WHERE activo = TRUE ORDER BY nombre");
     $proveedor_options = $stmt->fetchAll(PDO::FETCH_ASSOC);

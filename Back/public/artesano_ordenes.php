@@ -1,21 +1,63 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: MIS ÓRDENES (VISTA ARTESANO)
+ * ============================================================================
+ * 
+ * Página de gestión de órdenes para artesanos.
+ * Solo muestra las órdenes asignadas al artesano actual.
+ * 
+ * Características:
+ * - Lista de órdenes asignadas al artesano
+ * - Cambio de estado de orden (iniciar, pausar, terminar)
+ * - Registro de consumo de materiales (oro, insumos)
+ * - Registro de pieza terminada con datos de venta
+ * - Visualización de prioridad y fecha límite
+ * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 3 (Producción) + Rol de artesano
+ * 
+ * Restricciones:
+ * - Solo accesible para usuarios con artesano_id asociado
+ * - Administradores (rolid=1) no pueden acceder
+ * 
+ * APIs utilizadas:
+ * - GET /api/artesano_ordenes.php - Listar órdenes del artesano
+ * - PUT /api/artesano_ordenes.php - Cambiar estado de orden
+ * - POST /api/artesano_consumo.php - Registrar consumo de material
+ * - POST /api/artesano_terminada.php - Registrar pieza terminada
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(3);
+require_menu_access(3); // Menú: Producción
 
+// Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
 $user = get_session_user();
 
-// Obtener el artesano_id directamente de la sesión del usuario
+// =============================================================================
+// VALIDACIÓN DE ACCESO DE ARTESANO
+// =============================================================================
+// Solo usuarios con artesano_id pueden ver esta página.
+// Administradores no pueden acceder (deben usar produccion.php).
+
 $artesano_id = $user['artesano_id'] ?? null;
 $rolid = (int) ($user['rolid'] ?? 0);
 if (!$artesano_id || $rolid === 1) {
     dedumsoft_forbidden();
 }
+
+// Obtener nombre del artesano para mostrar en encabezado
 $artesano_nombre = '';
 if ($artesano_id) {
     try {
@@ -33,6 +75,7 @@ if ($artesano_id) {
 $ordenes_rows = [];
 $estados_options = [];
 
+// Cargar estados de orden para dropdown
 try {
     $stmt = $connLogic->query('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY orden, nombre');
     $estados_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -40,6 +83,7 @@ try {
     error_log('estados_orden error: ' . $e->getMessage());
 }
 
+// Cargar órdenes del artesano para modo legacy
 if ($legacy && $artesano_id) {
     try {
         $stmt = $connLogic->prepare(
@@ -64,6 +108,12 @@ if ($legacy && $artesano_id) {
 include __DIR__ . '/partials/header.php';
 include __DIR__ . '/partials/nav.php';
 
+/**
+ * Genera un badge HTML con color según la prioridad.
+ * 
+ * @param string $prioridad Nombre de la prioridad
+ * @return string HTML del badge
+ */
 function format_prioridad_badge($prioridad)
 {
     $prioridad = strtolower(trim((string) $prioridad));
@@ -77,6 +127,12 @@ function format_prioridad_badge($prioridad)
     return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars(ucfirst($prioridad ?: 'Normal')) . '</span>';
 }
 
+/**
+ * Genera un badge HTML con color según el estado de la orden.
+ * 
+ * @param string $estado Nombre del estado
+ * @return string HTML del badge
+ */
 function format_estado_badge($estado)
 {
     $estado_lower = strtolower(trim((string) $estado));
@@ -635,21 +691,21 @@ function format_estado_badge($estado)
             function handleTableClick(e) {
                 e = e || window.event;
                 var target = e.target || e.srcElement;
-                
+
                 // Buscar el boton de accion
                 var btn = getClosest(target, 'ds-action-btn');
                 if (!btn) {
                     // Si clicamos en la imagen dentro del boton
-                    if (target.parentNode && target.parentNode.className && 
+                    if (target.parentNode && target.parentNode.className &&
                         target.parentNode.className.indexOf('ds-action-btn') !== -1) {
                         btn = target.parentNode;
                     }
                 }
                 if (!btn) return;
-                
+
                 var row = getClosest(btn, 'tr');
                 if (!row) return;
-                
+
                 var ordenId = row.getAttribute('data-id');
                 var action = btn.getAttribute('data-action');
 

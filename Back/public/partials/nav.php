@@ -1,6 +1,49 @@
 <?php
+/**
+ * ============================================================================
+ * PARTIAL: BARRA DE NAVEGACIÓN LATERAL
+ * ============================================================================
+ * 
+ * Genera la barra lateral de navegación con menús dinámicos basados en
+ * los permisos del usuario autenticado.
+ * 
+ * Características:
+ * - Menús colapsables (Bootstrap Collapse en navegadores modernos)
+ * - Íconos Fatcow para modo legacy, Emojis para modo moderno
+ * - Resaltado automático de sección activa
+ * - Panel de usuario con avatar y rol
+ * - Botón de logout con protección CSRF
+ * 
+ * Permisos de menú (seg_menu IDs):
+ * - 1: Dashboard (Inicio)
+ * - 2: Inventario (Insumos, Maquinaria, Oro, Ubicaciones)
+ * - 3: Producción (Órdenes, Mis Órdenes para artesanos)
+ * - 4: Reportes (Producción, Ventas, Compras)
+ * - 5: Usuarios (Administración)
+ * - 6: Proveedores
+ * - 7: Configuración
+ * 
+ * Funciones helper:
+ * - dedumsoft_nav_active(): Marca link activo por página
+ * - dedumsoft_nav_active_section(): Marca link activo por sección GET
+ * 
+ * @package Dedumsoft\Partials
+ * @author  Equipo Dedumsoft
+ */
+
 require_once __DIR__ . '/../../connection/guard.php';
 
+// =============================================================================
+// FUNCIONES HELPER DE NAVEGACIÓN
+// =============================================================================
+
+/**
+ * Determina si un link de navegación debe estar activo.
+ * 
+ * @param string $current Nombre del archivo PHP actual
+ * @param string $target  Nombre del archivo objetivo
+ * @return string 'active' si coinciden, '' si no
+ */
 if (!function_exists('dedumsoft_nav_active')) {
     function dedumsoft_nav_active(string $current, string $target): string
     {
@@ -8,6 +51,16 @@ if (!function_exists('dedumsoft_nav_active')) {
     }
 }
 
+/**
+ * Determina si un link de navegación con sección debe estar activo.
+ * Usa el parámetro GET 'section' para comparar.
+ * 
+ * @param string $current Nombre del archivo PHP actual
+ * @param string $target  Nombre del archivo objetivo
+ * @param string $section Nombre de la sección a verificar
+ * @param string $default Sección por defecto si no hay parámetro
+ * @return string 'active' si coinciden, '' si no
+ */
 if (!function_exists('dedumsoft_nav_active_section')) {
     function dedumsoft_nav_active_section(string $current, string $target, string $section, string $default = ''): string
     {
@@ -22,26 +75,41 @@ if (!function_exists('dedumsoft_nav_active_section')) {
     }
 }
 
+// =============================================================================
+// PREPARACIÓN DE DATOS DE NAVEGACIÓN
+// =============================================================================
+
+// Detectar página actual y modo de navegador
 $current = basename($_SERVER['PHP_SELF'] ?? '');
 $legacy = dedumsoft_is_legacy_browser();
 $legacy_ua = dedumsoft_is_legacy_ua();
+
+// Determinar qué secciones del menú están expandidas
 $inv_open = in_array($current, ['inventario.php', 'inventario_insumos.php', 'inventario_maquinaria.php', 'inventario_oro.php', 'proveedores.php', 'ubicaciones.php'], true);
 $prod_open = in_array($current, ['produccion.php'], true);
 $rep_open = in_array($current, ['reportes.php'], true);
 $adm_open = in_array($current, ['usuarios.php'], true);
 $cfg_open = in_array($current, ['configuracion.php'], true);
 
+// Datos del usuario para el panel inferior
 $nombre = trim($user['nombre'] ?? '');
 $avatar = $nombre !== '' ? strtoupper(substr($nombre, 0, 1)) : '?';
 $rolid = (int) ($user['rolid'] ?? 0);
+
+// Etiqueta del rol para mostrar
 $rol_label = 'Operador';
 if ($rolid === 1) {
     $rol_label = 'Administrador';
 } elseif ($rolid === 3) {
     $rol_label = 'Lectura';
 }
+
+// =============================================================================
+// CÁLCULO DE PERMISOS DE MENÚ
+// =============================================================================
 // Permisos de menu: id_menu => ['abrir', 'guardar', 'editar', 'eliminar']
 // seg_menu ids: 1=Dashboard, 2=Inventario, 3=Produccion, 4=Reportes, 5=Usuarios, 6=Proveedores, 7=Configuracion
+
 $permisos = $user['permisos_menu'] ?? [];
 $can_dashboard = isset($permisos[1]);
 $can_inventario = isset($permisos[2]);
@@ -50,9 +118,15 @@ $can_reportes = isset($permisos[4]);
 $can_usuarios = isset($permisos[5]);
 $can_proveedores = isset($permisos[6]);
 $can_config = isset($permisos[7]);
+
+// Determinar si mostrar "Mis Órdenes" (solo artesanos no-admin)
 $has_artesano = !empty($user['artesano_id']);
 $show_mis_ordenes = $can_produccion && $has_artesano && $rolid !== 1;
+
+// Determinar si mostrar link de inicio (al menos un permiso)
 $show_home = $can_dashboard || $can_inventario || $can_produccion || $can_reportes || $can_usuarios || $can_proveedores || $can_config;
+
+// URL de inicio según permisos (dashboard completo o versión operario)
 $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
 ?>
 <?php if ($legacy): ?>
@@ -67,7 +141,8 @@ $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
 
         <div class="ds-nav">
             <?php if ($show_home): ?>
-                <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, $home_href); ?>" href="<?php echo $home_href; ?>">
+                <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, $home_href); ?>"
+                    href="<?php echo $home_href; ?>">
                     <img class="ds-icon-img" src="assets/icons/fatcow/16/application_home.png" alt="">
                     Inicio
                 </a>
@@ -182,7 +257,8 @@ $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
 
             <div class="ds-nav">
                 <?php if ($show_home): ?>
-                    <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, $home_href); ?>" href="<?php echo $home_href; ?>">
+                    <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, $home_href); ?>"
+                        href="<?php echo $home_href; ?>">
                         <span class="ds-icon">&#127968;</span>
                         <span class="ds-nav-label">Inicio</span>
                     </a>

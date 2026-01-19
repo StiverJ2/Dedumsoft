@@ -1,4 +1,39 @@
--- ============================================
+-- ============================================================================
+-- FUNCIONES: REPORTES
+-- ============================================================================
+--
+-- Funciones para generar reportes y estadísticas del sistema.
+-- Usadas por el módulo de reportes y el dashboard.
+--
+-- FUNCIONES INCLUIDAS:
+--
+-- PRODUCCIÓN:
+-- - fun_reporte_produccion(desde, hasta): Órdenes en rango de fechas
+-- - fun_reporte_eficiencia_artesanos(desde, hasta): Piezas por artesano
+--
+-- INVENTARIO:
+-- - fun_reporte_inventario(): Resumen de stock actual
+-- - fun_reporte_uso_materiales(desde, hasta): Consumo de materiales
+--
+-- VENTAS:
+-- - fun_reporte_ventas(desde, hasta): Ventas en rango de fechas
+--
+-- COMPRAS:
+-- - fun_reporte_compras(desde, hasta): Compras por tipo de inventario
+--
+-- USUARIOS:
+-- - fun_reporte_usuarios(): Lista de usuarios con roles
+--
+-- PARÁMETROS COMUNES:
+-- - par_desde (date): Fecha inicial del rango
+-- - par_hasta (date): Fecha final del rango
+--
+-- NOTAS:
+-- - Los reportes son de solo lectura (SELECT)
+-- - Incluyen JOINs para mostrar nombres en lugar de IDs
+-- - Manejan excepciones con mensajes genéricos
+--
+-- ============================================================================
 -- FUNCIONES DE REPORTES
 -- ============================================
 

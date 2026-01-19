@@ -1,4 +1,26 @@
--- ============================================
+-- ============================================================================
+-- FUNCIONES: PROVEEDORES
+-- ============================================================================
+--
+-- Funciones CRUD para la gestión de proveedores.
+-- Los proveedores suministran oro, insumos y maquinaria.
+--
+-- FUNCIONES INCLUIDAS:
+-- - fun_obtener_proveedores(offset, limit, tipo_id, activo)
+-- - fun_crear_proveedor(nombre, tipo_id, contacto, telefono, email, direccion)
+-- - fun_actualizar_proveedor(id, nombre, tipo_id, contacto, ...)
+-- - fun_eliminar_proveedor(id) - Soft delete
+--
+-- TIPOS DE PROVEEDOR:
+-- Los tipos se definen en la tabla 'tipos_proveedor' (no hardcoded).
+-- Ejemplos: oro, insumos, maquinaria, servicios.
+--
+-- VALIDACIONES:
+-- - Nombre único por tipo de proveedor
+-- - Email con formato válido (validado en PHP)
+-- - Teléfono normalizado
+--
+-- ============================================================================
 -- FUNCIONES DE PROVEEDORES
 -- ============================================
 

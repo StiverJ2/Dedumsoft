@@ -1,19 +1,62 @@
 <?php
+/**
+ * ============================================================================
+ * PÁGINA PÚBLICA: REPORTES GERENCIALES
+ * ============================================================================
+ * 
+ * Centro de reportes con múltiples vistas de datos consolidados.
+ * Incluye gráficos interactivos (uPlot) en modo moderno.
+ * 
+ * Secciones de reportes:
+ * - Producción: Ordenes por estado, artesano, producto
+ * - Inventario: Stock actual, alertas de stock bajo
+ * - Eficiencia: Métricas de productividad por artesano
+ * - Materiales: Consumo de materiales en producción
+ * - Ventas: Ingresos, utilidad, productos vendidos
+ * - Compras: Adquisiciones por tipo de inventario
+ * - Usuarios: Listado de usuarios del sistema
+ * 
+ * Autenticación: Requerida
+ * Autorización: Menú 4 (Reportes)
+ * 
+ * Parámetros GET:
+ * - desde: Fecha inicial del rango (default: primer día del mes)
+ * - hasta: Fecha final del rango (default: último día del mes)
+ * - section: Sección activa (produccion, ventas, compras, etc.)
+ * 
+ * APIs utilizadas:
+ * - GET /api/reportes_produccion.php
+ * - GET /api/reportes_ventas.php
+ * - GET /api/reportes_compras.php
+ * - GET /api/reportes_inventario.php
+ * - GET /api/reportes_eficiencia.php
+ * - GET /api/reportes_materiales.php
+ * - GET /api/reportes_usuarios.php
+ * 
+ * @package Dedumsoft\Public
+ * @author  Equipo Dedumsoft
+ */
+
 define('DEDUMSOFT_APP', true);
 
 require_once __DIR__ . '/../auth/auth.php';
 require_once __DIR__ . '/../connection/connectionLogic.php';
 
+// Verificar autenticación y autorización
 require_login('login.php');
-require_menu_access(4);
+require_menu_access(4); // Menú: Reportes
 
+// Detectar modo de interfaz y configurar gráficos
 $legacy = dedumsoft_is_legacy_browser();
-$load_uplot = !$legacy;
+$load_uplot = !$legacy;  // Solo cargar uPlot en navegadores modernos
+
+// Parámetros de rango de fechas (defaults al mes actual)
 $desde = $_GET['desde'] ?? date('Y-m-01');
 $hasta = $_GET['hasta'] ?? date('Y-m-t');
-$input_type = $legacy ? 'text' : 'date';
+$input_type = $legacy ? 'text' : 'date';  // IE8 no soporta type=date
 $chart_params = 'desde=' . urlencode($desde) . '&hasta=' . urlencode($hasta);
 
+// Variables para almacenar datos de reportes (modo legacy)
 $rep_produccion = [];
 $rep_inventario = [];
 $rep_eficiencia = [];
@@ -22,7 +65,9 @@ $rep_ventas = [];
 $rep_compras = [];
 $rep_usuarios = [];
 
+// Cargar todos los reportes para modo legacy
 if ($legacy) {
+    // Reporte de producción
     try {
         $stmt = $connLogic->prepare(
             'SELECT id, producto, cantidad, artesano, estado FROM fun_reporte_produccion(:desde, :hasta)'
@@ -33,6 +78,7 @@ if ($legacy) {
         error_log('reportes legacy produccion error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 
+    // Reporte de inventario
     try {
         $stmt = $connLogic->prepare(
             'SELECT tipo, item_id, nombre, cantidad, stock_minimo, proveedor FROM fun_reporte_inventario()'
@@ -43,6 +89,7 @@ if ($legacy) {
         error_log('reportes legacy inventario error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 
+    // Reporte de eficiencia de artesanos
     try {
         $stmt = $connLogic->prepare(
             'SELECT artesano, piezas, horas, promedio_horas FROM fun_reporte_eficiencia_artesanos(:desde, :hasta)'
@@ -53,6 +100,7 @@ if ($legacy) {
         error_log('reportes legacy eficiencia error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 
+    // Reporte de uso de materiales
     try {
         $stmt = $connLogic->prepare(
             'SELECT tipo_material, material_id, material_nombre, cantidad_total, costo_total FROM fun_reporte_uso_materiales(:desde, :hasta)'
@@ -63,6 +111,7 @@ if ($legacy) {
         error_log('reportes legacy materiales error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 
+    // Reporte de ventas
     try {
         $stmt = $connLogic->prepare(
             'SELECT id, producto_id, fecha_venta, precio_venta, utilidad FROM fun_reporte_ventas(:desde, :hasta)'
@@ -73,6 +122,7 @@ if ($legacy) {
         error_log('reportes legacy ventas error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 
+    // Reporte de compras
     try {
         $stmt = $connLogic->prepare(
             'SELECT tipo_inventario, cantidad_total, movimientos FROM fun_reporte_compras(:desde, :hasta)'
