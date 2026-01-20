@@ -9,6 +9,6 @@ composer.lock
 .DS_Store
 .idea/
 *.log
-
+env.php
 # Temporal
 scripts/update_paths.php

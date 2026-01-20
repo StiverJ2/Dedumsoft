@@ -55,7 +55,11 @@ $load_uplot = !$legacy;  // Solo cargar uPlot en navegadores modernos
 $desde = $_GET['desde'] ?? date('Y-m-01');
 $hasta = $_GET['hasta'] ?? date('Y-m-t');
 $input_type = $legacy ? 'text' : 'date';  // IE8 no soporta type=date
+$cache_bust = trim((string) ($_GET['cb'] ?? ''));
 $chart_params = 'desde=' . urlencode($desde) . '&hasta=' . urlencode($hasta);
+if ($cache_bust !== '') {
+    $chart_params .= '&cb=' . urlencode($cache_bust);
+}
 
 // Variables para almacenar datos de reportes (modo legacy)
 $rep_produccion = [];

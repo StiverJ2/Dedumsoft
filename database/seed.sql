@@ -151,7 +151,7 @@ INSERT INTO seguridad.seg_usuario (username, nombre, clave, rolid)
 VALUES (
     'admin',
     'Administrador',
-    '$argon2id$v=19$m=65536,t=4,p=1$MGQvRTBneVJhQlJFTGhmeg$V0Z6bsVV2cABUX7qo/joYRYmp0ovvxMNW0p3zFo32Aw',
+    '$argon2id$v=19$m=65536,t=4,p=1$blk1NmRUOWwyMmN2M3d4NQ$TH4dwRoQlIqvYram9JNwBKyDrxDapHWPaVDAY7HFG7c',
     1
 )
 ON CONFLICT (username) DO NOTHING;

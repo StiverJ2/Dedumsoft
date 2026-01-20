@@ -80,21 +80,9 @@ if (!in_array($chart, ['produccion', 'inventario', 'eficiencia', 'materiales', '
     dedumsoft_render_empty_chart('Sin datos', $width, $height);
 }
 
-// =============================================================================
-// CACHÉ DEL NAVEGADOR VIA ETAG
-// =============================================================================
-// Genera un ETag basado en parámetros + fecha actual (hora).
-// Permite caché por 1 hora para el mismo gráfico.
-
-$etag_data = $chart . $width . $height . $desde . $hasta . date('Y-m-d-H');
-$etag = '"' . md5($etag_data) . '"';
-$GLOBALS['etag'] = $etag;
-
-// Si el navegador ya tiene esta versión, responder 304
-if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] === $etag) {
-    header('HTTP/1.1 304 Not Modified');
-    exit;
-}
+// Cache control params (optional)
+$cache_bust = trim((string) ($_GET['cb'] ?? ''));
+$disable_cache = !empty($_GET['nocache']);
 
 // Verificar que GD esté disponible
 if (!function_exists('imagecreatetruecolor')) {
@@ -111,6 +99,7 @@ try {
                 'SELECT estado, COUNT(1) AS total FROM fun_reporte_produccion(:desde, :hasta) GROUP BY estado ORDER BY estado',
                 [':desde' => $desde, ':hasta' => $hasta]
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'estado', 'total', 'Produccion', $width, $height);
             break;
         case 'inventario':
@@ -118,6 +107,7 @@ try {
                 'SELECT tipo, COUNT(1) AS total FROM fun_reporte_inventario() GROUP BY tipo ORDER BY tipo',
                 []
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'tipo', 'total', 'Inventario', $width, $height);
             break;
         case 'eficiencia':
@@ -125,6 +115,7 @@ try {
                 'SELECT artesano, piezas FROM fun_reporte_eficiencia_artesanos(:desde, :hasta) ORDER BY piezas DESC',
                 [':desde' => $desde, ':hasta' => $hasta]
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'artesano', 'piezas', 'Eficiencia', $width, $height);
             break;
         case 'materiales':
@@ -132,6 +123,7 @@ try {
                 'SELECT tipo_material, SUM(costo_total) AS total FROM fun_reporte_uso_materiales(:desde, :hasta) GROUP BY tipo_material ORDER BY tipo_material',
                 [':desde' => $desde, ':hasta' => $hasta]
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'tipo_material', 'total', 'Materiales', $width, $height);
             break;
         case 'ventas':
@@ -139,6 +131,7 @@ try {
                 'SELECT fecha_venta::date AS dia, SUM(precio_venta) AS total FROM fun_reporte_ventas(:desde, :hasta) GROUP BY dia ORDER BY dia',
                 [':desde' => $desde, ':hasta' => $hasta]
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_line_chart($rows, 'dia', 'total', 'Ventas', $width, $height);
             break;
         case 'compras':
@@ -146,6 +139,7 @@ try {
                 'SELECT tipo_inventario, SUM(cantidad_total) AS total FROM fun_reporte_compras(:desde, :hasta) GROUP BY tipo_inventario ORDER BY tipo_inventario',
                 [':desde' => $desde, ':hasta' => $hasta]
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'tipo_inventario', 'total', 'Compras', $width, $height);
             break;
         case 'usuarios':
@@ -153,13 +147,15 @@ try {
                 'SELECT rol, COUNT(1) AS total FROM seguridad.fun_reporte_usuarios() GROUP BY rol ORDER BY rol',
                 []
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'rol', 'total', 'Usuarios', $width, $height);
             break;
         case 'ventas_mes':
             $rows = dedumsoft_query(
-                'SELECT fecha_venta::date AS dia, SUM(precio_venta_real) AS total FROM creaciones_terminadas WHERE vendida = TRUE AND fecha_venta::date BETWEEN :desde AND :hasta GROUP BY dia ORDER BY dia',
+                'SELECT fecha_venta::date AS dia, SUM(precio_venta_real) AS total FROM joyeria.creaciones_terminadas WHERE vendida = TRUE AND fecha_venta::date BETWEEN :desde AND :hasta GROUP BY dia ORDER BY dia',
                 [':desde' => $desde, ':hasta' => $hasta]
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_line_chart($rows, 'dia', 'total', 'Ventas del mes', $width, $height);
             break;
         case 'ordenes_estado':
@@ -167,6 +163,7 @@ try {
                 'SELECT COALESCE(eo.nombre, \'sin_estado\') AS estado, COUNT(1) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY COALESCE(eo.nombre, \'sin_estado\') ORDER BY COALESCE(eo.nombre, \'sin_estado\')',
                 []
             );
+            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'estado', 'total', 'Ordenes', $width, $height);
             break;
     }
@@ -243,9 +240,58 @@ function dedumsoft_output_empty_png(): void
 {
     header('Content-Type: image/png');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
     // PNG base64 de 1x1 pixel transparente
     echo base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=');
     exit;
+}
+
+/**
+ * Configura el ETag usando los datos del gráfico y responde 304 si aplica.
+ *
+ * @param string $chart Tipo de gráfico
+ * @param int $width Ancho de la imagen
+ * @param int $height Alto de la imagen
+ * @param string $desde Fecha inicio
+ * @param string $hasta Fecha fin
+ * @param array $rows Filas del reporte
+ * @param string $cache_bust Valor opcional para invalidar caché
+ * @param bool $disable_cache Si true, no se usa caché
+ * @return void
+ */
+function dedumsoft_apply_etag(
+    string $chart,
+    int $width,
+    int $height,
+    string $desde,
+    string $hasta,
+    array $rows,
+    string $cache_bust,
+    bool $disable_cache
+): void {
+    if ($disable_cache) {
+        return;
+    }
+
+    $payload = json_encode($rows);
+    if ($payload === false) {
+        $payload = serialize($rows);
+    }
+
+    $seed = $chart . '|' . $width . '|' . $height . '|' . $desde . '|' . $hasta . '|' . $payload;
+    if ($cache_bust !== '') {
+        $seed .= '|cb:' . $cache_bust;
+    }
+
+    $etag = '"' . md5($seed) . '"';
+    $GLOBALS['etag'] = $etag;
+
+    $client_etag = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+    if ($client_etag === $etag) {
+        header('HTTP/1.1 304 Not Modified');
+        exit;
+    }
 }
 
 /**
@@ -757,9 +803,13 @@ function dedumsoft_output_image($img): void
 {
     if (isset($GLOBALS['etag'])) {
         header('ETag: ' . $GLOBALS['etag']);
-        header('Cache-Control: public, max-age=300'); // 5 minutos
+        header('Cache-Control: no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
     } else {
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
     }
     header('Content-Type: image/png');
     imagepng($img, null, 6); // Compresión nivel 6 (balance tamaño/velocidad)

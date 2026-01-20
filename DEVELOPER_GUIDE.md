@@ -833,6 +833,14 @@ Causa: No se ejecutaron los scripts de functions/
 Solución: Ejecutar todos los archivos en DB/functions/ en orden
 ```
 
+#### 6. IE8/VM no carga assets o el login apunta a localhost
+
+```
+Problema: La pagina se ve rota o el POST de login va a localhost desde una VM
+Causa: SITE_URL en config/env.php sigue en localhost y <base href> reescribe rutas
+Solución: Usar la IP/host real accesible por el cliente (ej: http://192.168.64.1:8080/dedumsoft)
+```
+
 ### 💡 Tips de Desarrollo
 
 1. **Siempre probar en IE8** (o emulador) antes de deploy

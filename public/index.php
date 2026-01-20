@@ -45,6 +45,9 @@ require_menu_access(1); // Menú: Dashboard
 // Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
 $load_uplot = !$legacy;  // uPlot solo para navegadores modernos
+$cache_bust = trim((string) ($_GET['cb'] ?? ''));
+$chart_cb = $cache_bust !== '' ? '&cb=' . urlencode($cache_bust) : '';
+$chart_cb_q = $cache_bust !== '' ? '?cb=' . urlencode($cache_bust) : '';
 
 // =============================================================================
 // CARGA DE DATOS PARA EL DASHBOARD
@@ -256,7 +259,7 @@ if ($legacy) {
                 <div class="ds-chart" id="chart-ventas-mes"></div>
             <?php else: ?>
                 <img class="ds-chart-img"
-                    src="legacy_chart.php?chart=ventas_mes&desde=<?php echo urlencode($month_start); ?>&hasta=<?php echo urlencode($month_end); ?>"
+                    src="legacy_chart.php?chart=ventas_mes&desde=<?php echo urlencode($month_start); ?>&hasta=<?php echo urlencode($month_end); ?><?php echo $chart_cb; ?>"
                     alt="Grafico ventas del mes">
                 <div class="chart-summary">
                     Total: $<?php echo number_format($ventas_mes_total, 2); ?> |
@@ -271,7 +274,7 @@ if ($legacy) {
             <?php if (!$legacy): ?>
                 <div class="ds-chart" id="chart-ordenes-estado"></div>
             <?php else: ?>
-                <img class="ds-chart-img" src="legacy_chart.php?chart=ordenes_estado" alt="Grafico ordenes por estado">
+                <img class="ds-chart-img" src="legacy_chart.php?chart=ordenes_estado<?php echo $chart_cb_q; ?>" alt="Grafico ordenes por estado">
                 <div class="chart-summary">
                     <?php
                     $estado_summary = [];
