@@ -1,2 +1,14 @@
-Back/env/env.php
+# Configuración sensible
+config/env.php
+
+# Dependencias Composer
+vendor/
+composer.lock
+
+# Sistema
 .DS_Store
+.idea/
+*.log
+
+# Temporal
+scripts/update_paths.php

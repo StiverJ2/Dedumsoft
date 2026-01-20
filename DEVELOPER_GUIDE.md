@@ -26,30 +26,71 @@
 
 ```
 Dedumsoft/
-├── Back/                    # Backend PHP
-│   ├── api/                 # Endpoints REST (CRUD)
-│   ├── auth/                # Autenticación y autorización
-│   ├── bootstrap/           # CSS/JS de Bootstrap
-│   ├── connection/          # Conexión DB y middleware
-│   ├── env/                 # Configuración de entorno
-│   └── public/              # Vistas PHP (frontend renderizado)
-│       ├── assets/          # JS, CSS, iconos
-│       └── partials/        # Header, nav, footer reutilizables
-├── DB/                      # Scripts SQL
-│   ├── functions/           # Funciones PostgreSQL (fun_*)
-│   └── migrations/          # Migraciones futuras
-├── Front/                   # Landing page estática
-└── scripts/                 # Scripts de deploy
+├── public/                      # 🌐 WEB ROOT (DocumentRoot de Apache)
+│   ├── index.php                # Dashboard principal
+│   ├── login.php                # Página de login
+│   ├── assets/                  # Recursos estáticos
+│   │   ├── css/                 # Estilos (Bootstrap, DataTables, custom)
+│   │   ├── js/                  # Scripts (jQuery, axios, crud.js)
+│   │   ├── icons/               # Iconos Fatcow para IE8
+│   │   └── uplot/               # Librería de gráficos
+│   └── api/                     # Endpoints REST agrupados por dominio
+│       ├── auth/                # Login, logout, password reset
+│       ├── inventario/          # Oro, insumos, maquinaria
+│       ├── produccion/          # Órdenes, artesanos
+│       ├── reportes/            # Reportes varios
+│       └── catalogos/           # Catálogos, proveedores, ubicaciones
+│
+├── private/                     # 🔒 Código PHP interno (NO accesible via web)
+│   ├── bootstrap.php            # Inicialización: config + autoload + rutas
+│   ├── Auth/                    # Autenticación y autorización
+│   │   ├── AuthMiddleware.php   # Funciones require_login, require_api_auth
+│   │   ├── JwtHandler.php       # Generación/validación JWT
+│   │   ├── SessionManager.php   # Gestión de sesiones PHP + CSRF
+│   │   ├── LoginService.php     # Lógica de login (9 pasos)
+│   │   └── RateLimiter.php      # Protección contra fuerza bruta
+│   ├── Database/                # Conexión a base de datos
+│   │   ├── Connection.php       # Conexión PDO a PostgreSQL
+│   │   └── Guard.php            # Protección acceso directo
+│   ├── Http/                    # Utilidades HTTP
+│   │   ├── MethodValidator.php  # Validación método HTTP
+│   │   └── SecurityLogger.php   # Logging de eventos de seguridad
+│   └── Mail/                    # Envío de emails
+│       └── Mailer.php           # PHPMailer wrapper
+│
+├── views/                       # 📄 Vistas PHP (templates)
+│   ├── layouts/                 # Componentes reutilizables
+│   │   ├── header.php           # <head> y apertura <body>
+│   │   ├── nav.php              # Menú lateral según permisos
+│   │   └── footer.php           # Scripts y cierre </body>
+│   ├── inventario/              # Vistas de inventario
+│   ├── produccion/              # Vistas de producción
+│   ├── reportes/                # Vistas de reportes
+│   └── usuarios/                # Vistas de usuarios/config
+│
+├── config/                      # ⚙️ Configuración
+│   ├── env.php                  # Variables de entorno (¡NO commitear!)
+│   └── env.example.php          # Plantilla de configuración
+│
+├── database/                    # 🗄️ Scripts SQL
+│   ├── db_schema.sql            # Esquema de tablas
+│   ├── seed.sql                 # Datos iniciales
+│   └── functions/               # Funciones PostgreSQL (fun_*)
+│
+├── vendor/                      # 📦 Dependencias Composer
+├── composer.json                # Definición de dependencias
+├── scripts/                     # 🚀 Scripts de deploy
+└── DEVELOPER_GUIDE.md           # Esta guía
 ```
 
 ### Flujo de una Petición
 
 ```
-[Cliente] → [public/*.php] → [auth.php] → [api/*.php] → [PostgreSQL]
-               │                  │              │
-               │                  │              └── Funciones fun_*
-               │                  └── Valida sesión/JWT
-               └── Renderiza HTML + incluye partials
+[Cliente] → [public/*.php] → [private/Auth/*] → [public/api/*] → [PostgreSQL]
+               │                    │                  │
+               │                    │                  └── Funciones fun_*
+               │                    └── Valida sesión/JWT
+               └── Renderiza HTML + incluye views/layouts/*
 ```
 
 ### Stack Tecnológico
@@ -68,14 +109,14 @@ Dedumsoft/
 
 ### Archivos Clave
 
-| Archivo                  | Propósito                 |
-| ------------------------ | ------------------------- |
-| `auth/login.php`         | Endpoint POST para login  |
-| `auth/login_service.php` | Lógica de login (9 pasos) |
-| `auth/auth.php`          | Funciones de autorización |
-| `auth/jwt.php`           | Generación/validación JWT |
-| `auth/session.php`       | Gestión de sesión PHP     |
-| `auth/logout.php`        | Cierre de sesión          |
+| Archivo                           | Propósito                 |
+| --------------------------------- | ------------------------- |
+| `public/api/auth/login.php`       | Endpoint POST para login  |
+| `private/Auth/LoginService.php`   | Lógica de login (9 pasos) |
+| `private/Auth/AuthMiddleware.php` | Funciones de autorización |
+| `private/Auth/JwtHandler.php`     | Generación/validación JWT |
+| `private/Auth/SessionManager.php` | Gestión de sesión PHP     |
+| `public/api/auth/logout.php`      | Cierre de sesión          |
 
 ### Flujo de Login (9 Pasos)
 
@@ -105,11 +146,70 @@ dedumsoft_user_can_menu($id); // Verifica permiso de menú
 require_menu_access($id);     // Bloquea acceso si no tiene permiso
 ```
 
+### Recuperación de Contraseña
+
+El sistema incluye un flujo completo de recuperación de contraseña:
+
+```
+[Usuario] → forgot_password.php → API/password_reset.php?action=request
+                                         │
+                                         ▼
+                                  Genera token (1h)
+                                         │
+                                         ▼
+                              [Email con link] (TODO)
+                                         │
+                                         ▼
+[Usuario] → reset_password.php?token=xxx → API/password_reset.php?action=reset
+                                         │
+                                         ▼
+                              Cambia contraseña + invalida sesiones
+```
+
+**Archivos del sistema:**
+
+| Archivo                      | Propósito                                                                          |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| `public/forgot_password.php` | Formulario para solicitar reset                                                    |
+| `public/reset_password.php`  | Formulario para nueva contraseña                                                   |
+| `api/password_reset.php`     | API con 3 acciones: request, validate, reset                                       |
+| `connection/mailer.php`      | Servicio de envío de emails con PHPMailer                                          |
+| `DB/db_schema.sql`           | Tabla `seg_password_reset`                                                         |
+| `DB/functions/02_auth.sql`   | Funciones `fun_crear_reset_token`, `fun_validar_reset_token`, `fun_reset_password` |
+
+**Seguridad implementada:**
+
+- Tokens de 256 bits (64 caracteres hex)
+- Expiración de 1 hora
+- Rate limiting (5 solicitudes / 15 min por IP)
+- No revela si el email existe (previene enumeración)
+- Invalida todas las sesiones al cambiar contraseña
+- Validación de fortaleza: 8+ chars, mayúscula, minúscula, número
+- Emails enviados via SMTP con TLS/SSL (PHPMailer)
+
+**Configuración de Email (config/env.php):**
+
+```php
+'MAIL_HOST' => 'smtp.gmail.com',        // Servidor SMTP
+'MAIL_PORT' => 587,                      // Puerto (587=TLS, 465=SSL)
+'MAIL_USERNAME' => 'tu_email@gmail.com', // Usuario SMTP
+'MAIL_PASSWORD' => 'app_password_16char', // App Password (no contraseña normal)
+'MAIL_ENCRYPTION' => 'tls',              // 'tls' o 'ssl'
+'MAIL_FROM_ADDRESS' => 'noreply@dedumsoft.com',
+'MAIL_FROM_NAME' => 'Dedumsoft Joyería',
+```
+
+**Nota Gmail:** Usar [App Passwords](https://support.google.com/accounts/answer/185833) (16 caracteres), no la contraseña de la cuenta.
+
 ### Uso en Vistas
 
 ```php
 <?php
-require_once '../auth/auth.php';
+// Cargar bootstrap (siempre primero)
+require_once __DIR__ . '/../private/bootstrap.php';
+require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
+require_once PRIVATE_PATH . '/Database/Connection.php';
+
 require_login();                    // Paso 1: Verificar sesión
 require_menu_access(2);             // Paso 2: Verificar permiso menú #2
 
@@ -122,7 +222,11 @@ $user = get_session_user();
 
 ```php
 <?php
-require_once '../auth/auth.php';
+// Cargar bootstrap
+require_once __DIR__ . '/../../../private/bootstrap.php';
+require_once PRIVATE_PATH . '/Database/Connection.php';
+require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
+
 require_api_auth();  // Valida JWT del header Authorization: Bearer xxx
 
 // Si llega aquí, JWT válido
@@ -297,7 +401,7 @@ FROM joyeria.fun_inv_buscar_insumos('oro', 10, 0);
 
 ### Estructura Estándar
 
-Todas las APIs siguen el mismo patrón:
+Todas las APIs siguen el mismo patrón (ubicadas en `public/api/{dominio}/`):
 
 ```php
 <?php
@@ -306,17 +410,26 @@ Todas las APIs siguen el mismo patrón:
  * Métodos: GET, POST, PUT, DELETE
  */
 
-require_once '../auth/auth.php';
-require_once '../connection/connectionLogic.php';
-require_once '../connection/httpMethodValidator.php';
+// Cargar bootstrap (siempre primero)
+require_once __DIR__ . '/../../../private/bootstrap.php';
+
+// Dependencias
+require_once PRIVATE_PATH . '/Database/Connection.php';
+require_once PRIVATE_PATH . '/Http/MethodValidator.php';
+require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
+
+header('Content-Type: application/json');
 
 // 1. Autenticación
 require_api_auth();
 
 // 2. Validar método HTTP
-$method = validate_http_method(['GET', 'POST', 'PUT', 'DELETE']);
+if (!validateHttpMethod('POST')) {
+    exit;
+}
 
 // 3. Procesar según método
+$method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     case 'GET':
         // Listar o buscar
@@ -333,7 +446,6 @@ switch ($method) {
 }
 
 // 4. Respuesta JSON
-header('Content-Type: application/json');
 echo json_encode($response);
 ```
 
@@ -359,13 +471,13 @@ echo json_encode($response);
 
 ```javascript
 // Con Axios (recomendado)
-axios.get('/api/inventario_oro.php')
+axios.get('/api/inventario/oro.php')
     .then(res => console.log(res.data))
     .catch(err => console.error(err));
 
 // Con jQuery (legacy)
 $.ajax({
-    url: '/api/inventario_oro.php',
+    url: '/api/inventario/oro.php',
     method: 'GET',
     headers: { 'Authorization': 'Bearer ' + token },
     success: function(data) { ... }
@@ -619,27 +731,43 @@ if (!validate_csrf_token($_POST['csrf_token'])) {
 1. **Configurar entorno**
 
    ```bash
-   cp Back/env/env.example.php Back/env/env.php
+   cp config/env.example.php config/env.php
    # Editar env.php con credenciales reales
    ```
 
-2. **Crear base de datos**
+2. **Instalar dependencias PHP**
 
    ```bash
-   psql -U postgres -f DB/install.sql
-   psql -U postgres -d dedumsoft -f DB/db_schema.sql
-   psql -U postgres -d dedumsoft -f DB/functions/*.sql
-   psql -U postgres -d dedumsoft -f DB/seed.sql
+   composer install
    ```
 
-3. **Configurar permisos**
+3. **Crear base de datos**
 
    ```bash
-   chmod 755 Back/
-   chmod 644 Back/**/*.php
+   psql -U postgres -f database/install.sql
+   psql -U postgres -d dedumsoft -f database/db_schema.sql
+   psql -U postgres -d dedumsoft -f database/functions/*.sql
+   psql -U postgres -d dedumsoft -f database/seed.sql
    ```
 
-4. **Ejecutar script de deploy**
+4. **Configurar Apache (DocumentRoot)**
+
+   ```apache
+   DocumentRoot "/path/to/Dedumsoft/public"
+   <Directory "/path/to/Dedumsoft/public">
+       AllowOverride All
+       Require all granted
+   </Directory>
+   ```
+
+5. **Configurar permisos**
+
+   ```bash
+   chmod 755 public/ private/ views/
+   chmod 600 config/env.php
+   ```
+
+6. **Ejecutar script de deploy**
    ```bash
    cd scripts
    ./deploy_back.sh
@@ -740,13 +868,15 @@ if (window.console && console.log) {
 
 ### Rutas Importantes
 
-| Ruta                | Descripción                  |
-| ------------------- | ---------------------------- |
-| `/public/login.php` | Página de login              |
-| `/public/index.php` | Dashboard principal          |
-| `/api/*.php`        | Endpoints REST               |
-| `/auth/auth.php`    | Incluir para autenticación   |
-| `/env/env.php`      | Configuración (NO commitear) |
+| Ruta                         | Descripción                      |
+| ---------------------------- | -------------------------------- |
+| `public/login.php`           | Página de login                  |
+| `public/index.php`           | Dashboard principal              |
+| `public/api/{dominio}/*.php` | Endpoints REST                   |
+| `private/Auth/*.php`         | Módulos de autenticación         |
+| `private/bootstrap.php`      | Inicialización (incluir siempre) |
+| `config/env.php`             | Configuración (¡NO commitear!)   |
+| `views/layouts/*.php`        | Componentes reutilizables        |
 
 ### Comandos Útiles
 

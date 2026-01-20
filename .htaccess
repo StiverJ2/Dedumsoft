@@ -1,0 +1,35 @@
+# ============================================================================
+
+# DEDUMSOFT - ROOT .htaccess
+
+# ============================================================================
+
+# Este archivo redirige todas las peticiones al subdirectorio public/
+
+# Necesario cuando el servidor web no permite configurar DocumentRoot
+
+# ============================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /dedumsoft/
+    
+    # Bloquear acceso directo a directorios sensibles
+    RewriteRule ^(private|views|config|database|vendor|scripts)(/.*)?$ - [F,L]
+    
+    # Evitar bucles: no reescribir si ya estamos en public/
+    RewriteCond %{REQUEST_URI} !^/dedumsoft/public/
+    
+    # Redirigir todo al subdirectorio public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Prevenir listado de directorios
+
+Options -Indexes
+
+# Proteger archivos de configuración
+
+<FilesMatch "^(composer\.(json|lock)|\.htaccess|\.env|\.git)">
+Require all denied
+</FilesMatch>

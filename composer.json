@@ -1,0 +1,14 @@
+{
+    "name": "dedumsoft/backend",
+    "description": "Backend Dedumsoft Joyería",
+    "type": "project",
+    "require": {
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "authors": [
+        {
+            "name": "Dedumsoft",
+            "email": "info@dedumsoft.com"
+        }
+    ]
+}

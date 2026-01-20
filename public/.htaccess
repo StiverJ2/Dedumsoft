@@ -1,0 +1,38 @@
+# ============================================================================
+# DEDUMSOFT - PUBLIC .htaccess
+# ============================================================================
+# Este archivo maneja las rutas dentro del directorio public/
+# ============================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /dedumsoft/
+    
+    # No reescribir archivos y directorios que existen
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Redirigir 404 al index (opcional, desactivado por ahora)
+    # RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Prevenir listado de directorios
+Options -Indexes
+
+# Configuración de tipos MIME para assets
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType application/json .json
+</IfModule>
+
+# Cache para assets estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType application/json "access plus 1 day"
+</IfModule>
