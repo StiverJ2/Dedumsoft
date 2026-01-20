@@ -14,7 +14,7 @@
  * Seguridad:
  * - Rate limiting en solicitudes
  * - Tokens con expiración de 1 hora
- * - No revela si el email existe (previene enumeración)
+ * - No revela si el usuario/email existe (previene enumeración)
  * - Invalida sesiones activas al cambiar contraseña
  * 
  * @package Dedumsoft\API
@@ -83,7 +83,15 @@ function handleRequestReset(PDO $conn, array $input): void
         return;
     }
 
+    $username = trim($input['username'] ?? '');
     $email = trim($input['email'] ?? '');
+
+    // Validar username
+    if ($username === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Usuario invalido']);
+        return;
+    }
 
     // Validar formato de email
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -102,9 +110,10 @@ function handleRequestReset(PDO $conn, array $input): void
     // Llamar función de BD
     $stmt = $conn->prepare(
         'SELECT codigo, mensaje, token, usuario_id, nombre 
-         FROM seguridad.fun_crear_reset_token(:email, :ip::inet, :ua)'
+         FROM seguridad.fun_crear_reset_token(:username, :email, :ip::inet, :ua)'
     );
     $stmt->execute([
+        ':username' => $username,
         ':email' => $email,
         ':ip' => $ip,
         ':ua' => $user_agent
@@ -112,12 +121,18 @@ function handleRequestReset(PDO $conn, array $input): void
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Log del intento
-    dedumsoft_security_log('PASSWORD_RESET_REQUEST', $email, $result['token'] ? 'Token generated' : 'Email not found');
+    $detail = 'Username/email mismatch';
+    if ($result['token']) {
+        $detail = 'Token generated';
+    } elseif ((int) ($result['codigo'] ?? 0) === 429) {
+        $detail = 'User rate limited';
+    }
+    dedumsoft_security_log('PASSWORD_RESET_REQUEST', $username, $detail . ' | email=' . $email);
 
-    // Siempre responder igual al usuario (no revelar si email existe)
+    // Siempre responder igual al usuario (no revelar si usuario/email existe)
     $response = [
         'success' => true,
-        'message' => 'Si el email existe en nuestro sistema, recibirás instrucciones para recuperar tu contraseña.'
+        'message' => 'Si el usuario y el email existen en nuestro sistema, recibiras instrucciones para recuperar tu contrasena.'
     ];
 
     // Si hay token, enviar email

@@ -5,7 +5,7 @@
  * ============================================================================
  * 
  * Formulario para solicitar recuperación de contraseña.
- * El usuario ingresa su email y recibe un link de recuperación.
+ * El usuario ingresa su usuario y email y recibe un link de recuperación.
  * 
  * @package Dedumsoft\Public
  * @author  Equipo Dedumsoft
@@ -106,16 +106,20 @@ $success = isset($_GET['sent']);
 
             <?php if ($success): ?>
                 <div class="success-message">
-                    Si el email está registrado, recibirás instrucciones para recuperar tu contraseña.
+                    Si el usuario y el email estan registrados, recibiras instrucciones para recuperar tu contrasena.
                 </div>
                 <a href="login.php" class="back-link">← Volver al login</a>
             <?php else: ?>
-                <h4 class="subtitulo">Ingresa tu email para recuperar tu contraseña</h4>
+                <h4 class="subtitulo">Ingresa tu usuario y email para recuperar tu contrasena</h4>
 
                 <div id="error-msg" class="error-message"></div>
 
                 <form id="forgot-form" onsubmit="return handleSubmit(event)">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf); ?>">
+                    <div class="input-group">
+                        <label for="username">Usuario</label>
+                        <input type="text" id="username" name="username" required autocomplete="username">
+                    </div>
                     <div class="input-group">
                         <label for="email">Email</label>
                         <input type="email" id="email" name="email" required autocomplete="email">
@@ -138,6 +142,7 @@ $success = isset($_GET['sent']);
         <script>
             function handleSubmit(e) {
                 e.preventDefault();
+                var username = document.getElementById('username').value;
                 var email = document.getElementById('email').value;
                 var btn = document.getElementById('submit-btn');
                 var errorDiv = document.getElementById('error-msg');
@@ -150,7 +155,7 @@ $success = isset($_GET['sent']);
                     url: DEDUMSOFT_BASE_URL + '/api/auth/password_reset.php?action=request',
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ email: email }),
+                    data: JSON.stringify({ username: username, email: email }),
                     success: function (data) {
                         if (data.dev_link) {
                             var devInfo = document.getElementById('dev-info');
@@ -181,6 +186,7 @@ $success = isset($_GET['sent']);
         <script>
             async function handleSubmit(e) {
                 e.preventDefault();
+                const username = document.getElementById('username').value;
                 const email = document.getElementById('email').value;
                 const btn = document.getElementById('submit-btn');
                 const errorDiv = document.getElementById('error-msg');
@@ -193,7 +199,7 @@ $success = isset($_GET['sent']);
                     const response = await fetch(DEDUMSOFT_BASE_URL + '/api/auth/password_reset.php?action=request', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
+                        body: JSON.stringify({ username, email })
                     });
 
                     const data = await response.json();

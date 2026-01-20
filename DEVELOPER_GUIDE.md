@@ -151,7 +151,7 @@ require_menu_access($id);     // Bloquea acceso si no tiene permiso
 El sistema incluye un flujo completo de recuperación de contraseña:
 
 ```
-[Usuario] → forgot_password.php → API/password_reset.php?action=request
+[Usuario] → forgot_password.php (usuario + email) → API/password_reset.php?action=request
                                          │
                                          ▼
                                   Genera token (1h)
@@ -181,8 +181,9 @@ El sistema incluye un flujo completo de recuperación de contraseña:
 
 - Tokens de 256 bits (64 caracteres hex)
 - Expiración de 1 hora
-- Rate limiting (5 solicitudes / 15 min por IP)
-- No revela si el email existe (previene enumeración)
+- Rate limiting (5 solicitudes / 15 min por IP y por usuario)
+- Valida usuario + email antes de emitir token (respuesta generica)
+- No revela si el usuario/email existe (previene enumeración)
 - Invalida todas las sesiones al cambiar contraseña
 - Validación de fortaleza: 8+ chars, mayúscula, minúscula, número
 - Emails enviados via SMTP con TLS/SSL (PHPMailer)

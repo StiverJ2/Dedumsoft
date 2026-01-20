@@ -108,13 +108,15 @@ $$;
 -- -----------------------------------------------------------------------------
 -- fun_crear_reset_token: Genera token de recuperación de contraseña
 -- Parámetros:
+--   par_username: Username del usuario
 --   par_email: Email del usuario
 --   par_ip: IP del solicitante (opcional)
 --   par_user_agent: User-Agent del navegador (opcional)
 -- Retorna:
---   Token generado si el email existe, mensaje genérico si no
+--   Token generado si el usuario y email existen, mensaje genérico si no
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION seguridad.fun_crear_reset_token(
+    par_username TEXT,
     par_email VARCHAR(255),
     par_ip INET DEFAULT NULL,
     par_user_agent VARCHAR(500) DEFAULT NULL
@@ -132,16 +134,29 @@ DECLARE
     v_usuario_id INTEGER;
     v_nombre TEXT;
     v_token TEXT;
+    v_recent_count INTEGER;
 BEGIN
-    -- Buscar usuario por email
+    -- Buscar usuario por username y email
     SELECT u.id_usuario, u.nombre INTO v_usuario_id, v_nombre
     FROM seguridad.seg_usuario u
-    WHERE u.email = par_email 
+    WHERE u.username = par_username
+      AND LOWER(u.email) = LOWER(par_email)
       AND u.deleted_at IS NULL;
 
     IF v_usuario_id IS NULL THEN
-        -- No revelar si el email existe o no (seguridad)
-        RETURN QUERY SELECT 200, 'Si el email existe, recibirás instrucciones.'::TEXT, NULL::TEXT, NULL::INTEGER, NULL::TEXT;
+        -- No revelar si el usuario/email existe o no (seguridad)
+        RETURN QUERY SELECT 200, 'Si el usuario y el email existen, recibiras instrucciones.'::TEXT, NULL::TEXT, NULL::INTEGER, NULL::TEXT;
+        RETURN;
+    END IF;
+
+    -- Rate limit por usuario: max 5 solicitudes en 15 minutos
+    SELECT COUNT(1) INTO v_recent_count
+    FROM seguridad.seg_password_reset r
+    WHERE r.usuario_id = v_usuario_id
+      AND r.created_at > NOW() - INTERVAL '15 minutes';
+
+    IF v_recent_count >= 5 THEN
+        RETURN QUERY SELECT 429, 'Demasiadas solicitudes. Intenta mas tarde.'::TEXT, NULL::TEXT, v_usuario_id, v_nombre;
         RETURN;
     END IF;
 
