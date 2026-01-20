@@ -16,6 +16,7 @@
 7. [Seguridad](#7-seguridad)
 8. [Despliegue](#8-despliegue)
 9. [Gotchas y Errores Comunes](#9-gotchas-y-errores-comunes)
+10. [Glosario de Términos](#-glosario-de-términos)
 
 ---
 
@@ -760,6 +761,61 @@ tail -f /var/log/postgresql/postgresql-17-main.log
 # Verificar sintaxis PHP
 php -l archivo.php
 ```
+
+---
+
+## 📖 Glosario de Términos
+
+| Término                | Significado                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Artesano**           | Usuario que fabrica las piezas de joyería. Tiene un `artesano_id` y acceso limitado a sus propias órdenes. |
+| **Orden**              | Pedido de producción de una pieza. Pasa por estados: `pendiente` → `en_proceso` → `terminada`.             |
+| **Consumo**            | Material usado en una orden (oro, piedras, insumos). Registrado en `ord_consumos`.                         |
+| **Insumo**             | Material auxiliar (soldadura, lijas, etc.). Diferente de oro/piedras preciosas.                            |
+| **RBAC**               | Role-Based Access Control. Sistema de permisos basado en roles (ADMIN, OPERADOR, LECTURA).                 |
+| **JWT**                | JSON Web Token. Token de autenticación para APIs. Expira en 24h.                                           |
+| **CSRF**               | Cross-Site Request Forgery. Ataque prevenido con tokens en formularios.                                    |
+| **Rate Limiting**      | Límite de peticiones por IP (60/min) para prevenir ataques de fuerza bruta.                                |
+| **Legacy**             | Código/funcionalidad para navegadores antiguos (IE8). Ver sección 6.                                       |
+| **Polyfill**           | Código que agrega funcionalidad faltante a navegadores viejos (ej: JSON2 para IE8).                        |
+| **fun\_\***            | Prefijo de funciones PostgreSQL almacenadas. Ej: `fun_inv_buscar_insumos()`.                               |
+| **seg\_\***            | Prefijo de tablas de seguridad. Ej: `seg_usuario`, `seg_rol`, `seg_menurol`.                               |
+| **inv\_\***            | Prefijo de tablas de inventario. Ej: `inv_oro`, `inv_insumos`, `inv_maquinaria`.                           |
+| **ord\_\***            | Prefijo de tablas de órdenes/producción. Ej: `ord_ordenes`, `ord_consumos`.                                |
+| **prov\_\***           | Prefijo de tablas de proveedores. Ej: `prov_proveedores`, `prov_compras`.                                  |
+| **cat\_\***            | Prefijo de tablas de catálogos. Ej: `cat_tipos_material`, `cat_unidades`.                                  |
+| **PDO**                | PHP Data Objects. Extensión para acceso a base de datos con prepared statements.                           |
+| **Prepared Statement** | Query SQL con parámetros que previene SQL injection.                                                       |
+| **Session Fixation**   | Ataque donde se fuerza un ID de sesión. Prevenido con `session_regenerate_id()`.                           |
+| **XSS**                | Cross-Site Scripting. Ataque de inyección de JavaScript. Prevenido con `htmlspecialchars()`.               |
+| **HttpOnly**           | Flag de cookie que impide acceso desde JavaScript. Protege contra XSS.                                     |
+| **SameSite**           | Flag de cookie que controla envío cross-origin. Configurado como `Lax`.                                    |
+| **GD Library**         | Extensión PHP para generar imágenes. Usada en `legacy_chart.php` para gráficos PNG.                        |
+| **DataTables**         | Plugin jQuery para tablas interactivas con búsqueda, paginación y ordenamiento.                            |
+| **uPlot**              | Librería de gráficos ligera. Usada en navegadores modernos (no IE8).                                       |
+| **Notyf**              | Librería de notificaciones toast. Muestra mensajes de éxito/error.                                         |
+| **Guard**              | Archivo `connection/guard.php`. Protege contra inclusión directa de archivos.                              |
+| **Esquema**            | Namespace en PostgreSQL. Usamos: `joyeria`, `seguridad`, `public`.                                         |
+
+### Acrónimos Comunes en el Código
+
+| Acrónimo    | Significado                                        |
+| ----------- | -------------------------------------------------- |
+| `connLogic` | Connection Logic - Conexión PDO a la base de datos |
+| `stmt`      | Statement - Objeto de consulta preparada           |
+| `pdo`       | PHP Data Objects                                   |
+| `ENV`       | Environment - Variables de configuración           |
+| `CSRF`      | Cross-Site Request Forgery                         |
+| `JWT`       | JSON Web Token                                     |
+| `RBAC`      | Role-Based Access Control                          |
+| `CRUD`      | Create, Read, Update, Delete                       |
+| `API`       | Application Programming Interface                  |
+| `REST`      | Representational State Transfer                    |
+| `HSTS`      | HTTP Strict Transport Security                     |
+| `CSP`       | Content Security Policy                            |
+| `MIME`      | Multipurpose Internet Mail Extensions              |
+
+---
 
 ### Contacto
 
