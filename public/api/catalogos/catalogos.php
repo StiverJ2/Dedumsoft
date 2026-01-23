@@ -10,7 +10,7 @@
  * Métodos soportados:
  * - GET: Listar registros del catálogo
  * - POST: Crear nuevo registro en catálogo
- * - PUT: Actualizar registro existente
+ * - PATCH: Actualizar registro existente
  * - DELETE: Eliminar registro (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
@@ -161,7 +161,7 @@ if ($method === 'POST') {
 }
 
 // =============================================================================
-// PUT: Actualizar registro existente
+// PATCH: Actualizar registro existente
 // =============================================================================
 // Body JSON:
 //   - id (int, requerido): ID del registro a actualizar
@@ -174,7 +174,7 @@ if ($method === 'POST') {
 //
 // Nota: Solo se actualizan los campos proporcionados
 // Respuesta: { CODIGO: 200, MENSAJE: 'Registro actualizado.' }
-if ($method === 'PUT') {
+if ($method === 'PATCH') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -230,7 +230,7 @@ if ($method === 'PUT') {
 
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Registro actualizado.']);
     } catch (PDOException $e) {
-        error_log("catalogo PUT error ({$catalog}): " . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        error_log("catalogo PATCH error ({$catalog}): " . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         http_response_code(500);
         echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
     }

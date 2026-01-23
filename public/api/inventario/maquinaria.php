@@ -10,7 +10,7 @@
  * Métodos soportados:
  * - GET: Listar maquinaria (paginado, filtrable por estado)
  * - POST: Crear nuevo equipo
- * - PUT: Actualizar equipo existente
+ * - PATCH: Actualizar equipo existente
  * - DELETE: Eliminar equipo (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
@@ -41,7 +41,7 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Validar métodos HTTP permitidos
-if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
+if (!in_array($method, ['GET', 'POST', 'PATCH', 'DELETE'])) {
     http_response_code(405);
     echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
     exit;
@@ -189,7 +189,7 @@ if ($method === 'POST') {
 }
 
 // =============================================================================
-// PUT: Actualizar maquinaria existente
+// PATCH: Actualizar maquinaria existente
 // =============================================================================
 // Body JSON:
 //   - id (int, requerido): ID del equipo a actualizar
@@ -208,7 +208,7 @@ if ($method === 'POST') {
 //
 // Nota: Solo se actualizan los campos proporcionados (PATCH parcial)
 // Respuesta: { CODIGO: 200, MENSAJE: 'Maquinaria actualizada.' }
-if ($method === 'PUT') {
+if ($method === 'PATCH') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -241,7 +241,7 @@ if ($method === 'PUT') {
 
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Maquinaria actualizada.']);
     } catch (PDOException $e) {
-        error_log('inventario_maquinaria PUT error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        error_log('inventario_maquinaria PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 
         // Detectar si el error es porque no se encontró el equipo
         $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;

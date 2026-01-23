@@ -297,3 +297,38 @@ BEGIN
     RETURN v_deleted;
 END;
 $$;
+
+-- -----------------------------------------------------------------------------
+-- fun_actualizar_usuario_estado: Activa o desactiva usuarios (soft-delete)
+-- Parámetros:
+--   par_id: ID del usuario
+--   par_activo: true para activar, false para desactivar
+-- Retorna:
+--   TRUE si la operación fue exitosa
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION seguridad.fun_actualizar_usuario_estado(
+    par_id int,
+    par_activo boolean
+)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE seguridad.seg_usuario
+    SET deleted_at = CASE WHEN par_activo THEN NULL ELSE CURRENT_TIMESTAMP END,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id_usuario = par_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Usuario no encontrado.' USING ERRCODE = 'P0002';
+    END IF;
+
+    IF par_activo = FALSE THEN
+        UPDATE seguridad.seg_login
+        SET estado_token = FALSE
+        WHERE usuarioid = par_id AND estado_token = TRUE;
+    END IF;
+
+    RETURN TRUE;
+END;
+$$;

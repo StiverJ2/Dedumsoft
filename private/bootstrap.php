@@ -90,6 +90,28 @@ date_default_timezone_set('America/Bogota');
 mb_internal_encoding('UTF-8');
 
 // =========================================================================
+// HTTP Method Override (Legacy/Proxies)
+// =========================================================================
+// Permite soportar PATCH/PUT/DELETE via POST + X-HTTP-Method-Override o _method.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $override = '';
+    if (!empty($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'])) {
+        $override = $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'];
+    } elseif (!empty($_POST['_method'])) {
+        $override = $_POST['_method'];
+    } elseif (!empty($_GET['_method'])) {
+        $override = $_GET['_method'];
+    }
+
+    if ($override !== '') {
+        $override = strtoupper(trim($override));
+        if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
+            $_SERVER['REQUEST_METHOD'] = $override;
+        }
+    }
+}
+
+// =========================================================================
 // Funciones de ayuda para rutas
 // =========================================================================
 

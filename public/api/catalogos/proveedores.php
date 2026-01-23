@@ -10,13 +10,13 @@
  * Métodos soportados:
  * - GET: Listar proveedores (paginado, filtrable por tipo)
  * - POST: Crear nuevo proveedor
- * - PUT: Actualizar proveedor existente
+ * - PATCH: Actualizar proveedor existente
  * - DELETE: Eliminar proveedor (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
  * Autorización: 
  * - GET: Menú 6 (Proveedores) o Menú 2 (Inventario)
- * - POST/PUT/DELETE: Menú 6 (Proveedores)
+ * - POST/PATCH/DELETE: Menú 6 (Proveedores)
  * 
  * Campos principales:
  * - nombre: Razón social o nombre del proveedor
@@ -41,7 +41,7 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Validar métodos HTTP permitidos
-if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
+if (!in_array($method, ['GET', 'POST', 'PATCH', 'DELETE'])) {
     http_response_code(405);
     echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
     exit;
@@ -54,7 +54,7 @@ if (!require_api_auth()) {
 
 // Control de acceso especial:
 // - GET: Accesible desde Proveedores (6) o Inventario (2)
-// - POST/PUT/DELETE: Solo desde Proveedores (6)
+// - POST/PATCH/DELETE: Solo desde Proveedores (6)
 $can_proveedores = dedumsoft_user_can_menu(6);
 $can_inventario = dedumsoft_user_can_menu(2);
 if ($method === 'GET') {
@@ -171,7 +171,7 @@ if ($method === 'POST') {
 }
 
 // =============================================================================
-// PUT: Actualizar proveedor existente
+// PATCH: Actualizar proveedor existente
 // =============================================================================
 // Body JSON:
 //   - id (int, requerido): ID del proveedor a actualizar
@@ -185,7 +185,7 @@ if ($method === 'POST') {
 //
 // Nota: Solo se actualizan los campos proporcionados (PATCH parcial)
 // Respuesta: { CODIGO: 200, MENSAJE: 'Proveedor actualizado.' }
-if ($method === 'PUT') {
+if ($method === 'PATCH') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -212,7 +212,7 @@ if ($method === 'PUT') {
 
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Proveedor actualizado.']);
     } catch (PDOException $e) {
-        error_log('proveedores PUT error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        error_log('proveedores PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 
         // Detectar si el error es porque no se encontró el proveedor
         $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;

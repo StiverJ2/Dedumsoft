@@ -10,7 +10,7 @@
  * Métodos soportados:
  * - GET: Listar inventario (paginado, filtrable por tipo y estado)
  * - POST: Crear nuevo registro de oro
- * - PUT: Actualizar registro existente
+ * - PATCH: Actualizar registro existente
  * - DELETE: Eliminar registro (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
@@ -41,7 +41,7 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Validar métodos HTTP permitidos
-if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
+if (!in_array($method, ['GET', 'POST', 'PATCH', 'DELETE'])) {
     http_response_code(405);
     echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
     exit;
@@ -184,7 +184,7 @@ if ($method === 'POST') {
 }
 
 // =============================================================================
-// PUT: Actualizar registro de oro existente
+// PATCH: Actualizar registro de oro existente
 // =============================================================================
 // Body JSON:
 //   - id (int, requerido): ID del registro a actualizar
@@ -198,7 +198,7 @@ if ($method === 'POST') {
 //
 // Nota: Solo se actualizan los campos proporcionados (PATCH parcial)
 // Respuesta: { CODIGO: 200, MENSAJE: 'Registro actualizado.' }
-if ($method === 'PUT') {
+if ($method === 'PATCH') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -226,7 +226,7 @@ if ($method === 'PUT') {
 
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Registro actualizado.']);
     } catch (PDOException $e) {
-        error_log('inventario_oro PUT error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        error_log('inventario_oro PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 
         // Detectar si el error es porque no se encontró el registro
         $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;

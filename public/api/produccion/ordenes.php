@@ -8,7 +8,7 @@
  * 
  * Métodos soportados:
  * - GET: Listar órdenes con paginación y filtro por estado
- * - PUT: Actualizar orden (asignar artesano)
+ * - PATCH: Actualizar orden (asignar artesano)
  * 
  * Autenticación: Requerida (JWT en sesión)
  * Autorización: Menú 3 (Producción)
@@ -29,7 +29,7 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 // Validar métodos permitidos
-if (!in_array($method, ['GET', 'PUT'], true)) {
+if (!in_array($method, ['GET', 'PATCH'], true)) {
     http_response_code(405);
     echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
     exit;
@@ -76,14 +76,14 @@ if ($method === 'GET') {
 }
 
 // =============================================================================
-// PUT: Actualizar orden (asignar artesano)
+// PATCH: Actualizar orden (asignar artesano)
 // =============================================================================
 // Body JSON:
 //   - id (int): ID de la orden
 //   - artesano_id (int): ID del artesano a asignar
 //
 // Respuesta: { CODIGO: 200, MENSAJE: 'Orden actualizada.' }
-if ($method === 'PUT') {
+if ($method === 'PATCH') {
     // Leer body JSON
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -119,7 +119,7 @@ if ($method === 'PUT') {
             exit;
         }
     } catch (PDOException $e) {
-        error_log('ordenes PUT error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        error_log('ordenes PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         http_response_code(500);
         echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error al asignar artesano.']);
         exit;

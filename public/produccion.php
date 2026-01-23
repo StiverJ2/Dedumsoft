@@ -22,7 +22,7 @@
  * 
  * APIs utilizadas:
  * - GET /api/ordenes.php - Listar órdenes
- * - PUT /api/ordenes.php - Asignar artesano a orden
+ * - PATCH /api/ordenes.php - Asignar artesano a orden
  * - GET /api/opciones.php - Estados, prioridades, artesanos
  * 
  * @package Dedumsoft\Public
@@ -225,7 +225,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                             id: row.id,
                             artesano_id: fd.get('artesano_id')
                         };
-                        DsCrud.api('api/ordenes.php', 'PUT', payload, function () {
+                        DsCrud.api('api/ordenes.php', 'PATCH', payload, function () {
                             DsCrud.toast('Orden actualizada', 'success');
                             ordenesTable.ajax.reload();
                             DsCrud.closeModal();
@@ -291,7 +291,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
                         data.id = ordenId;
-                        DsCrud.api('api/ordenes.php', 'PUT', data, function () {
+                        DsCrud.api('api/ordenes.php', 'PATCH', data, function () {
                             DsCrud.toast('Orden actualizada', 'success');
                             DsCrud.closeModal();
                             location.reload();

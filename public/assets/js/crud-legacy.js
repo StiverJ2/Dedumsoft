@@ -406,7 +406,7 @@ var DsCrud = (function() {
         return '{' + parts.join(',') + '}';
     }
 
-    function api(url, method, data, onSuccess, onError) {
+    function api(url, method, data, onSuccess, onError, headers) {
         var xhr = createXHR();
         if (!xhr) {
             if (onError) onError('No se pudo crear la conexion');
@@ -414,6 +414,13 @@ var DsCrud = (function() {
         }
         xhr.open(method, url, true);
         xhr.setRequestHeader('Content-Type', 'application/json');
+        if (headers) {
+            for (var key in headers) {
+                if (Object.prototype.hasOwnProperty.call(headers, key)) {
+                    xhr.setRequestHeader(key, headers[key]);
+                }
+            }
+        }
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4) {
                 var response = null;
@@ -430,11 +437,51 @@ var DsCrud = (function() {
                 }
             }
         };
-        if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
+        if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
             xhr.send(stringifyJSON(data));
         } else {
             xhr.send(null);
         }
+    }
+
+    // Wrapper legacy con defaults: método GET y querystring cuando aplica.
+    function apiLegacy(url, method, data, onSuccess, onError) {
+        if (typeof method !== 'string') {
+            onError = onSuccess;
+            onSuccess = data;
+            data = method;
+            method = 'GET';
+        }
+        method = String(method || 'GET').toUpperCase();
+        var sendMethod = method;
+        var headers = null;
+        if (method !== 'GET' && method !== 'POST') {
+            sendMethod = 'POST';
+            headers = { 'X-HTTP-Method-Override': method };
+            // Fallback para proxies que eliminan headers personalizados.
+            url += (url.indexOf('?') === -1 ? '?' : '&') + '_method=' + encodeURIComponent(method);
+        }
+
+        if (method === 'GET' && data && typeof data === 'object') {
+            var qs = [];
+            for (var key in data) {
+                if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
+                if (data[key] === undefined || data[key] === null) continue;
+                qs.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(data[key])));
+            }
+            if (qs.length) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + qs.join('&');
+            }
+            data = null;
+        }
+
+        if (!onError) {
+            onError = function (msg) {
+                toast(msg || 'Error', 'error');
+            };
+        }
+
+        api(url, sendMethod, data, onSuccess, onError, headers);
     }
 
     function actionButtons(id) {
@@ -555,6 +602,7 @@ var DsCrud = (function() {
         confirm: confirm,
         field: field,
         api: api,
+        apiLegacy: apiLegacy,
         actionButtons: actionButtons,
         escapeHtml: escapeHtml,
         initLegacyTable: initLegacyTable,

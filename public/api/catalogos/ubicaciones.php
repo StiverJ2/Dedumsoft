@@ -10,7 +10,7 @@
  * Métodos soportados:
  * - GET: Listar ubicaciones (paginado, filtrable por área)
  * - POST: Crear nueva ubicación
- * - PUT: Actualizar ubicación existente
+ * - PATCH: Actualizar ubicación existente
  * - DELETE: Eliminar ubicación (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
@@ -122,7 +122,7 @@ if ($method === 'POST') {
 }
 
 // =============================================================================
-// PUT: Actualizar ubicación existente
+// PATCH: Actualizar ubicación existente
 // =============================================================================
 // Body JSON:
 //   - id (int, requerido): ID de la ubicación a actualizar
@@ -133,7 +133,7 @@ if ($method === 'POST') {
 //
 // Nota: Solo se actualizan los campos proporcionados
 // Respuesta: { CODIGO: 200, MENSAJE: 'Ubicación actualizada.' }
-if ($method === 'PUT') {
+if ($method === 'PATCH') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -161,7 +161,7 @@ if ($method === 'PUT') {
             ':activo' => $activo
         ]);
     } catch (PDOException $e) {
-        error_log('ubicaciones PUT error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        error_log('ubicaciones PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         http_response_code(500);
         echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
         exit;

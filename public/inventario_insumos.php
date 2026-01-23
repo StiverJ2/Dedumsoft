@@ -24,7 +24,7 @@
  * APIs utilizadas:
  * - GET /api/inventario_insumos.php - Listar insumos
  * - POST /api/inventario_insumos.php - Crear registro
- * - PUT /api/inventario_insumos.php - Actualizar registro
+ * - PATCH /api/inventario_insumos.php - Actualizar registro
  * - DELETE /api/inventario_insumos.php - Eliminar registro
  * - POST /api/compras.php - Registrar compra
  * - GET /api/proveedores.php - Lista de proveedores
@@ -338,7 +338,7 @@ $(function() {
                     fd.forEach(function(v, k) {
                         payload[k] = v;
                     });
-                    DsCrud.api('api/inventario_insumos.php', 'PUT', payload, function() {
+                    DsCrud.api('api/inventario_insumos.php', 'PATCH', payload, function() {
                         DsCrud.toast('Insumo actualizado', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
@@ -579,7 +579,7 @@ $(function() {
                     data.cantidad = 0;
                 }
 
-                DsCrud.api('api/inventario_insumos.php', 'POST', data, function(res) {
+                DsCrud.apiLegacy('api/inventario_insumos.php', 'POST', data, function(res) {
                     if (!registrarCompra) {
                         DsCrud.toast('Insumo creado', 'success');
                         DsCrud.closeModal();
@@ -591,7 +591,7 @@ $(function() {
                         item_id: res.ID,
                         cantidad: compraCantidad
                     };
-                    DsCrud.api('api/compras.php', 'POST', compraPayload, function() {
+                    DsCrud.apiLegacy('api/compras.php', 'POST', compraPayload, function() {
                         DsCrud.toast('Insumo creado y compra registrada', 'success');
                         DsCrud.closeModal();
                         location.reload();
@@ -622,7 +622,7 @@ $(function() {
                 if (data.fecha) {
                     data.fecha = data.fecha.replace('T', ' ');
                 }
-                DsCrud.api('api/compras.php', 'POST', data, function() {
+                DsCrud.apiLegacy('api/compras.php', 'POST', data, function() {
                     DsCrud.toast('Compra registrada', 'success');
                     DsCrud.closeModal();
                     location.reload();
@@ -635,7 +635,7 @@ $(function() {
 
     DsCrud.initLegacyTable('insumos-table', {
         onEdit: function(id) {
-            DsCrud.api('api/inventario_insumos.php?id=' + id, 'GET', null, function(res) {
+            DsCrud.apiLegacy('api/inventario_insumos.php?id=' + id, 'GET', null, function(res) {
                 var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                 DsCrud.openModal({
                     title: 'Editar Insumo #' + id,
@@ -644,7 +644,7 @@ $(function() {
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
                         data.id = id;
-                        DsCrud.api('api/inventario_insumos.php', 'PUT', data,
+                        DsCrud.apiLegacy('api/inventario_insumos.php', 'PATCH', data,
                             function() {
                                 DsCrud.toast('Insumo actualizado', 'success');
                                 DsCrud.closeModal();
@@ -661,7 +661,7 @@ $(function() {
         },
         onDelete: function(id) {
             DsCrud.confirm('Eliminar insumo #' + id + '?', function() {
-                DsCrud.api('api/inventario_insumos.php', 'DELETE', { id: id }, function() {
+                DsCrud.apiLegacy('api/inventario_insumos.php', 'DELETE', { id: id }, function() {
                     DsCrud.toast('Insumo eliminado', 'success');
                     location.reload();
                 }, function(e) {

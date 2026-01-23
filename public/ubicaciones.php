@@ -23,7 +23,7 @@
  * APIs utilizadas:
  * - GET /api/ubicaciones.php - Listar ubicaciones
  * - POST /api/ubicaciones.php - Crear ubicación
- * - PUT /api/ubicaciones.php - Actualizar ubicación
+ * - PATCH /api/ubicaciones.php - Actualizar ubicación
  * - DELETE /api/ubicaciones.php - Eliminar ubicación
  * - GET /api/opciones.php?tipo=areas - Áreas disponibles
  * 
@@ -329,7 +329,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                         id: row.id,
                         ...Object.fromEntries(fd)
                     };
-                    DsCrud.api('api/ubicaciones.php', 'PUT', payload, (success, resp) => {
+                    DsCrud.api('api/ubicaciones.php', 'PATCH', payload, (success, resp) => {
                         if (success) {
                             DsCrud.toast('Ubicación actualizada');
                             reloadTable();
@@ -499,7 +499,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                     onSave: function (modal) {
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
-                        DsCrud.api('api/ubicaciones.php', 'POST', data, function () {
+                        DsCrud.apiLegacy('api/ubicaciones.php', 'POST', data, function () {
                             DsCrud.toast('Ubicación creada', 'success');
                             DsCrud.closeModal();
                             location.reload();
@@ -512,7 +512,7 @@ include VIEWS_PATH . '/layouts/nav.php';
 
             DsCrud.initLegacyTable('ubicaciones-table', {
                 onEdit: function (id) {
-                    DsCrud.api('api/ubicaciones.php?id=' + id, 'GET', null, function (res) {
+                    DsCrud.apiLegacy('api/ubicaciones.php?id=' + id, 'GET', null, function (res) {
                         var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                         DsCrud.openModal({
                             title: 'Editar Ubicación #' + id,
@@ -523,7 +523,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                                 if (!DsCrud.validateForm(modal)) return;
                                 var data = DsCrud.getFormData(modal);
                                 data.id = id;
-                                DsCrud.api('api/ubicaciones.php', 'PUT', data,
+                                DsCrud.apiLegacy('api/ubicaciones.php', 'PATCH', data,
                                     function () {
                                         DsCrud.toast('Ubicación actualizada',
                                             'success');
@@ -541,7 +541,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                 },
                 onDelete: function (id) {
                     DsCrud.confirm('¿Eliminar ubicación #' + id + '?', function () {
-                        DsCrud.api('api/ubicaciones.php', 'DELETE', {
+                        DsCrud.apiLegacy('api/ubicaciones.php', 'DELETE', {
                             id: id
                         }, function () {
                             DsCrud.toast('Ubicación eliminada', 'success');

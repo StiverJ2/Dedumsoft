@@ -23,7 +23,7 @@
  * APIs utilizadas:
  * - GET /api/proveedores.php - Listar proveedores
  * - POST /api/proveedores.php - Crear proveedor
- * - PUT /api/proveedores.php - Actualizar proveedor
+ * - PATCH /api/proveedores.php - Actualizar proveedor
  * - DELETE /api/proveedores.php - Eliminar proveedor
  * - GET /api/opciones.php?tipo=tipos_proveedor - Tipos de proveedor
  * 
@@ -258,7 +258,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                                 id: prov.id,
                                 ...Object.fromEntries(fd)
                             };
-                            DsCrud.api('api/proveedores.php', 'PUT', payload, (res) => {
+                            DsCrud.api('api/proveedores.php', 'PATCH', payload, (res) => {
                                 DsCrud.toast('Proveedor actualizado', 'success');
                                 proveedoresTable.ajax.reload();
                                 DsCrud.closeModal();
@@ -385,7 +385,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                     onSave: function (modal) {
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
-                        DsCrud.api('api/proveedores.php', 'POST', data, function () {
+                        DsCrud.apiLegacy('api/proveedores.php', 'POST', data, function () {
                             DsCrud.toast('Proveedor creado', 'success');
                             DsCrud.closeModal();
                             location.reload();
@@ -398,7 +398,7 @@ include VIEWS_PATH . '/layouts/nav.php';
 
             DsCrud.initLegacyTable('proveedores-table', {
                 onEdit: function (id) {
-                    DsCrud.api('api/proveedores.php?id=' + id, 'GET', null, function (res) {
+                    DsCrud.apiLegacy('api/proveedores.php?id=' + id, 'GET', null, function (res) {
                         var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                         DsCrud.openModal({
                             title: 'Editar Proveedor #' + id,
@@ -408,7 +408,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                                 if (!DsCrud.validateForm(modal)) return;
                                 var data = DsCrud.getFormData(modal);
                                 data.id = id;
-                                DsCrud.api('api/proveedores.php', 'PUT', data,
+                                DsCrud.apiLegacy('api/proveedores.php', 'PATCH', data,
                                     function () {
                                         DsCrud.toast('Proveedor actualizado',
                                             'success');
@@ -426,7 +426,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                 },
                 onDelete: function (id) {
                     DsCrud.confirm('¿Eliminar proveedor #' + id + '?', function () {
-                        DsCrud.api('api/proveedores.php', 'DELETE', {
+                        DsCrud.apiLegacy('api/proveedores.php', 'DELETE', {
                             id: id
                         }, function () {
                             DsCrud.toast('Proveedor eliminado', 'success');

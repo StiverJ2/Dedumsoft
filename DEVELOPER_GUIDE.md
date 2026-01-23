@@ -1,7 +1,7 @@
 # 🛠️ Guía del Desarrollador - Dedumsoft
 
 > **Sistema de Gestión de Joyería**  
-> Versión: 1.0 | PHP 7.4+ | PostgreSQL 17+
+> Versión: 1.1 | PHP 7.4+ | PostgreSQL 17+ | Última actualización: 2026-01-23
 
 ---
 
@@ -26,12 +26,15 @@
 
 ```
 Dedumsoft/
+├── Back/                        # 🗂️ Legacy/backup (no usado en runtime)
+│   └── api/                     # Ej: password_reset.php (histórico)
 ├── public/                      # 🌐 WEB ROOT (DocumentRoot de Apache)
 │   ├── index.php                # Dashboard principal
 │   ├── login.php                # Página de login
+│   ├── auth/                    # Wrappers legacy (logout)
 │   ├── assets/                  # Recursos estáticos
 │   │   ├── css/                 # Estilos (Bootstrap, DataTables, custom)
-│   │   ├── js/                  # Scripts (jQuery, axios, crud.js)
+│   │   ├── js/                  # Scripts (jQuery, axios, crud.js, crud-legacy.js)
 │   │   ├── icons/               # Iconos Fatcow para IE8
 │   │   └── uplot/               # Librería de gráficos
 │   └── api/                     # Endpoints REST agrupados por dominio
@@ -39,7 +42,8 @@ Dedumsoft/
 │       ├── inventario/          # Oro, insumos, maquinaria
 │       ├── produccion/          # Órdenes, artesanos
 │       ├── reportes/            # Reportes varios
-│       └── catalogos/           # Catálogos, proveedores, ubicaciones
+│       ├── catalogos/           # Catálogos, proveedores, ubicaciones
+│       └── *.php                # Shims en raíz (usuarios.php, ordenes.php, etc.)
 │
 ├── private/                     # 🔒 Código PHP interno (NO accesible via web)
 │   ├── bootstrap.php            # Inicialización: config + autoload + rutas
@@ -59,14 +63,10 @@ Dedumsoft/
 │       └── Mailer.php           # PHPMailer wrapper
 │
 ├── views/                       # 📄 Vistas PHP (templates)
-│   ├── layouts/                 # Componentes reutilizables
-│   │   ├── header.php           # <head> y apertura <body>
-│   │   ├── nav.php              # Menú lateral según permisos
-│   │   └── footer.php           # Scripts y cierre </body>
-│   ├── inventario/              # Vistas de inventario
-│   ├── produccion/              # Vistas de producción
-│   ├── reportes/                # Vistas de reportes
-│   └── usuarios/                # Vistas de usuarios/config
+│   └── layouts/                 # Componentes reutilizables
+│       ├── header.php           # <head> y apertura <body>
+│       ├── nav.php              # Menú lateral según permisos
+│       └── footer.php           # Scripts y cierre </body>
 │
 ├── config/                      # ⚙️ Configuración
 │   ├── env.php                  # Variables de entorno (¡NO commitear!)
@@ -137,7 +137,7 @@ Dedumsoft/
 ### Funciones de Autorización
 
 ```php
-// En auth/auth.php
+// En private/Auth/AuthMiddleware.php
 
 require_login();              // Redirige a login si no autenticado
 require_api_auth();           // Valida JWT, retorna 401 si falla
@@ -172,10 +172,10 @@ El sistema incluye un flujo completo de recuperación de contraseña:
 | ---------------------------- | ---------------------------------------------------------------------------------- |
 | `public/forgot_password.php` | Formulario para solicitar reset                                                    |
 | `public/reset_password.php`  | Formulario para nueva contraseña                                                   |
-| `api/password_reset.php`     | API con 3 acciones: request, validate, reset                                       |
-| `connection/mailer.php`      | Servicio de envío de emails con PHPMailer                                          |
-| `DB/db_schema.sql`           | Tabla `seg_password_reset`                                                         |
-| `DB/functions/02_auth.sql`   | Funciones `fun_crear_reset_token`, `fun_validar_reset_token`, `fun_reset_password` |
+| `public/api/auth/password_reset.php` | API con 3 acciones: request, validate, reset                                 |
+| `private/Mail/Mailer.php`            | Servicio de envío de emails con PHPMailer                                    |
+| `database/db_schema.sql`             | Tabla `seg_password_reset`                                                   |
+| `database/functions/02_auth.sql`     | Funciones `fun_crear_reset_token`, `fun_validar_reset_token`, `fun_reset_password` |
 
 **Seguridad implementada:**
 
@@ -270,7 +270,7 @@ El sistema usa **Role-Based Access Control (RBAC)** con 3 tablas:
 ### Roles Predefinidos
 
 ```sql
--- En DB/seed.sql
+-- En database/seed.sql
 INSERT INTO seguridad.seg_rol VALUES
 (1, 'ADMIN', 'Acceso total'),
 (2, 'OPERADOR', 'Producción y configuración'),
@@ -279,15 +279,19 @@ INSERT INTO seguridad.seg_rol VALUES
 
 ### Menús del Sistema
 
-| ID  | Nombre        | Ruta                      |
-| --- | ------------- | ------------------------- |
-| 1   | Dashboard     | /public/index.php         |
-| 2   | Inventario    | /public/inventario.php    |
-| 3   | Produccion    | /public/produccion.php    |
-| 4   | Reportes      | /public/reportes.php      |
-| 5   | Usuarios      | /public/usuarios.php      |
-| 6   | Proveedores   | /public/proveedores.php   |
-| 7   | Configuracion | /public/configuracion.php |
+| ID  | Nombre        | Ruta (seg_menu.ruta) | Página principal (public) |
+| --- | ------------- | -------------------- | ------------------------- |
+| 1   | Dashboard     | /dashboard           | `public/index.php`        |
+| 2   | Inventario    | /inventario          | `public/inventario_insumos.php` |
+| 3   | Produccion    | /produccion          | `public/produccion.php`   |
+| 4   | Reportes      | /reportes            | `public/reportes.php`     |
+| 5   | Usuarios      | /usuarios            | `public/usuarios.php`     |
+| 6   | Proveedores   | /proveedores         | `public/proveedores.php`  |
+| 7   | Configuracion | /configuracion       | `public/configuracion.php` |
+
+**Nota:** `seg_menu.ruta` es una ruta lógica. La navegación real usa archivos PHP
+en `public/` (ver `views/layouts/nav.php`). Para operadores sin menú 1, el home
+puede ser `public/index_operario.php`.
 
 ### ⚠️ IMPORTANTE: Caché de Permisos
 
@@ -408,7 +412,7 @@ Todas las APIs siguen el mismo patrón (ubicadas en `public/api/{dominio}/`):
 <?php
 /**
  * API de [Entidad]
- * Métodos: GET, POST, PUT, DELETE
+ * Métodos: GET, POST, PATCH, DELETE
  */
 
 // Cargar bootstrap (siempre primero)
@@ -438,7 +442,7 @@ switch ($method) {
     case 'POST':
         // Crear nuevo
         break;
-    case 'PUT':
+    case 'PATCH':
         // Actualizar existente
         break;
     case 'DELETE':
@@ -455,16 +459,15 @@ echo json_encode($response);
 ```php
 // Éxito
 [
-    'success' => true,
-    'data' => [...],
-    'message' => 'Operación exitosa'
+    'CODIGO' => 200,
+    'MENSAJE' => 'Operación exitosa',
+    'DATOS' => [...]
 ]
 
 // Error
 [
-    'success' => false,
-    'error' => 'Descripción del error',
-    'code' => 400  // Código HTTP
+    'CODIGO' => 400,
+    'MENSAJE' => 'Descripción del error'
 ]
 ```
 
@@ -483,6 +486,19 @@ $.ajax({
     headers: { 'Authorization': 'Bearer ' + token },
     success: function(data) { ... }
 });
+
+// Con utilidades internas
+DsCrud.api('/api/inventario/oro.php', 'GET', null, onSuccess, onError);       // Moderno
+DsCrud.apiLegacy('/api/inventario/oro.php', 'PATCH', payload, ok, fail);      // Legacy (IE8)
+
+### Método Override (Legacy)
+
+Para compatibilidad con IE8 y proxies antiguos, el backend soporta **method override**:
+
+- `X-HTTP-Method-Override: PATCH|PUT|DELETE`
+- `_method=PATCH|PUT|DELETE` en querystring
+
+`private/bootstrap.php` aplica el override **solo si** el método original es POST.
 ```
 
 ---
@@ -504,7 +520,15 @@ Algunos clientes usan equipos antiguos con Windows XP/Vista que no pueden actual
 | ------------------------- | ---------------------------- |
 | `assets/ie8.css`          | Estilos específicos IE8      |
 | `assets/ie8.js`           | **Polyfill JSON2** (crítico) |
+| `assets/js/crud-legacy.js`| CRUD + XHR compatible IE8    |
 | `public/legacy_chart.php` | Genera gráficos PNG con GD   |
+
+### AJAX en Legacy
+
+Usa siempre `DsCrud.apiLegacy(...)` en bloques legacy para:
+- Forzar POST cuando el método sea PATCH/PUT/DELETE.
+- Enviar `X-HTTP-Method-Override` + `_method` en querystring.
+- Mantener compatibilidad con ActiveX XHR de IE8.
 
 ### ⚠️ NO USAR (Incompatible con IE8)
 
@@ -777,7 +801,7 @@ if (!validate_csrf_token($_POST['csrf_token'])) {
 ### Variables de Entorno
 
 ```php
-// En env/env.php
+// En config/env.php
 return [
     'DB_HOST' => 'localhost',
     'DB_PORT' => '5432',
@@ -831,7 +855,7 @@ Solución: Verificar host, puerto, usuario, contraseña
 ```
 Problema: "function does not exist"
 Causa: No se ejecutaron los scripts de functions/
-Solución: Ejecutar todos los archivos en DB/functions/ en orden
+Solución: Ejecutar todos los archivos en database/functions/ en orden
 ```
 
 #### 6. IE8/VM no carga assets o el login apunta a localhost
@@ -891,8 +915,8 @@ if (window.console && console.log) {
 
 ```bash
 # Reiniciar BD (¡CUIDADO! Borra todo)
-psql -d dedumsoft -f DB/nuke_functions.sql
-psql -d dedumsoft -f DB/install.sql
+psql -d dedumsoft -f database/nuke_functions.sql
+psql -d dedumsoft -f database/install.sql
 
 # Ver logs PostgreSQL
 tail -f /var/log/postgresql/postgresql-17-main.log
@@ -933,7 +957,7 @@ php -l archivo.php
 | **DataTables**         | Plugin jQuery para tablas interactivas con búsqueda, paginación y ordenamiento.                            |
 | **uPlot**              | Librería de gráficos ligera. Usada en navegadores modernos (no IE8).                                       |
 | **Notyf**              | Librería de notificaciones toast. Muestra mensajes de éxito/error.                                         |
-| **Guard**              | Archivo `connection/guard.php`. Protege contra inclusión directa de archivos.                              |
+| **Guard**              | Archivo `private/Database/Guard.php`. Protege contra inclusión directa de archivos.                        |
 | **Esquema**            | Namespace en PostgreSQL. Usamos: `joyeria`, `seguridad`, `public`.                                         |
 
 ### Acrónimos Comunes en el Código
@@ -962,7 +986,7 @@ Para dudas sobre el sistema, revisar primero:
 
 1. Este documento
 2. Comentarios en el código fuente
-3. Archivos en `DB/migrations/README.md`
+3. Archivos en `database/` (scripts SQL y funciones)
 
 ---
 

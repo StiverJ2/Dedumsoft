@@ -10,7 +10,7 @@
  * Métodos soportados:
  * - GET: Listar insumos (paginado, filtrable por categoría y stock bajo)
  * - POST: Crear nuevo insumo
- * - PUT: Actualizar insumo existente
+ * - PATCH: Actualizar insumo existente
  * - DELETE: Eliminar insumo (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
@@ -42,7 +42,7 @@ header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Validar métodos HTTP permitidos
-if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) {
+if (!in_array($method, ['GET', 'POST', 'PATCH', 'DELETE'])) {
     http_response_code(405);
     echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
     exit;
@@ -198,7 +198,7 @@ if ($method === 'POST') {
 }
 
 // =============================================================================
-// PUT: Actualizar insumo existente
+// PATCH: Actualizar insumo existente
 // =============================================================================
 // Body JSON:
 //   - id (int, requerido): ID del insumo a actualizar
@@ -214,7 +214,7 @@ if ($method === 'POST') {
 //
 // Nota: Solo se actualizan los campos proporcionados (PATCH parcial)
 // Respuesta: { CODIGO: 200, MENSAJE: 'Insumo actualizado.' }
-if ($method === 'PUT') {
+if ($method === 'PATCH') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -244,7 +244,7 @@ if ($method === 'PUT') {
 
         echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Insumo actualizado.']);
     } catch (PDOException $e) {
-        error_log('inventario_insumos PUT error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        error_log('inventario_insumos PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 
         // Detectar si el error es porque no se encontró el registro
         $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;

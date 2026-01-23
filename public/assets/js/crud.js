@@ -226,7 +226,7 @@ const DsCrud = (() => {
             headers: { 'Content-Type': 'application/json' }
         };
         
-        if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
+        if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
             config.data = data;
         }
         

@@ -12,6 +12,7 @@
  * - Visualización de roles con badges de color
  * - Filtrado por rol (Administrador, Operador, Lectura)
  * - Filtrado por estado activo/inactivo
+ * - Acciones para activar/desactivar usuarios
  * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
  * 
  * Autenticación: Requerida
@@ -23,6 +24,7 @@
  * 
  * APIs utilizadas:
  * - GET /api/reportes_usuarios.php - Listar usuarios
+ * - PATCH /api/usuarios.php - Activar/desactivar usuarios
  * 
  * @package Dedumsoft\Public
  * @author  Equipo Dedumsoft
@@ -40,6 +42,8 @@ require_menu_access(5); // Menú: Usuarios
 
 // Detectar modo de interfaz
 $legacy = dedumsoft_is_legacy_browser();
+$current_user = get_session_user();
+$current_user_id = (int) ($current_user['id_usuario'] ?? 0);
 
 // Filtros de búsqueda (solo usados en modo legacy)
 $rol_filter = $_GET['rol'] ?? '';
@@ -160,13 +164,14 @@ include VIEWS_PATH . '/layouts/nav.php';
                         <th>Nombre</th>
                         <th>Rol</th>
                         <th>Activo</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($legacy): ?>
                         <?php if (empty($usuarios_rows)): ?>
                             <tr>
-                                <td colspan="5">Sin usuarios para los filtros seleccionados</td>
+                                <td colspan="6">Sin usuarios para los filtros seleccionados</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($usuarios_rows as $row): ?>
@@ -176,6 +181,28 @@ include VIEWS_PATH . '/layouts/nav.php';
                                     <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
                                     <td><?php echo format_rol_badge($row['rol']); ?></td>
                                     <td><?php echo format_activo_badge($row['activo']); ?></td>
+                                    <td class="ds-actions-col">
+                                        <?php
+                                        $is_active = !empty($row['activo']);
+                                        $action_label = $is_active ? 'Desactivar' : 'Activar';
+                                        $action_icon = $is_active ? 'cross.png' : 'arrow_refresh.png';
+                                        $action_class = $is_active ? 'ds-action-btn--delete' : 'ds-action-btn--edit';
+                                        $is_self = (int) $row['id_usuario'] === $current_user_id;
+                                        ?>
+                                        <div class="ds-actions-cell">
+                                            <button type="button"
+                                                class="ds-action-btn <?php echo $action_class; ?>"
+                                                data-action="toggle"
+                                                data-id="<?php echo htmlspecialchars((string) $row['id_usuario']); ?>"
+                                                data-activo="<?php echo $is_active ? '1' : '0'; ?>"
+                                                title="<?php echo $action_label; ?>"
+                                                aria-label="<?php echo $action_label; ?>"
+                                                <?php echo $is_self && $is_active ? 'disabled' : ''; ?>>
+                                                <img src="assets/icons/fatcow/16/<?php echo $action_icon; ?>"
+                                                    alt="<?php echo $action_label; ?>">
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -189,6 +216,7 @@ include VIEWS_PATH . '/layouts/nav.php';
 <?php include VIEWS_PATH . '/layouts/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
+        const currentUserId = <?php echo $current_user_id; ?>;
         const formatRol = (rol) => {
             if (!rol) return '';
             const key = rol.toLowerCase();
@@ -203,24 +231,147 @@ include VIEWS_PATH . '/layouts/nav.php';
             if (v) return '<span class="ds-badge ds-badge--success">Activo</span>';
             return '<span class="ds-badge ds-badge--muted">Inactivo</span>';
         };
+        const renderAcciones = (data, type, row) => {
+            if (type !== 'display') return '';
+            const isActive = !!row.activo;
+            const label = isActive ? 'Desactivar' : 'Activar';
+            const isSelf = Number(row.id_usuario) === Number(currentUserId);
+            const btnClass = isActive ? 'ds-action-btn--delete' : 'ds-action-btn--edit';
+            const disabledAttr = isSelf && isActive ? ' disabled aria-disabled="true"' : '';
+            let icon = '';
+            if (window.DEDUMSOFT_ICON_MODE === 'emoji') {
+                icon = isActive ? '🚫' : '✅';
+            } else {
+                const img = isActive ? 'cross.png' : 'arrow_refresh.png';
+                icon = `<img src="assets/icons/fatcow/16/${img}" alt="${label}">`;
+            }
+            return `<div class="ds-actions-cell">
+                <button type="button" class="ds-action-btn ${btnClass}" data-action="toggle" data-id="${DsCrud.escapeHtml(row.id_usuario)}" data-activo="${isActive ? '1' : '0'}" title="${label}" aria-label="${label}"${disabledAttr}>${icon}</button>
+            </div>`;
+        };
         $(() => {
-            $.getJSON('api/reportes_usuarios.php', (data) => {
-                $('#usuarios-table').DataTable({
-                    data: data.DATOS || [],
-                    columns: [
-                        { data: 'id_usuario' },
-                        { data: 'username' },
-                        { data: 'nombre' },
-                        { data: 'rol', render: formatRol },
-                        { data: 'activo', render: formatActivo }
-                    ],
-                    language: { url: 'assets/dataTables.es-ES.json' }
+            const usuariosTable = $('#usuarios-table').DataTable({
+                ajax: {
+                    url: 'api/reportes_usuarios.php',
+                    dataSrc: 'DATOS'
+                },
+                columns: [
+                    { data: 'id_usuario' },
+                    { data: 'username' },
+                    { data: 'nombre' },
+                    { data: 'rol', render: formatRol },
+                    { data: 'activo', render: formatActivo },
+                    { data: null, orderable: false, searchable: false, render: renderAcciones }
+                ],
+                language: { url: 'assets/dataTables.es-ES.json' }
+            });
+
+            const openToggleModal = (row) => {
+                if (!row) return;
+                const isActive = !!row.activo;
+                if (Number(row.id_usuario) === Number(currentUserId) && isActive) {
+                    DsCrud.toast('No puedes desactivar tu propio usuario.', 'error');
+                    return;
+                }
+                const actionLabel = isActive ? 'Desactivar' : 'Activar';
+                const username = row.username || '';
+                DsCrud.openModal({
+                    title: `${actionLabel} usuario`,
+                    body: `<p>¿Desea ${actionLabel.toLowerCase()} al usuario <strong>${DsCrud.escapeHtml(username)}</strong>?</p>`,
+                    saveText: actionLabel,
+                    cancelText: 'Cancelar',
+                    onSave: (modalEl, close) => {
+                        DsCrud.api('api/usuarios.php', 'PATCH', {
+                            id: row.id_usuario,
+                            activo: !isActive
+                        }, (success, resp) => {
+                            if (success) {
+                                DsCrud.toast(resp.MENSAJE || 'Usuario actualizado');
+                                usuariosTable.ajax.reload(null, false);
+                                close();
+                            } else {
+                                DsCrud.toast(resp.MENSAJE || 'Error al actualizar', 'error');
+                            }
+                        });
+                    }
                 });
+            };
+
+            $('#usuarios-table').on('click', '.ds-action-btn[data-action="toggle"]', function () {
+                const row = usuariosTable.row($(this).closest('tr')).data();
+                openToggleModal(row);
             });
         });
     </script>
 <?php elseif ($legacy): ?>
-    <script>if (window.DedumTableSort) DedumTableSort.init('usuarios-table');</script>
+    <script>
+        (function () {
+            if (window.DedumTableSort) DedumTableSort.init('usuarios-table');
+
+            var currentUserId = <?php echo $current_user_id; ?>;
+            var table = DsCrud.getById('usuarios-table');
+            if (!table) return;
+
+            function getText(el) {
+                if (!el) return '';
+                return el.textContent !== undefined ? el.textContent : el.innerText;
+            }
+
+            function openToggleModal(id, username, isActive) {
+                if (!id) return;
+                var numericId = parseInt(id, 10);
+                if (!isNaN(numericId) && numericId === currentUserId && isActive) {
+                    DsCrud.toast('No puedes desactivar tu propio usuario.', 'error');
+                    return;
+                }
+                var actionLabel = isActive ? 'Desactivar' : 'Activar';
+                DsCrud.openModal({
+                    title: actionLabel + ' usuario',
+                    body: '<p>¿Desea ' + actionLabel.toLowerCase() + ' al usuario <strong>' +
+                        DsCrud.escapeHtml(username || '') + '</strong>?</p>',
+                    saveText: actionLabel,
+                    cancelText: 'Cancelar',
+                    onSave: function () {
+                        DsCrud.apiLegacy('api/usuarios.php', 'PATCH', {
+                            id: numericId,
+                            activo: !isActive
+                        }, function () {
+                            DsCrud.toast('Usuario actualizado', 'success');
+                            DsCrud.closeModal();
+                            location.reload();
+                        }, function (e) {
+                            DsCrud.toast(e || 'Error al actualizar', 'error');
+                        });
+                    }
+                });
+            }
+
+            DsCrud.addEvent(table, 'click', function (e) {
+                e = e || window.event;
+                var target = e.target || e.srcElement;
+                while (target && target !== table) {
+                    if (target.tagName === 'BUTTON' && target.getAttribute('data-action') === 'toggle') {
+                        var id = target.getAttribute('data-id');
+                        var isActive = target.getAttribute('data-activo') === '1';
+                        var tr = target;
+                        while (tr && tr.tagName !== 'TR') {
+                            tr = tr.parentNode;
+                        }
+                        var username = '';
+                        if (tr) {
+                            var cells = tr.getElementsByTagName('td');
+                            if (cells.length > 1) {
+                                username = getText(cells[1]).replace(/^\s+|\s+$/g, '');
+                            }
+                        }
+                        openToggleModal(id, username, isActive);
+                        break;
+                    }
+                    target = target.parentNode;
+                }
+            });
+        })();
+    </script>
 <?php endif; ?>
 </body>
 
