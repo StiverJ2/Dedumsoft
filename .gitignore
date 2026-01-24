@@ -12,3 +12,5 @@ composer.lock
 env.php
 # Temporal
 scripts/update_paths.php
+node_modules/
+package-lock.json

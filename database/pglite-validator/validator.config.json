@@ -1,0 +1,54 @@
+{
+  "schemaFile": "db_schema.sql",
+  "functionsDir": "functions",
+  "seedFile": "seed.sql",
+  "functionPrefix": "fun_%",
+  "smokeTests": [
+    {
+      "name": "users",
+      "sql": "SELECT id_usuario, username FROM seguridad.seg_usuario LIMIT 1"
+    },
+    { "name": "roles", "sql": "SELECT id_rol, nombre FROM seguridad.seg_rol" },
+    {
+      "name": "auth",
+      "sql": "SELECT codigo FROM seguridad.fun_iniciar_sesion('admin')"
+    },
+    {
+      "name": "inv_oro",
+      "sql": "SELECT id FROM joyeria.inventario_oro LIMIT 1"
+    }
+  ],
+  "functionTests": {
+    "enabled": true,
+    "errorPatterns": [
+      "^ERROR",
+      "error al",
+      "no disponible",
+      "failed",
+      "CODIGO.*500"
+    ],
+    "skipFunctions": ["fun_iniciar_sesion", "fun_registrar_login"],
+    "defaultParams": {
+      "par_offset": 0,
+      "par_limit": 1,
+      "par_activo": true,
+      "par_id": 1,
+      "par_estado_id": 1,
+      "par_producto_id": 1,
+      "par_tipo_oro_id": 1,
+      "par_nombre": "'Mock Test'",
+      "par_sku": "'SKU-TEST-001'",
+      "par_peso_gramos": 1.0,
+      "par_precio_gramo": 100.0,
+      "par_peso_final": 1.0,
+      "par_cantidad": 1,
+      "par_tipo_material": "'oro'",
+      "par_desde": "'2020-01-01'",
+      "par_hasta": "'2030-12-31'",
+      "par_username": "'testuser'",
+      "par_email": "'test@test.com'",
+      "par_token": "'mock-token-12345'",
+      "par_new_password_hash": "'$2y$10$mockhashmockhashmockhashmockhash'"
+    }
+  }
+}

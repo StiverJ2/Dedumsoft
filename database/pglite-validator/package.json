@@ -1,0 +1,22 @@
+{
+  "name": "dedumsoft-db-validator",
+  "version": "1.0.0",
+  "description": "Validador de SQL para Dedumsoft usando PGlite",
+  "type": "module",
+  "scripts": {
+    "validate": "node validate.js",
+    "validate:schema": "node validate.js --schema",
+    "validate:functions": "node validate.js --functions",
+    "validate:all": "node validate.js --all",
+    "validate:file": "node validate.js --file",
+    "test": "node validate.js --all"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "tronprogram",
+  "license": "MIT"
+}
