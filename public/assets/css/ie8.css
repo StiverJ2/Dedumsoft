@@ -632,16 +632,20 @@ body.ds-login {
   float: right;
   background: none;
   border: none;
-  font-size: 20px;
-  color: #666;
   cursor: pointer;
   padding: 0;
   line-height: 1;
-  font-weight: bold;
 }
 
 .ds-modal-close:hover {
-  color: #000;
+  filter: alpha(opacity=80);
+}
+
+.ds-modal-close img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 0;
 }
 
 .ds-modal-header:after {
@@ -667,6 +671,20 @@ body.ds-login {
 .ds-modal-footer .btn-add {
   display: inline;
   margin-left: 8px;
+}
+
+/* Toolbar fallback for IE8 */
+.ds-toolbar {
+  margin-bottom: 12px;
+  zoom: 1;
+}
+
+.ds-toolbar-actions {
+  margin-top: 8px;
+}
+
+.ds-toolbar-actions .btn-add {
+  display: inline;
 }
 
 /* Form fields inside modal for IE8 */

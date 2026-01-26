@@ -566,7 +566,9 @@ $(function() {
         var modal = document.createElement('div');
         modal.className = 'ds-modal';
         modal.innerHTML = '<div class="ds-modal-header"><strong>' + esc(title) +
-            '</strong><button type="button" class="ds-modal-close">&times;</button></div>' +
+            '</strong><button type="button" class="ds-modal-close">' +
+            '<img src="assets/icons/fatcow/16/prohibition_button.png" alt="Cerrar" style="display:block;border:0;width:16px;height:16px;">' +
+            '</button></div>' +
             '<div class="ds-modal-body">' + bodyHtml + '</div>' +
             '<div class="ds-modal-footer"><button type="button" class="btn btn-secondary ds-modal-cancel">Cancelar</button><button type="submit" class="btn btn-primary ds-modal-save">Guardar</button></div>';
         overlay.appendChild(modal);

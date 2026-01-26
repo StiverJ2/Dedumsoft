@@ -332,3 +332,111 @@ BEGIN
     RETURN TRUE;
 END;
 $$;
+
+-- -----------------------------------------------------------------------------
+-- fun_crear_usuario: Crea un nuevo usuario del sistema
+-- Parámetros:
+--   par_username: Username único
+--   par_nombre: Nombre completo
+--   par_clave: Hash bcrypt de la contraseña (generado en PHP)
+--   par_email: Email (opcional)
+--   par_rolid: ID del rol
+-- Retorna:
+--   ID del usuario creado
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION seguridad.fun_crear_usuario(
+    par_username text,
+    par_nombre text,
+    par_clave text,
+    par_rolid int,
+    par_email text DEFAULT NULL,
+    par_apellido text DEFAULT NULL,
+    par_especialidad text DEFAULT NULL,
+    par_telefono text DEFAULT NULL
+)
+RETURNS int
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_id int;
+    v_role int;
+    v_exists int;
+    v_email text;
+    v_apellido text;
+    v_especialidad text;
+    v_telefono text;
+    v_nombre_seg text;
+BEGIN
+    par_username := btrim(par_username);
+    par_nombre := btrim(par_nombre);
+    par_clave := NULLIF(par_clave, '');
+    v_email := NULLIF(btrim(par_email), '');
+    v_apellido := NULLIF(btrim(par_apellido), '');
+    v_especialidad := NULLIF(btrim(par_especialidad), '');
+    v_telefono := NULLIF(btrim(par_telefono), '');
+    v_nombre_seg := par_nombre;
+    IF v_apellido IS NOT NULL AND v_apellido <> '' THEN
+        v_nombre_seg := par_nombre || ' ' || v_apellido;
+    END IF;
+
+    IF par_username IS NULL OR par_username = '' THEN
+        RAISE EXCEPTION 'Username requerido.' USING ERRCODE = 'P0001';
+    END IF;
+
+    IF par_nombre IS NULL OR par_nombre = '' THEN
+        RAISE EXCEPTION 'Nombre requerido.' USING ERRCODE = 'P0001';
+    END IF;
+
+    IF par_clave IS NULL THEN
+        RAISE EXCEPTION 'Contrasena requerida.' USING ERRCODE = 'P0001';
+    END IF;
+
+    IF par_rolid IS NULL OR par_rolid <= 0 THEN
+        RAISE EXCEPTION 'Rol invalido.' USING ERRCODE = 'P0001';
+    END IF;
+
+    SELECT r.id_rol INTO v_role
+    FROM seguridad.seg_rol r
+    WHERE r.id_rol = par_rolid
+      AND r.deleted_at IS NULL;
+
+    IF v_role IS NULL THEN
+        RAISE EXCEPTION 'Rol invalido.' USING ERRCODE = 'P0001';
+    END IF;
+
+    IF par_rolid = 2 AND (v_apellido IS NULL OR v_apellido = '') THEN
+        RAISE EXCEPTION 'Apellido requerido.' USING ERRCODE = 'P0001';
+    END IF;
+
+    SELECT u.id_usuario INTO v_exists
+    FROM seguridad.seg_usuario u
+    WHERE u.username = par_username
+    LIMIT 1;
+
+    IF v_exists IS NOT NULL THEN
+        RAISE EXCEPTION 'Usuario ya existe.' USING ERRCODE = 'P0001';
+    END IF;
+
+    IF v_email IS NOT NULL THEN
+        SELECT u.id_usuario INTO v_exists
+        FROM seguridad.seg_usuario u
+        WHERE LOWER(u.email) = LOWER(v_email)
+        LIMIT 1;
+
+        IF v_exists IS NOT NULL THEN
+            RAISE EXCEPTION 'Email ya registrado.' USING ERRCODE = 'P0001';
+        END IF;
+    END IF;
+
+    INSERT INTO seguridad.seg_usuario (username, nombre, clave, email, rolid)
+    VALUES (par_username, v_nombre_seg, par_clave, v_email, par_rolid)
+    RETURNING id_usuario INTO v_id;
+
+    IF par_rolid = 2 THEN
+        INSERT INTO joyeria.artesanos (usuario_id, nombre, apellido, especialidad, telefono, email, activo)
+        VALUES (v_id, par_nombre, v_apellido, v_especialidad, v_telefono, v_email, TRUE);
+    END IF;
+
+    RETURN v_id;
+END;
+$$;

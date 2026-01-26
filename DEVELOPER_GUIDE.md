@@ -490,6 +490,7 @@ $.ajax({
 // Con utilidades internas
 DsCrud.api('/api/inventario/oro.php', 'GET', null, onSuccess, onError);       // Moderno
 DsCrud.apiLegacy('/api/inventario/oro.php', 'PATCH', payload, ok, fail);      // Legacy (IE8)
+```
 
 ### Método Override (Legacy)
 
@@ -499,6 +500,36 @@ Para compatibilidad con IE8 y proxies antiguos, el backend soporta **method over
 - `_method=PATCH|PUT|DELETE` en querystring
 
 `private/bootstrap.php` aplica el override **solo si** el método original es POST.
+
+### API de Usuarios (crear/activar)
+
+La gestión de usuarios se realiza desde `public/usuarios.php` y la API
+`public/api/usuarios.php` (Menú 5).
+
+**Crear usuario (POST):**
+
+```json
+{
+  "username": "juan",
+  "nombre": "Juan Perez",
+  "apellido": "Gomez",
+  "especialidad": "Grabado",
+  "telefono": "555-1234",
+  "email": "juan@empresa.com",
+  "rolid": 2,
+  "password": "Secreto123!"
+}
+```
+
+- Para rol **OPERADOR (2)**, `apellido` es obligatorio y se crea registro en `joyeria.artesanos`.
+- El hash de contraseña se genera en PHP (`password_hash`).
+- Inserta vía `seguridad.fun_crear_usuario(...)`.
+- En `public/usuarios.php`, los campos de artesano se muestran solo cuando el rol seleccionado es **Operador**.
+
+**Activar/Desactivar (PATCH):**
+
+```json
+{ "id": 12, "activo": false }
 ```
 
 ---

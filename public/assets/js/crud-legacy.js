@@ -235,7 +235,10 @@ var DsCrud = (function() {
         var header = document.createElement('div');
         header.className = 'ds-modal-header';
         header.style.cssText = 'padding:12px 15px;border-bottom:1px solid #ccc;background:#f5f5f5;zoom:1;';
-        header.innerHTML = '<h3 style="margin:0;float:left;font-size:16px;font-weight:bold;color:#333;">' + escapeHtml(title) + '</h3><button type="button" class="ds-modal-close" style="float:right;background:none;border:none;font-size:20px;cursor:pointer;font-weight:bold;color:#666;">&times;</button><div style="clear:both;"></div>';
+        header.innerHTML = '<h3 style="margin:0;float:left;font-size:16px;font-weight:bold;color:#333;">' + escapeHtml(title) + '</h3>' +
+            '<button type="button" class="ds-modal-close" style="float:right;background:none;border:none;padding:0;margin:0;cursor:pointer;width:16px;height:16px;">' +
+            '<img src="assets/icons/fatcow/16/prohibition_button.png" alt="Cerrar" style="display:block;border:0;width:16px;height:16px;">' +
+            '</button><div style="clear:both;"></div>';
 
         var body = document.createElement('div');
         body.className = 'ds-modal-body';

@@ -12,6 +12,7 @@
  * - Visualización de roles con badges de color
  * - Filtrado por rol (Administrador, Operador, Lectura)
  * - Filtrado por estado activo/inactivo
+ * - Creación de usuarios (incluye artesanos para rol OPERADOR)
  * - Acciones para activar/desactivar usuarios
  * - Soporte dual: DataTables (moderno) o tabla HTML (legacy)
  * 
@@ -24,6 +25,7 @@
  * 
  * APIs utilizadas:
  * - GET /api/reportes_usuarios.php - Listar usuarios
+ * - POST /api/usuarios.php - Crear usuario
  * - PATCH /api/usuarios.php - Activar/desactivar usuarios
  * 
  * @package Dedumsoft\Public
@@ -129,7 +131,14 @@ include VIEWS_PATH . '/layouts/nav.php';
     </div>
 
     <div class="card">
-        <strong>Listado de usuarios</strong>
+        <div class="ds-toolbar">
+            <div>
+                <strong>Listado de usuarios</strong>
+            </div>
+            <div class="ds-toolbar-actions">
+                <button type="button" id="usuarios-create-btn" class="btn-add">Nuevo usuario</button>
+            </div>
+        </div>
         <?php if ($legacy): ?>
             <form method="get" action="usuarios.php" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
@@ -249,8 +258,122 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" class="ds-action-btn ${btnClass}" data-action="toggle" data-id="${DsCrud.escapeHtml(row.id_usuario)}" data-activo="${isActive ? '1' : '0'}" title="${label}" aria-label="${label}"${disabledAttr}>${icon}</button>
             </div>`;
         };
+
+        let usuariosTable;
+        const roleOptions = [
+            { value: 1, label: 'Administrador' },
+            { value: 2, label: 'Operador' },
+            { value: 3, label: 'Lectura' }
+        ];
+
+        const openCreateModal = () => {
+            const operatorFields = [
+                DsCrud.field({ name: 'apellido', label: 'Apellido (Operador)', placeholder: 'Requerido para Operador' }),
+                DsCrud.field({ name: 'especialidad', label: 'Especialidad (Operador)', placeholder: 'Opcional' }),
+                DsCrud.field({ name: 'telefono', label: 'Teléfono (Operador)', placeholder: 'Opcional' })
+            ].join('');
+
+            const body = [
+                DsCrud.field({ name: 'username', label: 'Usuario', required: true, placeholder: 'usuario' }),
+                DsCrud.field({ name: 'nombre', label: 'Nombre', required: true, placeholder: 'Nombre' }),
+                '<div class="ds-operator-fields" style="display:none;">' + operatorFields + '</div>',
+                DsCrud.field({ name: 'email', label: 'Email', type: 'email', placeholder: 'correo@dominio.com' }),
+                DsCrud.field({ name: 'rolid', label: 'Rol', type: 'select', required: true, options: roleOptions }),
+                DsCrud.field({ name: 'password', label: 'Contraseña', type: 'password', required: true, attrs: 'autocomplete="new-password"' }),
+                DsCrud.field({ name: 'password_confirm', label: 'Confirmar contraseña', type: 'password', required: true, attrs: 'autocomplete="new-password"' }),
+                '<p class="muted">Campos de artesano se usan solo para rol Operador.</p>'
+            ].join('');
+
+            const modalRef = DsCrud.openModal({
+                title: 'Nuevo usuario',
+                body,
+                saveText: 'Crear',
+                cancelText: 'Cancelar',
+                onSave: (modalEl, close, formData) => {
+                    const username = (formData.username || '').trim();
+                    const nombre = (formData.nombre || '').trim();
+                    const apellido = (formData.apellido || '').trim();
+                    const especialidad = (formData.especialidad || '').trim();
+                    const telefono = (formData.telefono || '').trim();
+                    const email = (formData.email || '').trim();
+                    const rolid = Number(formData.rolid || 0);
+                    const password = String(formData.password || '');
+                    const passwordConfirm = String(formData.password_confirm || '');
+
+                    if (!username || !nombre || !rolid || !password) {
+                        DsCrud.toast('Complete los campos requeridos.', 'error');
+                        return;
+                    }
+                    if (password.length < 8) {
+                        DsCrud.toast('La contraseña debe tener al menos 8 caracteres.', 'error');
+                        return;
+                    }
+                    if (password !== passwordConfirm) {
+                        DsCrud.toast('Las contraseñas no coinciden.', 'error');
+                        return;
+                    }
+                    if (rolid === 2 && !apellido) {
+                        DsCrud.toast('Apellido requerido para rol Operador.', 'error');
+                        return;
+                    }
+
+                    DsCrud.api('api/usuarios.php', 'POST', {
+                        username,
+                        nombre,
+                        apellido,
+                        especialidad,
+                        telefono,
+                        email,
+                        rolid,
+                        password
+                    }, (success, resp) => {
+                        if (success) {
+                            DsCrud.toast(resp.MENSAJE || 'Usuario creado');
+                            if (usuariosTable) {
+                                usuariosTable.ajax.reload(null, false);
+                            }
+                            close();
+                        } else {
+                            DsCrud.toast(resp.MENSAJE || 'Error al crear usuario', 'error');
+                        }
+                    });
+                }
+            });
+
+            const modalEl = modalRef && modalRef.modal ? modalRef.modal : null;
+            if (!modalEl) return;
+            const rolSelect = modalEl.querySelector('select[name="rolid"]');
+            const operatorWrap = modalEl.querySelector('.ds-operator-fields');
+            const apellidoInput = modalEl.querySelector('input[name="apellido"]');
+            const especialidadInput = modalEl.querySelector('input[name="especialidad"]');
+            const telefonoInput = modalEl.querySelector('input[name="telefono"]');
+
+            const toggleOperatorFields = () => {
+                if (!rolSelect || !operatorWrap) return;
+                const isOperador = Number(rolSelect.value) === 2;
+                operatorWrap.style.display = isOperador ? 'block' : 'none';
+                if (apellidoInput) {
+                    if (isOperador) {
+                        apellidoInput.setAttribute('required', 'required');
+                    } else {
+                        apellidoInput.removeAttribute('required');
+                        apellidoInput.value = '';
+                    }
+                }
+                if (!isOperador) {
+                    if (especialidadInput) especialidadInput.value = '';
+                    if (telefonoInput) telefonoInput.value = '';
+                }
+            };
+
+            if (rolSelect) {
+                rolSelect.addEventListener('change', toggleOperatorFields);
+            }
+            toggleOperatorFields();
+        };
+
         $(() => {
-            const usuariosTable = $('#usuarios-table').DataTable({
+            usuariosTable = $('#usuarios-table').DataTable({
                 ajax: {
                     url: 'api/reportes_usuarios.php',
                     dataSrc: 'DATOS'
@@ -301,6 +424,10 @@ include VIEWS_PATH . '/layouts/nav.php';
                 const row = usuariosTable.row($(this).closest('tr')).data();
                 openToggleModal(row);
             });
+
+            $('#usuarios-create-btn').on('click', () => {
+                openCreateModal();
+            });
         });
     </script>
 <?php elseif ($legacy): ?>
@@ -346,6 +473,114 @@ include VIEWS_PATH . '/layouts/nav.php';
                 });
             }
 
+            var roleOptions = [
+                { value: '1', label: 'Administrador' },
+                { value: '2', label: 'Operador' },
+                { value: '3', label: 'Lectura' }
+            ];
+
+            function openCreateModal() {
+                var operatorFields = '';
+                operatorFields += DsCrud.field({ name: 'apellido', label: 'Apellido (Operador)', placeholder: 'Requerido para Operador' });
+                operatorFields += DsCrud.field({ name: 'especialidad', label: 'Especialidad (Operador)', placeholder: 'Opcional' });
+                operatorFields += DsCrud.field({ name: 'telefono', label: 'Telefono (Operador)', placeholder: 'Opcional' });
+
+                var body = '';
+                body += DsCrud.field({ name: 'username', label: 'Usuario', required: true, placeholder: 'usuario' });
+                body += DsCrud.field({ name: 'nombre', label: 'Nombre', required: true, placeholder: 'Nombre' });
+                body += '<div class="ds-operator-fields" style="display:none;">' + operatorFields + '</div>';
+                body += DsCrud.field({ name: 'email', label: 'Email', type: 'text', placeholder: 'correo@dominio.com' });
+                body += DsCrud.field({ name: 'rolid', label: 'Rol', type: 'select', required: true, options: roleOptions });
+                body += DsCrud.field({ name: 'password', label: 'Contrasena', type: 'password', required: true, attrs: 'autocomplete="new-password"' });
+                body += DsCrud.field({ name: 'password_confirm', label: 'Confirmar contrasena', type: 'password', required: true, attrs: 'autocomplete="new-password"' });
+                body += '<p class="muted">Campos de artesano se usan solo para rol Operador.</p>';
+
+                var modalRef = DsCrud.openModal({
+                    title: 'Nuevo usuario',
+                    body: body,
+                    saveText: 'Crear',
+                    cancelText: 'Cancelar',
+                    onSave: function (modal) {
+                        if (!DsCrud.validateForm(modal)) return;
+                        var data = DsCrud.getFormData(modal);
+                        var username = (data.username || '').replace(/^\s+|\s+$/g, '');
+                        var nombre = (data.nombre || '').replace(/^\s+|\s+$/g, '');
+                        var apellido = (data.apellido || '').replace(/^\s+|\s+$/g, '');
+                        var especialidad = (data.especialidad || '').replace(/^\s+|\s+$/g, '');
+                        var telefono = (data.telefono || '').replace(/^\s+|\s+$/g, '');
+                        var email = (data.email || '').replace(/^\s+|\s+$/g, '');
+                        var rolid = parseInt(data.rolid || '0', 10);
+                        var password = String(data.password || '');
+                        var passwordConfirm = String(data.password_confirm || '');
+
+                        if (!username || !nombre || !rolid || !password) {
+                            DsCrud.toast('Complete los campos requeridos.', 'error');
+                            return;
+                        }
+                        if (password.length < 8) {
+                            DsCrud.toast('La contrasena debe tener al menos 8 caracteres.', 'error');
+                            return;
+                        }
+                        if (password !== passwordConfirm) {
+                            DsCrud.toast('Las contrasenas no coinciden.', 'error');
+                            return;
+                        }
+                        if (rolid === 2 && !apellido) {
+                            DsCrud.toast('Apellido requerido para rol Operador.', 'error');
+                            return;
+                        }
+
+                        DsCrud.apiLegacy('api/usuarios.php', 'POST', {
+                            username: username,
+                            nombre: nombre,
+                            apellido: apellido,
+                            especialidad: especialidad,
+                            telefono: telefono,
+                            email: email,
+                            rolid: rolid,
+                            password: password
+                        }, function (resp) {
+                            DsCrud.toast(resp.MENSAJE || 'Usuario creado', 'success');
+                            DsCrud.closeModal();
+                            location.reload();
+                        }, function (err) {
+                            DsCrud.toast(err || 'Error al crear usuario', 'error');
+                        });
+                    }
+                });
+
+                var modalEl = modalRef && modalRef.modal ? modalRef.modal : null;
+                if (!modalEl) return;
+                var rolSelect = DsCrud.query('select[name="rolid"]', modalEl);
+                var operatorWrap = DsCrud.query('.ds-operator-fields', modalEl);
+                var apellidoInput = DsCrud.query('input[name="apellido"]', modalEl);
+                var especialidadInput = DsCrud.query('input[name="especialidad"]', modalEl);
+                var telefonoInput = DsCrud.query('input[name="telefono"]', modalEl);
+
+                function toggleOperatorFields() {
+                    if (!rolSelect || !operatorWrap) return;
+                    var isOperador = String(rolSelect.value) === '2';
+                    operatorWrap.style.display = isOperador ? 'block' : 'none';
+                    if (apellidoInput) {
+                        if (isOperador) {
+                            apellidoInput.setAttribute('required', 'required');
+                        } else {
+                            apellidoInput.removeAttribute('required');
+                            apellidoInput.value = '';
+                        }
+                    }
+                    if (!isOperador) {
+                        if (especialidadInput) especialidadInput.value = '';
+                        if (telefonoInput) telefonoInput.value = '';
+                    }
+                }
+
+                if (rolSelect) {
+                    DsCrud.addEvent(rolSelect, 'change', toggleOperatorFields);
+                }
+                toggleOperatorFields();
+            }
+
             DsCrud.addEvent(table, 'click', function (e) {
                 e = e || window.event;
                 var target = e.target || e.srcElement;
@@ -370,6 +605,13 @@ include VIEWS_PATH . '/layouts/nav.php';
                     target = target.parentNode;
                 }
             });
+
+            var createBtn = DsCrud.getById('usuarios-create-btn');
+            if (createBtn) {
+                DsCrud.addEvent(createBtn, 'click', function () {
+                    openCreateModal();
+                });
+            }
         })();
     </script>
 <?php endif; ?>
