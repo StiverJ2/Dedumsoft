@@ -3,7 +3,7 @@
 > **Proyecto:** Dedumsoft - Sistema de Gestión para Joyería  
 > **Versión:** 1.1  
 > **Stack:** PHP 7.4+ | PostgreSQL 17+ | Bootstrap 5 | jQuery  
-> **Última actualización:** 2026-01-23
+> **Última actualización:** 2026-01-26
 
 ---
 
@@ -461,6 +461,7 @@ var isIE8 = navigator.userAgent.indexOf('MSIE 8') !== -1;
 - JSON2 polyfill
 - table-sort.js (ordenamiento simple)
 - Iconos Fatcow (16x16 PNG)
+- GD Library (gráficos como imágenes PNG)
 
 ### Sistema de Notificaciones
 
