@@ -47,4 +47,5 @@ $legacy = dedumsoft_is_legacy_browser();
         window.DEDUMSOFT_ICON_MODE = 'emoji';
     </script>
     <script src="assets/js/crud.js"></script>
+    <script src="assets/js/sidebar.js"></script>
 <?php endif; ?>

@@ -54,6 +54,15 @@ $productos_options = [];
 $prioridades_options = [];
 $estado_options = [];
 
+// Cargar estados de orden (usado en filtros)
+try {
+    $stmt = $connLogic->prepare('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY orden');
+    $stmt->execute();
+    $estado_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log('estados orden error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+}
+
 // Cargar datos para modo legacy
 if ($legacy) {
     try {
@@ -93,15 +102,6 @@ if ($legacy) {
         $artesanos_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('artesanos legacy error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-    }
-
-    // Cargar estados para filtro legacy
-    try {
-        $stmt = $connLogic->prepare('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY orden');
-        $stmt->execute();
-        $estado_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        error_log('estados orden legacy error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 
     if ($estado !== '') {
@@ -152,6 +152,27 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" class="btn-add" id="btn-add-orden">+ Crear Orden</button>
             </div>
         </div>
+        <?php if (!$legacy): ?>
+            <form class="d-flex flex-wrap gap-2 align-items-end" id="orden-filtros-modern">
+                <div>
+                    <label class="form-label muted" for="orden-estado-modern">Estado</label>
+                    <select id="orden-estado-modern" class="form-select form-select-sm ds-field">
+                        <option value="">Todos</option>
+                        <?php foreach ($estado_options as $est): ?>
+                            <?php
+                            $nombre = (string) ($est['nombre'] ?? '');
+                            $label = ucwords(str_replace('_', ' ', $nombre));
+                            ?>
+                            <option value="<?php echo htmlspecialchars($nombre); ?>">
+                                <?php echo htmlspecialchars($label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="button" id="orden-filtrar-modern">Aplicar</button>
+                <button class="btn btn-sm btn-secondary" type="button" id="orden-limpiar-modern">Limpiar</button>
+            </form>
+        <?php endif; ?>
         <?php if ($legacy): ?>
             <form method="get" action="produccion.php" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
@@ -265,6 +286,15 @@ include VIEWS_PATH . '/layouts/nav.php';
             var artesanosCache = [];
             var productosCache = [];
             var prioridadesCache = [];
+            var estadoFilter = '';
+
+            function applyOrdenFilters() {
+                var estadoEl = $('#orden-estado-modern');
+                estadoFilter = estadoEl.length ? estadoEl.val() : '';
+                if (ordenesTable) {
+                    ordenesTable.ajax.reload();
+                }
+            }
 
             axios.get('api/opciones.php?tipo=artesanos').then(function (res) {
                 artesanosCache = (res.data.DATOS || []).map(function (a) {
@@ -309,7 +339,12 @@ include VIEWS_PATH . '/layouts/nav.php';
 
             ordenesTable = $('#ordenes-table').DataTable({
                 ajax: {
-                    url: 'api/ordenes.php?limit=100&offset=0',
+                    url: 'api/ordenes.php',
+                    data: function (d) {
+                        d.limit = 100;
+                        d.offset = 0;
+                        if (estadoFilter) d.estado = estadoFilter;
+                    },
                     dataSrc: 'DATOS'
                 },
                 columns: [
@@ -509,6 +544,13 @@ include VIEWS_PATH . '/layouts/nav.php';
             $('#btn-add-orden').on('click', function () {
                 openCrear();
             });
+            $('#orden-filtrar-modern').on('click', applyOrdenFilters);
+            $('#orden-limpiar-modern').on('click', function () {
+                var estadoEl = $('#orden-estado-modern');
+                if (estadoEl.length) estadoEl.val('');
+                applyOrdenFilters();
+            });
+            $('#orden-estado-modern').on('change', applyOrdenFilters);
 
             $('#ordenes-table').on('click', '.ds-action-btn[data-action="asignar"]', function () {
                 var row = ordenesTable.row($(this).closest('tr')).data();

@@ -144,6 +144,27 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" class="btn-add" id="btn-compra-insumo">+ Registrar Compra</button>
             </div>
         </div>
+        <?php if (!$legacy): ?>
+        <form class="d-flex flex-wrap gap-3 align-items-end" id="insumo-filtros-modern">
+            <div>
+                <label class="form-label muted" for="insumo-categoria-modern">Categoria</label>
+                <select id="insumo-categoria-modern" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <?php foreach ($categoria_options as $categoria): ?>
+                    <option value="<?php echo htmlspecialchars((string) $categoria); ?>">
+                        <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', (string) $categoria))); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input ds-field" type="checkbox" id="insumo-stock-bajo-modern">
+                <label class="form-check-label muted" for="insumo-stock-bajo-modern">Solo stock bajo</label>
+            </div>
+            <button class="btn btn-sm" type="button" id="insumo-filtrar-modern">Aplicar</button>
+            <button class="btn btn-sm btn-secondary" type="button" id="insumo-limpiar-modern">Limpiar</button>
+        </form>
+        <?php endif; ?>
         <?php if ($legacy): ?>
         <form method="get" action="inventario_insumos.php#inv-insumos" class="d-flex flex-wrap gap-3 align-items-end">
             <div>
@@ -227,6 +248,18 @@ $(function() {
     };
     var insumosTable;
     var proveedoresCache = [];
+    var categoriaFilter = '';
+    var stockBajoFilter = false;
+
+    function applyInsumoFilters() {
+        var categoriaEl = $('#insumo-categoria-modern');
+        var stockEl = $('#insumo-stock-bajo-modern');
+        categoriaFilter = categoriaEl.length ? categoriaEl.val() : '';
+        stockBajoFilter = stockEl.length ? stockEl.is(':checked') : false;
+        if (insumosTable) {
+            insumosTable.ajax.reload();
+        }
+    }
 
     $.getJSON('api/proveedores.php?limit=500', function(res) {
         proveedoresCache = (res.DATOS || []).map(function(p) {
@@ -465,7 +498,13 @@ $(function() {
 
     insumosTable = $('#insumos-table').DataTable({
         ajax: {
-            url: 'api/inventario_insumos.php?limit=500',
+            url: 'api/inventario_insumos.php',
+            data: function(d) {
+                d.limit = 500;
+                d.offset = 0;
+                if (categoriaFilter) d.categoria = categoriaFilter;
+                if (stockBajoFilter) d.stock_bajo = true;
+            },
             dataSrc: 'DATOS'
         },
         columns: [
@@ -489,6 +528,16 @@ $(function() {
 
     $('#btn-add-insumo').on('click', openInsumoCreate);
     $('#btn-compra-insumo').on('click', openInsumoCompra);
+    $('#insumo-filtrar-modern').on('click', applyInsumoFilters);
+    $('#insumo-limpiar-modern').on('click', function() {
+        var categoriaEl = $('#insumo-categoria-modern');
+        var stockEl = $('#insumo-stock-bajo-modern');
+        if (categoriaEl.length) categoriaEl.val('');
+        if (stockEl.length) stockEl.prop('checked', false);
+        applyInsumoFilters();
+    });
+    $('#insumo-categoria-modern').on('change', applyInsumoFilters);
+    $('#insumo-stock-bajo-modern').on('change', applyInsumoFilters);
     $('#insumos-table').on('click', '.ds-action-btn[data-action="edit"]', function() {
         openInsumoEdit(insumosTable.row($(this).closest('tr')).data());
     });

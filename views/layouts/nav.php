@@ -132,7 +132,7 @@ $show_home = $can_dashboard || $can_inventario || $can_produccion || $can_report
 $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
 ?>
 <?php if ($legacy): ?>
-    <aside class="ds-sidebar">
+    <aside class="ds-sidebar" id="ds-sidebar">
         <div class="ds-logo">
             <div class="ds-logo-wrap">
                 <div class="diamond-logo"></div>
@@ -257,9 +257,10 @@ $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
     </aside>
     <main class="ds-main">
     <?php else: ?>
-        <aside class="ds-sidebar">
+        <aside class="ds-sidebar" id="ds-sidebar">
             <div class="ds-logo">
-                <div class="ds-logo-wrap">
+                <div class="ds-logo-wrap" id="ds-sidebar-toggle" role="button" tabindex="0" aria-label="Abrir menu"
+                    aria-expanded="false">
                     <div class="diamond-logo"></div>
                     <h2>Joyas Van</h2>
                 </div>

@@ -55,49 +55,47 @@ $usuarios_rows = [];
 $rol_options = [];
 $rol_id_map = [];
 
-if ($legacy) {
-    try {
-        $stmt = $connLogic->prepare('SELECT id_rol, nombre FROM seguridad.seg_rol ORDER BY id_rol');
-        $stmt->execute();
-        $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $rol_options = array_map(function ($r) use (&$rol_id_map) {
-            $nombre = trim((string) $r['nombre']);
-            $key = strtolower($nombre);
-            $label = $nombre;
-            if ($key === 'admin') {
-                $label = 'Administrador';
-            } elseif ($key === 'operador') {
-                $label = 'Operador';
-            } elseif ($key === 'lectura') {
-                $label = 'Lectura';
-            }
-            $rol_id_map[(string) ($r['id_rol'] ?? '')] = $nombre;
-            return [
-                'value' => $nombre,
-                'label' => $label
-            ];
-        }, $roles);
-    } catch (PDOException $e) {
-        error_log('usuarios roles error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $rol_options = [
-            ['value' => 'ADMIN', 'label' => 'Administrador'],
-            ['value' => 'OPERADOR', 'label' => 'Operador'],
-            ['value' => 'LECTURA', 'label' => 'Lectura']
+try {
+    $stmt = $connLogic->prepare('SELECT id_rol, nombre FROM seguridad.seg_rol ORDER BY id_rol');
+    $stmt->execute();
+    $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rol_options = array_map(function ($r) use (&$rol_id_map) {
+        $nombre = trim((string) $r['nombre']);
+        $key = strtolower($nombre);
+        $label = $nombre;
+        if ($key === 'admin') {
+            $label = 'Administrador';
+        } elseif ($key === 'operador') {
+            $label = 'Operador';
+        } elseif ($key === 'lectura') {
+            $label = 'Lectura';
+        }
+        $rol_id_map[(string) ($r['id_rol'] ?? '')] = $nombre;
+        return [
+            'value' => $nombre,
+            'label' => $label
         ];
-    }
+    }, $roles);
+} catch (PDOException $e) {
+    error_log('usuarios roles error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    $rol_options = [
+        ['value' => 'ADMIN', 'label' => 'Administrador'],
+        ['value' => 'OPERADOR', 'label' => 'Operador'],
+        ['value' => 'LECTURA', 'label' => 'Lectura']
+    ];
+}
 
-    if ($rol_filter !== '') {
-        if (ctype_digit($rol_filter) && isset($rol_id_map[$rol_filter])) {
-            $rol_filter_value = (string) $rol_id_map[$rol_filter];
-        } else {
-            $key = strtolower($rol_filter);
-            if ($key === 'administrador' || $key === 'admin') {
-                $rol_filter_value = 'ADMIN';
-            } elseif ($key === 'operador') {
-                $rol_filter_value = 'OPERADOR';
-            } elseif ($key === 'lectura') {
-                $rol_filter_value = 'LECTURA';
-            }
+if ($legacy && $rol_filter !== '') {
+    if (ctype_digit($rol_filter) && isset($rol_id_map[$rol_filter])) {
+        $rol_filter_value = (string) $rol_id_map[$rol_filter];
+    } else {
+        $key = strtolower($rol_filter);
+        if ($key === 'administrador' || $key === 'admin') {
+            $rol_filter_value = 'ADMIN';
+        } elseif ($key === 'operador') {
+            $rol_filter_value = 'OPERADOR';
+        } elseif ($key === 'lectura') {
+            $rol_filter_value = 'LECTURA';
         }
     }
 }
@@ -196,6 +194,23 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" id="usuarios-create-btn" class="btn-add">Nuevo usuario</button>
             </div>
         </div>
+        <?php if (!$legacy): ?>
+            <form class="d-flex flex-wrap gap-2 align-items-end" id="usuarios-filtros-modern">
+                <div>
+                    <label class="form-label muted" for="usuario-rol-modern">Rol</label>
+                    <select id="usuario-rol-modern" class="form-select form-select-sm ds-field">
+                        <option value="">Todos</option>
+                        <?php foreach ($rol_options as $opt): ?>
+                            <option value="<?php echo htmlspecialchars((string) $opt['value']); ?>">
+                                <?php echo htmlspecialchars((string) $opt['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="button" id="usuarios-filtrar-modern">Aplicar</button>
+                <button class="btn btn-sm btn-secondary" type="button" id="usuarios-limpiar-modern">Limpiar</button>
+            </form>
+        <?php endif; ?>
         <?php if ($legacy): ?>
             <form method="get" action="usuarios.php" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
@@ -475,6 +490,21 @@ include VIEWS_PATH . '/layouts/nav.php';
                 language: { url: 'assets/dataTables.es-ES.json' }
             });
 
+            const applyRolFilter = () => {
+                const rolEl = document.getElementById('usuario-rol-modern');
+                const value = rolEl ? (rolEl.value || '') : '';
+                if (!usuariosTable) return;
+                if (!value) {
+                    usuariosTable.column(3).search('').draw();
+                    return;
+                }
+                const escapeRegex = $.fn.dataTable.util.escapeRegex || function (v) {
+                    return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                };
+                const safe = escapeRegex(value);
+                usuariosTable.column(3).search('^' + safe + '$', true, false).draw();
+            };
+
             const openToggleModal = (row) => {
                 if (!row) return;
                 const isActive = !!row.activo;
@@ -514,6 +544,22 @@ include VIEWS_PATH . '/layouts/nav.php';
             $('#usuarios-create-btn').on('click', () => {
                 openCreateModal();
             });
+
+            const rolFilterBtn = document.getElementById('usuarios-filtrar-modern');
+            const rolClearBtn = document.getElementById('usuarios-limpiar-modern');
+            const rolSelect = document.getElementById('usuario-rol-modern');
+            if (rolFilterBtn) {
+                rolFilterBtn.addEventListener('click', applyRolFilter);
+            }
+            if (rolClearBtn) {
+                rolClearBtn.addEventListener('click', () => {
+                    if (rolSelect) rolSelect.value = '';
+                    applyRolFilter();
+                });
+            }
+            if (rolSelect) {
+                rolSelect.addEventListener('change', applyRolFilter);
+            }
         });
     </script>
 <?php elseif ($legacy): ?>

@@ -51,34 +51,32 @@ $proveedores_rows = [];
 $tipo_proveedor_options = [];
 
 // Obtener tipos de proveedor desde tabla de catálogo
-if ($legacy) {
-    try {
-        $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_proveedor WHERE activo = true ORDER BY orden, nombre');
-        $stmt->execute();
-        $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_proveedor WHERE activo = true ORDER BY orden, nombre');
+    $stmt->execute();
+    $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $tipo_proveedor_options = array_map(function ($t) {
-            return ['value' => $t['id'], 'label' => $t['nombre']];
-        }, $tipos);
-    } catch (PDOException $e) {
-        error_log('tipos proveedor error: ' . $e->getMessage());
-        // Fallback a valores por defecto
-        $tipo_proveedor_options = [
-            ['value' => 1, 'label' => 'Oro'],
-            ['value' => 2, 'label' => 'Insumos'],
-            ['value' => 3, 'label' => 'Maquinaria']
-        ];
-    }
+    $tipo_proveedor_options = array_map(function ($t) {
+        return ['value' => $t['id'], 'label' => $t['nombre']];
+    }, $tipos);
+} catch (PDOException $e) {
+    error_log('tipos proveedor error: ' . $e->getMessage());
+    // Fallback a valores por defecto
+    $tipo_proveedor_options = [
+        ['value' => 1, 'label' => 'Oro'],
+        ['value' => 2, 'label' => 'Insumos'],
+        ['value' => 3, 'label' => 'Maquinaria']
+    ];
+}
 
-    if ($tipo !== '') {
-        if (ctype_digit($tipo) && (int) $tipo > 0) {
-            $tipo_id = (int) $tipo;
-        } else {
-            foreach ($tipo_proveedor_options as $opt) {
-                if (strcasecmp((string) ($opt['label'] ?? ''), $tipo) === 0) {
-                    $tipo_id = (int) ($opt['value'] ?? 0);
-                    break;
-                }
+if ($legacy && $tipo !== '') {
+    if (ctype_digit($tipo) && (int) $tipo > 0) {
+        $tipo_id = (int) $tipo;
+    } else {
+        foreach ($tipo_proveedor_options as $opt) {
+            if (strcasecmp((string) ($opt['label'] ?? ''), $tipo) === 0) {
+                $tipo_id = (int) ($opt['value'] ?? 0);
+                break;
             }
         }
     }
@@ -126,6 +124,23 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" class="btn-add" id="btn-add-proveedor">+ Nuevo Proveedor</button>
             </div>
         </div>
+        <?php if (!$legacy): ?>
+            <form class="d-flex flex-wrap gap-2 align-items-end" id="prov-filtros-modern">
+                <div>
+                    <label class="form-label muted" for="prov-tipo-modern">Tipo</label>
+                    <select id="prov-tipo-modern" class="form-select form-select-sm ds-field">
+                        <option value="">Todos</option>
+                        <?php foreach ($tipo_proveedor_options as $opt): ?>
+                            <option value="<?php echo (int) $opt['value']; ?>">
+                                <?php echo htmlspecialchars((string) $opt['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="button" id="prov-filtrar-modern">Aplicar</button>
+                <button class="btn btn-sm btn-secondary" type="button" id="prov-limpiar-modern">Limpiar</button>
+            </form>
+        <?php endif; ?>
         <?php if ($legacy): ?>
             <form method="get" action="proveedores.php" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
@@ -180,6 +195,15 @@ include VIEWS_PATH . '/layouts/nav.php';
         document.addEventListener('DOMContentLoaded', async () => {
             let proveedoresTable;
             let tipoOptions = [];
+            let tipoFilter = '';
+
+            const applyProveedorFilters = () => {
+                const tipoEl = document.getElementById('prov-tipo-modern');
+                tipoFilter = tipoEl ? (tipoEl.value || '') : '';
+                if (proveedoresTable) {
+                    proveedoresTable.ajax.reload();
+                }
+            };
 
             // Cargar opciones desde la API
             try {
@@ -309,7 +333,12 @@ include VIEWS_PATH . '/layouts/nav.php';
 
             proveedoresTable = $('#proveedores-table').DataTable({
                 ajax: {
-                    url: 'api/proveedores.php?limit=500&offset=0',
+                    url: 'api/proveedores.php',
+                    data: function (d) {
+                        d.limit = 500;
+                        d.offset = 0;
+                        if (tipoFilter) d.tipo_id = tipoFilter;
+                    },
                     dataSrc: 'DATOS'
                 },
                 columns: [{
@@ -345,6 +374,21 @@ include VIEWS_PATH . '/layouts/nav.php';
             });
 
             document.getElementById('btn-add-proveedor').addEventListener('click', openCreateModal);
+            const tipoFilterBtn = document.getElementById('prov-filtrar-modern');
+            const tipoClearBtn = document.getElementById('prov-limpiar-modern');
+            const tipoSelect = document.getElementById('prov-tipo-modern');
+            if (tipoFilterBtn) {
+                tipoFilterBtn.addEventListener('click', applyProveedorFilters);
+            }
+            if (tipoClearBtn) {
+                tipoClearBtn.addEventListener('click', () => {
+                    if (tipoSelect) tipoSelect.value = '';
+                    applyProveedorFilters();
+                });
+            }
+            if (tipoSelect) {
+                tipoSelect.addEventListener('change', applyProveedorFilters);
+            }
 
             document.getElementById('proveedores-table').addEventListener('click', (e) => {
                 const editBtn = e.target.closest('.ds-action-btn[data-action="edit"]');

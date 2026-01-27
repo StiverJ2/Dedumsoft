@@ -978,6 +978,7 @@ if (window.console && console.log) {
 | `private/bootstrap.php`      | Inicialización (incluir siempre) |
 | `config/env.php`             | Configuración (¡NO commitear!)   |
 | `views/layouts/*.php`        | Componentes reutilizables        |
+| `public/assets/js/sidebar.js`| Toggle del menú lateral (móvil)  |
 
 ### Comandos Útiles
 

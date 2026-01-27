@@ -61,36 +61,34 @@ try {
 }
 
 // Obtener opciones de tipos de oro desde tabla de catálogo
-if ($legacy) {
-    try {
-        $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_oro WHERE activo = true ORDER BY orden, kilates');
-        $stmt->execute();
-        $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_oro WHERE activo = true ORDER BY orden, kilates');
+    $stmt->execute();
+    $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $oro_tipo_options = array_map(function ($t) {
-            return ['value' => $t['id'], 'label' => $t['nombre']];
-        }, $tipos);
-    } catch (PDOException $e) {
-        error_log('tipos oro error: ' . $e->getMessage());
-        // Fallback a valores por defecto
-        $oro_tipo_options = [
-            ['value' => 1, 'label' => '10k'],
-            ['value' => 2, 'label' => '14k'],
-            ['value' => 3, 'label' => '18k'],
-            ['value' => 4, 'label' => '22k'],
-            ['value' => 5, 'label' => '24k']
-        ];
-    }
+    $oro_tipo_options = array_map(function ($t) {
+        return ['value' => $t['id'], 'label' => $t['nombre']];
+    }, $tipos);
+} catch (PDOException $e) {
+    error_log('tipos oro error: ' . $e->getMessage());
+    // Fallback a valores por defecto
+    $oro_tipo_options = [
+        ['value' => 1, 'label' => '10k'],
+        ['value' => 2, 'label' => '14k'],
+        ['value' => 3, 'label' => '18k'],
+        ['value' => 4, 'label' => '22k'],
+        ['value' => 5, 'label' => '24k']
+    ];
+}
 
-    if ($oro_tipo !== '') {
-        if (ctype_digit($oro_tipo) && (int) $oro_tipo > 0) {
-            $oro_tipo_id = (int) $oro_tipo;
-        } else {
-            foreach ($oro_tipo_options as $opt) {
-                if (strcasecmp((string) ($opt['label'] ?? ''), $oro_tipo) === 0) {
-                    $oro_tipo_id = (int) ($opt['value'] ?? 0);
-                    break;
-                }
+if ($legacy && $oro_tipo !== '') {
+    if (ctype_digit($oro_tipo) && (int) $oro_tipo > 0) {
+        $oro_tipo_id = (int) $oro_tipo;
+    } else {
+        foreach ($oro_tipo_options as $opt) {
+            if (strcasecmp((string) ($opt['label'] ?? ''), $oro_tipo) === 0) {
+                $oro_tipo_id = (int) ($opt['value'] ?? 0);
+                break;
             }
         }
     }
@@ -138,6 +136,23 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" class="btn-add" id="btn-compra-oro">+ Registrar Compra</button>
             </div>
         </div>
+        <?php if (!$legacy): ?>
+            <form class="d-flex flex-wrap gap-2 align-items-end" id="oro-filtros-modern">
+                <div>
+                    <label class="form-label muted" for="oro-tipo-modern">Tipo</label>
+                    <select id="oro-tipo-modern" class="form-select form-select-sm ds-field">
+                        <option value="">Todos</option>
+                        <?php foreach ($oro_tipo_options as $tipo): ?>
+                            <option value="<?php echo (int) $tipo['value']; ?>">
+                                <?php echo htmlspecialchars((string) $tipo['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="button" id="oro-filtrar-modern">Aplicar</button>
+                <button class="btn btn-sm btn-secondary" type="button" id="oro-limpiar-modern">Limpiar</button>
+            </form>
+        <?php endif; ?>
         <?php if ($legacy): ?>
             <form method="get" action="inventario_oro.php#inv-oro" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
@@ -201,6 +216,15 @@ include VIEWS_PATH . '/layouts/nav.php';
             let oroTable;
             let proveedoresCache = [];
             let oroTipoOptions = [];
+            let tipoFilter = '';
+
+            function applyOroFilters() {
+                const tipoEl = $('#oro-tipo-modern');
+                tipoFilter = tipoEl.length ? tipoEl.val() : '';
+                if (oroTable) {
+                    oroTable.ajax.reload();
+                }
+            }
 
             // Cargar opciones y proveedores en paralelo
             Promise.all([
@@ -461,7 +485,12 @@ include VIEWS_PATH . '/layouts/nav.php';
 
             oroTable = $('#oro-table').DataTable({
                 ajax: {
-                    url: 'api/inventario_oro.php?limit=500',
+                    url: 'api/inventario_oro.php',
+                    data: function (d) {
+                        d.limit = 500;
+                        d.offset = 0;
+                        if (tipoFilter) d.tipo_id = tipoFilter;
+                    },
                     dataSrc: 'DATOS'
                 },
                 columns: [{
@@ -495,6 +524,13 @@ include VIEWS_PATH . '/layouts/nav.php';
 
             $('#btn-add-oro').on('click', openOroCreate);
             $('#btn-compra-oro').on('click', openOroCompra);
+            $('#oro-filtrar-modern').on('click', applyOroFilters);
+            $('#oro-limpiar-modern').on('click', function () {
+                const tipoEl = $('#oro-tipo-modern');
+                if (tipoEl.length) tipoEl.val('');
+                applyOroFilters();
+            });
+            $('#oro-tipo-modern').on('change', applyOroFilters);
             $('#oro-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
                 openOroEdit(oroTable.row($(this).closest('tr')).data());
             });

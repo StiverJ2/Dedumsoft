@@ -401,6 +401,8 @@ $.ajax({ url: "/api", success: function (d) {} });
 element.className += " clase";
 ```
 
+- Nota: estas reglas SOLO se deben aplicar cuando se escriba código que esté dirigido a la vista legacy. No es necesario e inclusive se incita a usar normas de desarrollo modernas de JS si se está trabajando en código que solo se ejecutará en navegadores modernos.
+
 ### Archivos de Compatibilidad
 
 | Archivo                    | Propósito                      |

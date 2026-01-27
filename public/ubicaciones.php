@@ -51,37 +51,35 @@ $ubicaciones_rows = [];
 $area_options = [];
 
 // Obtener áreas desde tabla de catálogo
-if ($legacy) {
-    try {
-        $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM areas WHERE activo = true ORDER BY orden, nombre');
-        $stmt->execute();
-        $areas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM areas WHERE activo = true ORDER BY orden, nombre');
+    $stmt->execute();
+    $areas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $area_options = array_map(function ($a) {
-            return ['value' => $a['id'], 'label' => $a['nombre']];
-        }, $areas);
-    } catch (PDOException $e) {
-        error_log('areas error: ' . $e->getMessage());
-        // Fallback a valores por defecto
-        $area_options = [
-            ['value' => 1, 'label' => 'General'],
-            ['value' => 2, 'label' => 'Producción'],
-            ['value' => 3, 'label' => 'Almacén'],
-            ['value' => 4, 'label' => 'Ventas'],
-            ['value' => 5, 'label' => 'Oficina'],
-            ['value' => 6, 'label' => 'Taller']
-        ];
-    }
+    $area_options = array_map(function ($a) {
+        return ['value' => $a['id'], 'label' => $a['nombre']];
+    }, $areas);
+} catch (PDOException $e) {
+    error_log('areas error: ' . $e->getMessage());
+    // Fallback a valores por defecto
+    $area_options = [
+        ['value' => 1, 'label' => 'General'],
+        ['value' => 2, 'label' => 'Producción'],
+        ['value' => 3, 'label' => 'Almacén'],
+        ['value' => 4, 'label' => 'Ventas'],
+        ['value' => 5, 'label' => 'Oficina'],
+        ['value' => 6, 'label' => 'Taller']
+    ];
+}
 
-    if ($area !== '') {
-        if (ctype_digit($area) && (int) $area > 0) {
-            $area_id = (int) $area;
-        } else {
-            foreach ($area_options as $opt) {
-                if (strcasecmp((string) ($opt['label'] ?? ''), $area) === 0) {
-                    $area_id = (int) ($opt['value'] ?? 0);
-                    break;
-                }
+if ($legacy && $area !== '') {
+    if (ctype_digit($area) && (int) $area > 0) {
+        $area_id = (int) $area;
+    } else {
+        foreach ($area_options as $opt) {
+            if (strcasecmp((string) ($opt['label'] ?? ''), $area) === 0) {
+                $area_id = (int) ($opt['value'] ?? 0);
+                break;
             }
         }
     }
@@ -177,6 +175,23 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" class="btn-add" id="btn-add-ubicacion">+ Nueva Ubicación</button>
             </div>
         </div>
+        <?php if (!$legacy): ?>
+            <form class="d-flex flex-wrap gap-2 align-items-end" id="ubic-filtros-modern">
+                <div>
+                    <label class="form-label muted" for="ubic-area-modern">Área</label>
+                    <select id="ubic-area-modern" class="form-select form-select-sm ds-field">
+                        <option value="">Todas</option>
+                        <?php foreach ($area_options as $opt): ?>
+                            <option value="<?php echo (int) $opt['value']; ?>">
+                                <?php echo htmlspecialchars((string) $opt['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="button" id="ubic-filtrar-modern">Aplicar</button>
+                <button class="btn btn-sm btn-secondary" type="button" id="ubic-limpiar-modern">Limpiar</button>
+            </form>
+        <?php endif; ?>
         <?php if ($legacy): ?>
             <form method="get" action="ubicaciones.php" class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
@@ -419,9 +434,23 @@ include VIEWS_PATH . '/layouts/nav.php';
                 ];
             }
 
+            let areaFilter = '';
+            const applyAreaFilter = () => {
+                const areaEl = document.getElementById('ubic-area-modern');
+                areaFilter = areaEl ? (areaEl.value || '') : '';
+                if (ubicacionesTable) {
+                    ubicacionesTable.ajax.reload();
+                }
+            };
+
             ubicacionesTable = $('#ubicaciones-table').DataTable({
                 ajax: {
-                    url: 'api/ubicaciones.php?limit=500&offset=0',
+                    url: 'api/ubicaciones.php',
+                    data: function (d) {
+                        d.limit = 500;
+                        d.offset = 0;
+                        if (areaFilter) d.area_id = areaFilter;
+                    },
                     dataSrc: 'DATOS'
                 },
                 columns: [{
@@ -457,6 +486,21 @@ include VIEWS_PATH . '/layouts/nav.php';
 
             // Add button
             document.getElementById('btn-add-ubicacion').addEventListener('click', openCreateModal);
+            const areaFilterBtn = document.getElementById('ubic-filtrar-modern');
+            const areaClearBtn = document.getElementById('ubic-limpiar-modern');
+            const areaSelect = document.getElementById('ubic-area-modern');
+            if (areaFilterBtn) {
+                areaFilterBtn.addEventListener('click', applyAreaFilter);
+            }
+            if (areaClearBtn) {
+                areaClearBtn.addEventListener('click', () => {
+                    if (areaSelect) areaSelect.value = '';
+                    applyAreaFilter();
+                });
+            }
+            if (areaSelect) {
+                areaSelect.addEventListener('change', applyAreaFilter);
+            }
 
             // Edit/Delete buttons (delegated)
             document.getElementById('ubicaciones-table').addEventListener('click', (e) => {

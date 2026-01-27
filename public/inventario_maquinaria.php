@@ -207,6 +207,23 @@ include VIEWS_PATH . '/layouts/nav.php';
                 <button type="button" class="btn-add" id="btn-compra-maquinaria">+ Registrar Compra</button>
             </div>
         </div>
+        <?php if (!$legacy): ?>
+            <form class="d-flex flex-wrap gap-2 align-items-end" id="maq-filtros-modern">
+                <div>
+                    <label class="form-label muted" for="maq-estado-modern">Estado</label>
+                    <select id="maq-estado-modern" class="form-select form-select-sm ds-field">
+                        <option value="">Todos</option>
+                        <?php foreach ($maq_estado_options as $est): ?>
+                            <option value="<?php echo (int) $est['id']; ?>">
+                                <?php echo htmlspecialchars((string) $est['nombre']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button class="btn btn-sm" type="button" id="maq-filtrar-modern">Aplicar</button>
+                <button class="btn btn-sm btn-secondary" type="button" id="maq-limpiar-modern">Limpiar</button>
+            </form>
+        <?php endif; ?>
         <?php if ($legacy): ?>
             <form method="get" action="inventario_maquinaria.php#inv-maquinaria"
                 class="d-flex flex-wrap gap-2 align-items-end">
@@ -307,6 +324,15 @@ include VIEWS_PATH . '/layouts/nav.php';
             let ubicacionesCache = [];
             let tipoMaquinariaCache = [];
             let maqEstadoOptions = [];
+            let estadoFilter = '';
+
+            function applyMaqFilter() {
+                var estadoEl = $('#maq-estado-modern');
+                estadoFilter = estadoEl.length ? estadoEl.val() : '';
+                if (maqTable) {
+                    maqTable.ajax.reload();
+                }
+            }
 
             // Cargar todas las opciones en paralelo
             Promise.all([
@@ -586,7 +612,12 @@ include VIEWS_PATH . '/layouts/nav.php';
             const initMaqTable = () => {
                 maqTable = $('#maq-table').DataTable({
                     ajax: {
-                        url: 'api/inventario_maquinaria.php?limit=500',
+                        url: 'api/inventario_maquinaria.php',
+                        data: function (d) {
+                            d.limit = 500;
+                            d.offset = 0;
+                            if (estadoFilter) d.estado_id = estadoFilter;
+                        },
                         dataSrc: 'DATOS'
                     },
                     columns: [{
@@ -628,6 +659,13 @@ include VIEWS_PATH . '/layouts/nav.php';
 
                 $('#btn-add-maquinaria').on('click', openMaqCreate);
                 $('#btn-compra-maquinaria').on('click', openMaqCompra);
+                $('#maq-filtrar-modern').on('click', applyMaqFilter);
+                $('#maq-limpiar-modern').on('click', function () {
+                    var estadoEl = $('#maq-estado-modern');
+                    if (estadoEl.length) estadoEl.val('');
+                    applyMaqFilter();
+                });
+                $('#maq-estado-modern').on('change', applyMaqFilter);
                 $('#maq-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
                     openMaqEdit(maqTable.row($(this).closest('tr')).data());
                 });
