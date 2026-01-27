@@ -168,7 +168,8 @@ require_menu_access(2);    // Bloquea si no tiene permiso al menú #2
 | 5   | Usuarios       | `usuarios.php`           |
 | 6   | Proveedores    | `proveedores.php`        |
 | 7   | Configuración  | `configuracion.php`      |
-| 8   | Especialidades | `especialidades.php`     |
+
+**Nota:** Especialidades se gestiona dentro de **Ajustes > Catálogos** (`catalogos.php`) usando el mismo menú 7.
 
 ### ⚠️ IMPORTANTE: Caché de Permisos
 

@@ -52,7 +52,7 @@ $tipo_proveedor_options = [];
 
 // Obtener tipos de proveedor desde tabla de catálogo
 try {
-    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_proveedor WHERE activo = true ORDER BY orden, nombre');
+    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_proveedor WHERE activo = true ORDER BY nombre');
     $stmt->execute();
     $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

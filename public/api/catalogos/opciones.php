@@ -22,7 +22,7 @@
  * - Menú 6 (Proveedores): tipos_proveedor
  * - Menú 3 (Producción): estados_orden, prioridades, tipos_material,
  *                        niveles_calidad, artesanos, productos
- * - Menú 5/8 (Usuarios/Especialidades): especialidades
+ * - Menú 5/7 (Usuarios/Configuración): especialidades
  * 
  * Formato de respuesta:
  * Cada opción tiene la estructura { value: ID, label: NOMBRE, ...extras }
@@ -91,8 +91,8 @@ if ($method === 'GET') {
         ]);
     }
 
-    // Menú 5 (Usuarios) o Menú 8 (Especialidades): Acceso a especialidades
-    if (dedumsoft_user_can_menu(5) || dedumsoft_user_can_menu(8)) {
+    // Menú 5 (Usuarios) o Menú 7 (Configuración): Acceso a especialidades
+    if (dedumsoft_user_can_menu(5) || dedumsoft_user_can_menu(7)) {
         $allowed_types[] = 'especialidades';
     }
 
@@ -125,7 +125,7 @@ if ($method === 'GET') {
             // ÁREAS: Áreas del almacén para organización de inventario
             // -----------------------------------------------------------------
             if ($requested === 'areas') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion FROM areas WHERE activo = true ORDER BY orden, nombre');
+                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion FROM areas WHERE activo = true ORDER BY nombre');
                 $stmt->execute();
                 $areas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -141,7 +141,7 @@ if ($method === 'GET') {
             // TIPOS DE PROVEEDOR: Clasificación de proveedores
             // -----------------------------------------------------------------
             elseif ($requested === 'tipos_proveedor') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion FROM tipos_proveedor WHERE activo = true ORDER BY orden, nombre');
+                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion FROM tipos_proveedor WHERE activo = true ORDER BY nombre');
                 $stmt->execute();
                 $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -157,7 +157,7 @@ if ($method === 'GET') {
             // TIPOS DE ORO: Clasificación por kilates y pureza
             // -----------------------------------------------------------------
             elseif ($requested === 'tipos_oro') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, kilates, pureza_porcentaje, descripcion FROM tipos_oro WHERE activo = true ORDER BY orden, kilates');
+                $stmt = $connLogic->prepare('SELECT id, nombre, kilates, pureza_porcentaje, descripcion FROM tipos_oro WHERE activo = true ORDER BY kilates, nombre');
                 $stmt->execute();
                 $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -175,7 +175,7 @@ if ($method === 'GET') {
             // ESTADOS DE MAQUINARIA: Estados operativos de equipos
             // -----------------------------------------------------------------
             elseif ($requested === 'estados_maquinaria') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion, color FROM estados_maquinaria WHERE activo = true ORDER BY orden');
+                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion, color FROM estados_maquinaria WHERE activo = true ORDER BY id');
                 $stmt->execute();
                 $estados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -192,7 +192,7 @@ if ($method === 'GET') {
             // ESTADOS DE ORDEN: Estados del flujo de producción
             // -----------------------------------------------------------------
             elseif ($requested === 'estados_orden') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion, color FROM estados_orden WHERE activo = true ORDER BY orden');
+                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion, color FROM estados_orden WHERE activo = true ORDER BY id');
                 $stmt->execute();
                 $estados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -209,7 +209,7 @@ if ($method === 'GET') {
             // PRIORIDADES: Niveles de urgencia para órdenes
             // -----------------------------------------------------------------
             elseif ($requested === 'prioridades') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion, color FROM prioridades WHERE activo = true ORDER BY orden DESC');
+                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion, color FROM prioridades WHERE activo = true ORDER BY id DESC');
                 $stmt->execute();
                 $prioridades = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -263,7 +263,7 @@ if ($method === 'GET') {
             // NIVELES DE CALIDAD: Clasificación de calidad de productos
             // -----------------------------------------------------------------
             elseif ($requested === 'niveles_calidad') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion FROM niveles_calidad WHERE activo = true ORDER BY orden');
+                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion FROM niveles_calidad WHERE activo = true ORDER BY id');
                 $stmt->execute();
                 $niveles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

@@ -64,7 +64,7 @@ BEGIN
     LEFT JOIN areas a ON u.area_id = a.id
     WHERE (par_activo IS NULL OR u.activo = par_activo)
       AND (par_area_id IS NULL OR u.area_id = par_area_id)
-    ORDER BY a.orden, u.nombre
+    ORDER BY a.nombre, u.nombre
     OFFSET par_offset
     LIMIT par_limit;
 END;
@@ -156,16 +156,15 @@ CREATE OR REPLACE FUNCTION fun_obtener_areas()
 RETURNS TABLE (
     id int,
     nombre text,
-    descripcion text,
-    orden int
+    descripcion text
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT a.id, a.nombre::text, a.descripcion::text, a.orden
+    SELECT a.id, a.nombre::text, a.descripcion::text
     FROM areas a
     WHERE a.activo = TRUE
-    ORDER BY a.orden, a.nombre;
+    ORDER BY a.nombre;
 END;
 $$;

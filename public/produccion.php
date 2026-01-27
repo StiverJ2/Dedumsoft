@@ -56,7 +56,7 @@ $estado_options = [];
 
 // Cargar estados de orden (usado en filtros)
 try {
-    $stmt = $connLogic->prepare('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY orden');
+    $stmt = $connLogic->prepare('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY id');
     $stmt->execute();
     $estado_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -128,7 +128,7 @@ if ($legacy) {
 
     // Cargar prioridades para creación de órdenes
     try {
-        $stmt = $connLogic->prepare('SELECT id, nombre FROM prioridades WHERE activo = TRUE ORDER BY orden DESC');
+    $stmt = $connLogic->prepare('SELECT id, nombre FROM prioridades WHERE activo = TRUE ORDER BY id DESC');
         $stmt->execute();
         $prioridades_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {

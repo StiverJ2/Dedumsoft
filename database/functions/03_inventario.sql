@@ -242,7 +242,7 @@ BEGIN
     SELECT em.id, em.nombre::text, em.descripcion::text, em.color::text
     FROM estados_maquinaria em
     WHERE em.activo = TRUE
-    ORDER BY em.orden;
+    ORDER BY em.id;
 END;
 $$;
 

@@ -13,7 +13,7 @@
  * - DELETE: Eliminar especialidad (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
- * Autorización: Menú 8 (Especialidades)
+ * Autorización: Menú 7 (Configuración)
  * 
  * @package Dedumsoft\API
  * @author  Equipo Dedumsoft
@@ -32,7 +32,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if (!require_api_auth()) {
     exit;
 }
-require_menu_access(8);
+require_menu_access(7);
 
 // =============================================================================
 // GET: Listar especialidades
@@ -41,7 +41,19 @@ if ($method === 'GET') {
     $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
     $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
-    $activo = isset($_GET['activo']) ? ($_GET['activo'] === '1' || $_GET['activo'] === 'true') : true;
+    if ($limit <= 0) $limit = 100;
+    if ($limit > 500) $limit = 500;
+    $activo_param = isset($_GET['activo']) ? trim((string) $_GET['activo']) : null;
+    $use_activo_filter = true;
+    $activo = true;
+    if ($activo_param !== null && $activo_param !== '') {
+        $activo_param = strtolower($activo_param);
+        if ($activo_param === 'all') {
+            $use_activo_filter = false;
+        } else {
+            $activo = ($activo_param === '1' || $activo_param === 'true' || $activo_param === 't');
+        }
+    }
 
     try {
         if ($id > 0) {
@@ -57,12 +69,18 @@ if ($method === 'GET') {
                 exit;
             }
         } else {
+            $where = '';
+            if ($use_activo_filter) {
+                $where = ' WHERE activo = :activo';
+            }
             $stmt = $connLogic->prepare(
-                'SELECT id, nombre, descripcion, activo FROM fun_obtener_especialidades(:offset, :limit, :activo)'
+                'SELECT id, nombre, descripcion, activo FROM cat_especialidad' . $where . ' ORDER BY nombre OFFSET :offset LIMIT :limit'
             );
+            if ($use_activo_filter) {
+                $stmt->bindValue(':activo', $activo, PDO::PARAM_BOOL);
+            }
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->bindValue(':activo', $activo, PDO::PARAM_BOOL);
             $stmt->execute();
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
@@ -93,7 +111,9 @@ if ($method === 'POST') {
     $descripcion = $descripcion === '' ? null : $descripcion;
 
     try {
-        $stmt = $connLogic->prepare('SELECT fun_crear_especialidad(:nombre, :descripcion) AS id');
+        $stmt = $connLogic->prepare(
+            'INSERT INTO cat_especialidad (nombre, descripcion) VALUES (:nombre, :descripcion) RETURNING id'
+        );
         $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
         $stmt->bindValue(':descripcion', $descripcion, $descripcion === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
         $stmt->execute();
@@ -143,12 +163,38 @@ if ($method === 'PATCH') {
     $nombre = ($nombre !== null && $nombre !== '') ? $nombre : null;
     $descripcion = ($descripcion !== null && $descripcion !== '') ? $descripcion : null;
 
+    $updates = [];
+    $params = [':id' => $id];
+    if ($nombre !== null) {
+        $updates[] = 'nombre = :nombre';
+        $params[':nombre'] = $nombre;
+    }
+    if ($descripcion !== null) {
+        $updates[] = 'descripcion = :descripcion';
+        $params[':descripcion'] = $descripcion;
+    }
+    if ($activo !== null) {
+        $updates[] = 'activo = :activo';
+        $params[':activo'] = $activo;
+    }
+
+    if (!$updates) {
+        http_response_code(400);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'No hay campos para actualizar.']);
+        exit;
+    }
+
     try {
-        $stmt = $connLogic->prepare('SELECT fun_actualizar_especialidad(:id, :nombre, :descripcion, :activo)');
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->bindValue(':nombre', $nombre, $nombre === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-        $stmt->bindValue(':descripcion', $descripcion, $descripcion === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-        $stmt->bindValue(':activo', $activo, $activo === null ? PDO::PARAM_NULL : PDO::PARAM_BOOL);
+        $stmt = $connLogic->prepare('UPDATE cat_especialidad SET ' . implode(', ', $updates) . ' WHERE id = :id');
+        foreach ($params as $key => $val) {
+            if ($key === ':id') {
+                $stmt->bindValue($key, $val, PDO::PARAM_INT);
+            } elseif ($key === ':activo') {
+                $stmt->bindValue($key, $val, PDO::PARAM_BOOL);
+            } else {
+                $stmt->bindValue($key, $val);
+            }
+        }
         $stmt->execute();
     } catch (PDOException $e) {
         error_log('especialidades PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
@@ -178,7 +224,7 @@ if ($method === 'DELETE') {
     }
 
     try {
-        $stmt = $connLogic->prepare('SELECT fun_eliminar_especialidad(:id)');
+        $stmt = $connLogic->prepare('UPDATE cat_especialidad SET activo = false WHERE id = :id');
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
     } catch (PDOException $e) {

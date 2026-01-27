@@ -52,7 +52,7 @@ $area_options = [];
 
 // Obtener áreas desde tabla de catálogo
 try {
-    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM areas WHERE activo = true ORDER BY orden, nombre');
+    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM areas WHERE activo = true ORDER BY nombre');
     $stmt->execute();
     $areas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

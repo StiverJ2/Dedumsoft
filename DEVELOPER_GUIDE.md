@@ -288,11 +288,12 @@ INSERT INTO seguridad.seg_rol VALUES
 | 5   | Usuarios      | /usuarios            | `public/usuarios.php`     |
 | 6   | Proveedores   | /proveedores         | `public/proveedores.php`  |
 | 7   | Configuracion | /configuracion       | `public/configuracion.php` |
-| 8   | Especialidades | /especialidades     | `public/especialidades.php` |
 
 **Nota:** `seg_menu.ruta` es una ruta lógica. La navegación real usa archivos PHP
 en `public/` (ver `views/layouts/nav.php`). Para operadores sin menú 1, el home
 puede ser `public/index_operario.php`.
+
+**Especialidades:** ahora se administran dentro de `public/catalogos.php` (Ajustes > Catalogos).
 
 ### ⚠️ IMPORTANTE: Caché de Permisos
 
@@ -535,11 +536,11 @@ La gestión de usuarios se realiza desde `public/usuarios.php` y la API
 { "id": 12, "activo": false }
 ```
 
-**Catálogo de especialidades (Menú 8):**
+**Catálogo de especialidades (Ajustes > Catalogos):**
 
-- API: `api/catalogos/especialidades.php` (GET/POST/PATCH/DELETE).
+- API: `api/catalogos/maestros.php?catalog=especialidades` (GET/POST/PATCH/DELETE).
 - Tabla fuente: `joyeria.cat_especialidad` (activo, descripción).
-- UI: `public/especialidades.php`.
+- UI: `public/catalogos.php?catalog=especialidades`.
 
 ### API de Órdenes de Producción (crear/asignar)
 
@@ -973,12 +974,14 @@ if (window.console && console.log) {
 | ---------------------------- | -------------------------------- |
 | `public/login.php`           | Página de login                  |
 | `public/index.php`           | Dashboard principal              |
+| `public/catalogos.php`       | Catálogos maestros (Ajustes)     |
 | `public/api/{dominio}/*.php` | Endpoints REST                   |
 | `private/Auth/*.php`         | Módulos de autenticación         |
 | `private/bootstrap.php`      | Inicialización (incluir siempre) |
 | `config/env.php`             | Configuración (¡NO commitear!)   |
 | `views/layouts/*.php`        | Componentes reutilizables        |
 | `public/assets/js/sidebar.js`| Toggle del menú lateral (móvil)  |
+| `public/api/catalogos/maestros.php` | CRUD de catálogos maestros |
 
 ### Comandos Útiles
 

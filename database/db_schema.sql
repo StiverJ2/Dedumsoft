@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS estados_maquinaria (
     nombre VARCHAR(50) NOT NULL UNIQUE,
     descripcion TEXT,
     color VARCHAR(20) DEFAULT 'neutral',
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE
 );
 
@@ -67,7 +66,6 @@ CREATE TABLE IF NOT EXISTS estados_orden (
     nombre VARCHAR(50) NOT NULL UNIQUE,
     descripcion TEXT,
     color VARCHAR(20) DEFAULT 'neutral',
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE
 );
 
@@ -77,7 +75,6 @@ CREATE TABLE IF NOT EXISTS prioridades (
     nombre VARCHAR(50) NOT NULL UNIQUE,
     descripcion TEXT,
     color VARCHAR(20) DEFAULT 'neutral',
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE
 );
 
@@ -94,7 +91,6 @@ CREATE TABLE IF NOT EXISTS niveles_calidad (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(10) NOT NULL UNIQUE,
     descripcion TEXT,
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE
 );
 
@@ -107,7 +103,6 @@ CREATE TABLE IF NOT EXISTS areas (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT,
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -120,7 +115,6 @@ CREATE TABLE IF NOT EXISTS tipos_oro (
     kilates DECIMAL(5,2),
     pureza_porcentaje DECIMAL(5,2),
     descripcion TEXT,
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -131,7 +125,6 @@ CREATE TABLE IF NOT EXISTS tipos_proveedor (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT,
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -142,7 +135,6 @@ CREATE TABLE IF NOT EXISTS tipos_maquinaria (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT,
-    orden INTEGER DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -296,6 +296,16 @@ body.ds-body {
   font-weight: 600;
 }
 
+.ds-color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
 .ds-main {
   flex: 1;
   padding: 30px;
@@ -983,6 +993,30 @@ textarea.ds-form-control {
 .ds-toolbar-actions {
   display: flex;
   gap: 8px;
+}
+
+.ds-catalog-active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--ds-dark-2);
+  font-size: 14px;
+}
+
+.ds-catalog-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}
+
+.ds-emoji {
+  display: inline-block;
+  width: 20px;
+  text-align: center;
+  margin-right: 6px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .btn-add {

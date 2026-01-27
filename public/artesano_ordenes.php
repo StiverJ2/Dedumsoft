@@ -78,7 +78,7 @@ $estados_options = [];
 
 // Cargar estados de orden para dropdown
 try {
-    $stmt = $connLogic->query('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY orden, nombre');
+    $stmt = $connLogic->query('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY id');
     $estados_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log('estados_orden error: ' . $e->getMessage());
@@ -97,7 +97,7 @@ if ($legacy && $artesano_id) {
              LEFT JOIN prioridades pr ON op.prioridad_id = pr.id
              WHERE op.artesano_id = :artesano_id
                AND op.estado_id <> 3
-             ORDER BY COALESCE(pr.orden, 99), op.fecha_creacion DESC
+             ORDER BY COALESCE(pr.id, 99), op.fecha_creacion DESC
              LIMIT 50'
         );
         $stmt->execute([':artesano_id' => $artesano_id]);

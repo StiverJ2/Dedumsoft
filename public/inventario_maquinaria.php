@@ -148,7 +148,7 @@ try {
 
 // Obtener opciones de estados de maquinaria desde la BD
 try {
-    $stmt = $connLogic->query("SELECT id, nombre, color FROM estados_maquinaria WHERE activo = TRUE ORDER BY orden");
+    $stmt = $connLogic->query("SELECT id, nombre, color FROM estados_maquinaria WHERE activo = TRUE ORDER BY id");
     $maq_estado_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     error_log('inventario estados_maquinaria error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());

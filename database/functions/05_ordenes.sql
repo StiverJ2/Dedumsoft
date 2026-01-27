@@ -104,7 +104,7 @@ BEGIN
     LEFT JOIN estados_orden eo ON op.estado_id = eo.id
     LEFT JOIN prioridades p ON op.prioridad_id = p.id
     WHERE (par_estado IS NULL OR eo.nombre = par_estado)
-    ORDER BY p.orden DESC, op.fecha_creacion DESC
+    ORDER BY p.id DESC, op.fecha_creacion DESC
     OFFSET par_offset
     LIMIT par_limit;
 END;
@@ -170,7 +170,7 @@ BEGIN
     LEFT JOIN estados_orden eo ON op.estado_id = eo.id
     LEFT JOIN prioridades p ON op.prioridad_id = p.id
     WHERE (par_estado_id IS NULL OR op.estado_id = par_estado_id)
-    ORDER BY p.orden DESC, op.fecha_creacion DESC
+    ORDER BY p.id DESC, op.fecha_creacion DESC
     OFFSET par_offset
     LIMIT par_limit;
 END;
@@ -194,7 +194,7 @@ BEGIN
     SELECT eo.id, eo.nombre::text, eo.descripcion::text, eo.color::text
     FROM estados_orden eo
     WHERE eo.activo = TRUE
-    ORDER BY eo.orden;
+    ORDER BY eo.id;
 END;
 $$;
 
@@ -212,7 +212,7 @@ BEGIN
     SELECT p.id, p.nombre::text, p.descripcion::text, p.color::text
     FROM prioridades p
     WHERE p.activo = TRUE
-    ORDER BY p.orden DESC;
+    ORDER BY p.id DESC;
 END;
 $$;
 
@@ -398,6 +398,6 @@ BEGIN
     SELECT nc.id, nc.nombre::text, nc.descripcion::text
     FROM niveles_calidad nc
     WHERE nc.activo = TRUE
-    ORDER BY nc.orden;
+    ORDER BY nc.id;
 END;
 $$;

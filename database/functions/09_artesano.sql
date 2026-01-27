@@ -90,7 +90,7 @@ BEGIN
     LEFT JOIN prioridades pr ON op.prioridad_id = pr.id
     WHERE op.artesano_id = par_artesano_id
       AND op.estado_id <> 3
-    ORDER BY COALESCE(pr.orden, 99), op.fecha_creacion DESC
+    ORDER BY COALESCE(pr.id, 99), op.fecha_creacion DESC
     OFFSET par_offset
     LIMIT par_limit;
 END;

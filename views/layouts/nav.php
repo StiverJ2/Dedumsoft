@@ -22,7 +22,6 @@
  * - 5: Usuarios (Administración)
  * - 6: Proveedores
  * - 7: Configuración
- * - 8: Especialidades
  * 
  * Funciones helper:
  * - dedumsoft_nav_active(): Marca link activo por página
@@ -90,7 +89,7 @@ $inv_open = in_array($current, ['inventario.php', 'inventario_insumos.php', 'inv
 $prod_open = in_array($current, ['produccion.php'], true);
 $rep_open = in_array($current, ['reportes.php'], true);
 $adm_open = in_array($current, ['usuarios.php'], true);
-$cfg_open = in_array($current, ['configuracion.php', 'especialidades.php'], true);
+$cfg_open = in_array($current, ['configuracion.php', 'catalogos.php'], true);
 
 // Datos del usuario para el panel inferior
 $nombre = trim($user['nombre'] ?? '');
@@ -109,7 +108,7 @@ if ($rolid === 1) {
 // CÁLCULO DE PERMISOS DE MENÚ
 // =============================================================================
 // Permisos de menu: id_menu => ['abrir', 'guardar', 'editar', 'eliminar']
-// seg_menu ids: 1=Dashboard, 2=Inventario, 3=Produccion, 4=Reportes, 5=Usuarios, 6=Proveedores, 7=Configuracion, 8=Especialidades
+// seg_menu ids: 1=Dashboard, 2=Inventario, 3=Produccion, 4=Reportes, 5=Usuarios, 6=Proveedores, 7=Configuracion
 
 $permisos = $user['permisos_menu'] ?? [];
 $can_dashboard = isset($permisos[1]);
@@ -119,14 +118,13 @@ $can_reportes = isset($permisos[4]);
 $can_usuarios = isset($permisos[5]);
 $can_proveedores = isset($permisos[6]);
 $can_config = isset($permisos[7]);
-$can_especialidades = isset($permisos[8]);
 
 // Determinar si mostrar "Mis Órdenes" (solo artesanos no-admin)
 $has_artesano = !empty($user['artesano_id']);
 $show_mis_ordenes = $can_produccion && $has_artesano && $rolid !== 1;
 
 // Determinar si mostrar link de inicio (al menos un permiso)
-$show_home = $can_dashboard || $can_inventario || $can_produccion || $can_reportes || $can_usuarios || $can_proveedores || $can_config || $can_especialidades;
+$show_home = $can_dashboard || $can_inventario || $can_produccion || $can_reportes || $can_usuarios || $can_proveedores || $can_config;
 
 // URL de inicio según permisos (dashboard completo o versión operario)
 $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
@@ -223,22 +221,17 @@ $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
                 </a>
             <?php endif; ?>
 
-            <?php if ($can_config || $can_especialidades): ?>
+            <?php if ($can_config): ?>
                 <div class="ds-nav-section">Ajustes</div>
-                <?php if ($can_config): ?>
                     <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'configuracion.php'); ?>"
                         href="configuracion.php">
                         <img class="ds-icon-img" src="assets/icons/fatcow/16/cog.png" alt="">
                         Configuracion
                     </a>
-                <?php endif; ?>
-                <?php if ($can_especialidades): ?>
-                    <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'especialidades.php'); ?>"
-                        href="especialidades.php">
-                        <img class="ds-icon-img" src="assets/icons/fatcow/16/award_star_gold_blue.png" alt="">
-                        Especialidades
+                    <a class="ds-nav-link <?php echo dedumsoft_nav_active($current, 'catalogos.php'); ?>" href="catalogos.php">
+                        <img class="ds-icon-img" src="assets/icons/fatcow/16/books.png" alt="">
+                        Catalogos
                     </a>
-                <?php endif; ?>
             <?php endif; ?>
         </div>
 
@@ -366,7 +359,7 @@ $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
                     </div>
                 <?php endif; ?>
 
-                <?php if ($can_config || $can_especialidades): ?>
+                <?php if ($can_config): ?>
                     <button class="ds-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#ds-config"
                         aria-expanded="<?php echo $cfg_open ? 'true' : 'false'; ?>" aria-controls="ds-config">
                         <span class="ds-icon">&#9881;</span>
@@ -374,16 +367,12 @@ $home_href = $can_dashboard ? 'index.php' : 'index_operario.php';
                         <span class="ds-arrow">&#9660;</span>
                     </button>
                     <div id="ds-config" class="collapse ds-submenu <?php echo $cfg_open ? 'show' : ''; ?>">
-                        <?php if ($can_config): ?>
                             <a class="<?php echo dedumsoft_nav_active($current, 'configuracion.php'); ?>" href="configuracion.php">
                                 <span class="ds-subicon">&#9881;</span> Configuracion
                             </a>
-                        <?php endif; ?>
-                        <?php if ($can_especialidades): ?>
-                            <a class="<?php echo dedumsoft_nav_active($current, 'especialidades.php'); ?>" href="especialidades.php">
-                                <span class="ds-subicon">&#9733;</span> Especialidades
+                            <a class="<?php echo dedumsoft_nav_active($current, 'catalogos.php'); ?>" href="catalogos.php">
+                                <span class="ds-subicon">&#128218;</span> Catalogos
                             </a>
-                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>

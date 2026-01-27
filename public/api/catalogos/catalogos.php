@@ -25,7 +25,6 @@
  * - codigo: Código único del registro
  * - nombre: Nombre descriptivo
  * - descripcion: Descripción opcional
- * - orden: Orden de visualización
  * 
  * Campos específicos (tipos_oro):
  * - kilates: Kilates del oro (10, 14, 18, 24)
@@ -72,13 +71,13 @@ if (!in_array($catalog, $valid_catalogs)) {
 // Parámetros:
 //   - catalog (string, requerido): Nombre del catálogo
 //
-// Nota: Solo retorna registros activos, ordenados por 'orden' y 'nombre'
+// Nota: Solo retorna registros activos, ordenados por nombre
 // Respuesta: { CODIGO: 200, DATOS: [...] }
 if ($method === 'GET') {
     try {
         // Consulta directa a la tabla del catálogo
         // NOTA: $catalog está validado contra lista blanca, seguro para interpolación
-        $stmt = $connLogic->prepare("SELECT id, nombre, descripcion, orden, activo FROM {$catalog} WHERE activo = true ORDER BY orden, nombre");
+        $stmt = $connLogic->prepare("SELECT id, nombre, descripcion, activo FROM {$catalog} WHERE activo = true ORDER BY nombre");
         $stmt->execute();
         $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -98,7 +97,6 @@ if ($method === 'GET') {
 //   - codigo (string, requerido): Código único
 //   - nombre (string, requerido): Nombre descriptivo
 //   - descripcion (string, opcional): Descripción
-//   - orden (int, opcional): Orden de visualización (default: 0)
 //   - kilates (float, solo tipos_oro): Kilates del oro
 //   - pureza_porcentaje (float, solo tipos_oro): Porcentaje de pureza
 //
@@ -116,13 +114,12 @@ if ($method === 'POST') {
 
     try {
         // Preparar campos base (comunes a todos los catálogos)
-        $fields = ['codigo', 'nombre', 'descripcion', 'orden'];
-        $values = [':codigo', ':nombre', ':descripcion', ':orden'];
+        $fields = ['codigo', 'nombre', 'descripcion'];
+        $values = [':codigo', ':nombre', ':descripcion'];
         $params = [
             ':codigo' => $input['codigo'],
             ':nombre' => $input['nombre'],
-            ':descripcion' => $input['descripcion'] ?? null,
-            ':orden' => $input['orden'] ?? 0
+            ':descripcion' => $input['descripcion'] ?? null
         ];
 
         // Campos específicos para catálogo tipos_oro
@@ -168,7 +165,6 @@ if ($method === 'POST') {
 //   - codigo (string, opcional): Nuevo código
 //   - nombre (string, opcional): Nuevo nombre
 //   - descripcion (string, opcional): Nueva descripción
-//   - orden (int, opcional): Nuevo orden
 //   - kilates (float, solo tipos_oro): Nuevos kilates
 //   - pureza_porcentaje (float, solo tipos_oro): Nueva pureza
 //
@@ -203,11 +199,6 @@ if ($method === 'PATCH') {
             $updates[] = 'descripcion = :descripcion';
             $params[':descripcion'] = $input['descripcion'];
         }
-        if (isset($input['orden'])) {
-            $updates[] = 'orden = :orden';
-            $params[':orden'] = $input['orden'];
-        }
-
         // Campos específicos para catálogo tipos_oro
         if ($catalog === 'tipos_oro') {
             if (isset($input['kilates'])) {

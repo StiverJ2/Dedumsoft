@@ -18,12 +18,12 @@
 --
 -- CARACTERÍSTICAS:
 -- - Solo retornan registros activos (activo = TRUE)
--- - Ordenados por campo 'orden' o 'nombre'
+-- - Ordenados por nombre o kilates
 -- - Usan solo ID como identificador (¡no códigos!)
 --
 -- EJEMPLO DE USO:
---   SELECT id, nombre, kilates, pureza_porcentaje, descripcion, orden FROM fun_obtener_tipos_oro();
---   -- Retorna: id, nombre, kilates, pureza_porcentaje, descripcion, orden
+--   SELECT id, nombre, kilates, pureza_porcentaje, descripcion FROM fun_obtener_tipos_oro();
+--   -- Retorna: id, nombre, kilates, pureza_porcentaje, descripcion
 --
 -- ============================================================================
 -- FUNCIONES DE CATÁLOGOS
@@ -45,17 +45,16 @@ RETURNS TABLE (
     nombre text,
     kilates numeric,
     pureza_porcentaje numeric,
-    descripcion text,
-    orden int
+    descripcion text
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT t.id, t.nombre::text, t.kilates, t.pureza_porcentaje, t.descripcion::text, t.orden
+    SELECT t.id, t.nombre::text, t.kilates, t.pureza_porcentaje, t.descripcion::text
     FROM tipos_oro t
     WHERE t.activo = TRUE
-    ORDER BY t.orden, t.kilates;
+    ORDER BY t.kilates, t.nombre;
 END;
 $$;
 
@@ -69,17 +68,16 @@ CREATE OR REPLACE FUNCTION fun_obtener_tipos_proveedor()
 RETURNS TABLE (
     id int,
     nombre text,
-    descripcion text,
-    orden int
+    descripcion text
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT t.id, t.nombre::text, t.descripcion::text, t.orden
+    SELECT t.id, t.nombre::text, t.descripcion::text
     FROM tipos_proveedor t
     WHERE t.activo = TRUE
-    ORDER BY t.orden, t.nombre;
+    ORDER BY t.nombre;
 END;
 $$;
 

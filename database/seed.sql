@@ -48,28 +48,28 @@ SET search_path TO joyeria, seguridad, public;
 -- ============================================
 
 -- Estados de maquinaria
-INSERT INTO estados_maquinaria (id, nombre, descripcion, color, orden) VALUES
-(1, 'operativa', 'Maquinaria funcionando correctamente', 'success', 1),
-(2, 'mantenimiento', 'En mantenimiento programado', 'warning', 2),
-(3, 'averiada', 'Fuera de servicio por averia', 'danger', 3),
-(4, 'fuera_servicio', 'Retirada permanentemente del servicio', 'muted', 4)
+INSERT INTO estados_maquinaria (id, nombre, descripcion, color) VALUES
+(1, 'operativa', 'Maquinaria funcionando correctamente', 'success'),
+(2, 'mantenimiento', 'En mantenimiento programado', 'warning'),
+(3, 'averiada', 'Fuera de servicio por averia', 'danger'),
+(4, 'fuera_servicio', 'Retirada permanentemente del servicio', 'muted')
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion, color = EXCLUDED.color;
 
 -- Estados de orden de produccion
-INSERT INTO estados_orden (id, nombre, descripcion, color, orden) VALUES
-(1, 'pendiente', 'Orden creada, pendiente de iniciar', 'muted', 1),
-(2, 'en_proceso', 'Orden en proceso de fabricacion', 'info', 2),
-(3, 'terminada', 'Orden completada exitosamente', 'success', 3),
-(4, 'cancelada', 'Orden cancelada', 'danger', 4),
-(5, 'pausada', 'Orden pausada temporalmente', 'warning', 5)
+INSERT INTO estados_orden (id, nombre, descripcion, color) VALUES
+(1, 'pendiente', 'Orden creada, pendiente de iniciar', 'muted'),
+(2, 'en_proceso', 'Orden en proceso de fabricacion', 'info'),
+(3, 'terminada', 'Orden completada exitosamente', 'success'),
+(4, 'cancelada', 'Orden cancelada', 'danger'),
+(5, 'pausada', 'Orden pausada temporalmente', 'warning')
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion, color = EXCLUDED.color;
 
 -- Prioridades
-INSERT INTO prioridades (id, nombre, descripcion, color, orden) VALUES
-(1, 'baja', 'Prioridad baja', 'muted', 1),
-(2, 'media', 'Prioridad normal', 'info', 2),
-(3, 'alta', 'Prioridad alta', 'warning', 3),
-(4, 'urgente', 'Prioridad urgente', 'danger', 4)
+INSERT INTO prioridades (id, nombre, descripcion, color) VALUES
+(1, 'baja', 'Prioridad baja', 'muted'),
+(2, 'media', 'Prioridad normal', 'info'),
+(3, 'alta', 'Prioridad alta', 'warning'),
+(4, 'urgente', 'Prioridad urgente', 'danger')
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion, color = EXCLUDED.color;
 
 -- Tipos de material
@@ -79,10 +79,10 @@ INSERT INTO tipos_material (id, nombre, descripcion) VALUES
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion;
 
 -- Niveles de calidad
-INSERT INTO niveles_calidad (id, nombre, descripcion, orden) VALUES
-(1, 'A', 'Calidad premium - Sin defectos', 1),
-(2, 'B', 'Calidad estandar - Defectos menores', 2),
-(3, 'C', 'Calidad basica - Requiere retrabajo', 3)
+INSERT INTO niveles_calidad (id, nombre, descripcion) VALUES
+(1, 'A', 'Calidad premium - Sin defectos'),
+(2, 'B', 'Calidad estandar - Defectos menores'),
+(3, 'C', 'Calidad basica - Requiere retrabajo')
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion;
 
 -- Tipos de movimiento
@@ -118,8 +118,7 @@ INSERT INTO seguridad.seg_menu (id_menu, nombre, comentario, ruta) VALUES
 (4, 'Reportes', 'Reportes del sistema', '/reportes'),
 (5, 'Usuarios', 'Administracion de usuarios y roles', '/usuarios'),
 (6, 'Proveedores', 'Gestion de proveedores', '/proveedores'),
-(7, 'Configuracion', 'Preferencias y ajustes', '/configuracion'),
-(8, 'Especialidades', 'Catalogo de especialidades', '/especialidades')
+(7, 'Configuracion', 'Preferencias y ajustes', '/configuracion')
 ON CONFLICT (id_menu) DO UPDATE
 SET nombre = EXCLUDED.nombre, comentario = EXCLUDED.comentario, ruta = EXCLUDED.ruta;
 
@@ -131,18 +130,15 @@ INSERT INTO seguridad.seg_menurol (abrir, guardar, editar, eliminar, rolid, menu
 (TRUE, TRUE, TRUE, TRUE, 1, 5),
 (TRUE, TRUE, TRUE, TRUE, 1, 6),
 (TRUE, TRUE, TRUE, TRUE, 1, 7),
-(TRUE, TRUE, TRUE, TRUE, 1, 8),
 (TRUE, FALSE, FALSE, FALSE, 2, 3),
 (TRUE, FALSE, FALSE, FALSE, 2, 7),
-(TRUE, FALSE, FALSE, FALSE, 2, 8),
 (TRUE, FALSE, FALSE, FALSE, 3, 1),
 (TRUE, FALSE, FALSE, FALSE, 3, 2),
 (TRUE, FALSE, FALSE, FALSE, 3, 3),
 (TRUE, FALSE, FALSE, FALSE, 3, 4),
 (FALSE, FALSE, FALSE, FALSE, 3, 5),
 (TRUE, FALSE, FALSE, FALSE, 3, 6),
-(FALSE, FALSE, FALSE, FALSE, 3, 7),
-(FALSE, FALSE, FALSE, FALSE, 3, 8)
+(FALSE, FALSE, FALSE, FALSE, 3, 7)
 ON CONFLICT (rolid, menuid) DO UPDATE
 SET abrir = EXCLUDED.abrir, guardar = EXCLUDED.guardar, editar = EXCLUDED.editar, eliminar = EXCLUDED.eliminar;
 
@@ -189,55 +185,55 @@ ON CONFLICT (username) DO NOTHING;
 -- ============================================
 
 -- AREAS
-INSERT INTO areas (id, nombre, descripcion, orden, activo) VALUES
-(1, 'General', 'Area general de uso multiple', 1, TRUE),
-(2, 'Produccion', 'Area dedicada a la produccion y manufactura', 2, TRUE),
-(3, 'Almacen', 'Area de almacenamiento de materiales', 3, TRUE),
-(4, 'Ventas', 'Area comercial y de atencion al cliente', 4, TRUE),
-(5, 'Oficina', 'Area administrativa y de gestion', 5, TRUE),
-(6, 'Taller', 'Taller de trabajo especializado', 6, TRUE)
+INSERT INTO areas (id, nombre, descripcion, activo) VALUES
+(1, 'General', 'Area general de uso multiple', TRUE),
+(2, 'Produccion', 'Area dedicada a la produccion y manufactura', TRUE),
+(3, 'Almacen', 'Area de almacenamiento de materiales', TRUE),
+(4, 'Ventas', 'Area comercial y de atencion al cliente', TRUE),
+(5, 'Oficina', 'Area administrativa y de gestion', TRUE),
+(6, 'Taller', 'Taller de trabajo especializado', TRUE)
 ON CONFLICT (id) DO UPDATE SET 
     nombre = EXCLUDED.nombre,
     descripcion = EXCLUDED.descripcion,
-    orden = EXCLUDED.orden;
+    activo = EXCLUDED.activo;
 
 -- TIPOS DE ORO
-INSERT INTO tipos_oro (id, nombre, kilates, pureza_porcentaje, descripcion, orden, activo) VALUES
-(1, '10 Kilates', 10.00, 41.67, 'Oro de 10 quilates - 41.67% de pureza', 1, TRUE),
-(2, '14 Kilates', 14.00, 58.33, 'Oro de 14 quilates - 58.33% de pureza', 2, TRUE),
-(3, '18 Kilates', 18.00, 75.00, 'Oro de 18 quilates - 75% de pureza', 3, TRUE),
-(4, '22 Kilates', 22.00, 91.67, 'Oro de 22 quilates - 91.67% de pureza', 4, TRUE),
-(5, '24 Kilates', 24.00, 99.99, 'Oro puro de 24 quilates - 99.99% de pureza', 5, TRUE)
+INSERT INTO tipos_oro (id, nombre, kilates, pureza_porcentaje, descripcion, activo) VALUES
+(1, '10 Kilates', 10.00, 41.67, 'Oro de 10 quilates - 41.67% de pureza', TRUE),
+(2, '14 Kilates', 14.00, 58.33, 'Oro de 14 quilates - 58.33% de pureza', TRUE),
+(3, '18 Kilates', 18.00, 75.00, 'Oro de 18 quilates - 75% de pureza', TRUE),
+(4, '22 Kilates', 22.00, 91.67, 'Oro de 22 quilates - 91.67% de pureza', TRUE),
+(5, '24 Kilates', 24.00, 99.99, 'Oro puro de 24 quilates - 99.99% de pureza', TRUE)
 ON CONFLICT (id) DO UPDATE SET 
     nombre = EXCLUDED.nombre,
     kilates = EXCLUDED.kilates,
     pureza_porcentaje = EXCLUDED.pureza_porcentaje,
     descripcion = EXCLUDED.descripcion,
-    orden = EXCLUDED.orden;
+    activo = EXCLUDED.activo;
 
 -- TIPOS DE PROVEEDOR
-INSERT INTO tipos_proveedor (id, nombre, descripcion, orden, activo) VALUES
-(1, 'Oro', 'Proveedores de oro y metales preciosos', 1, TRUE),
-(2, 'Insumos', 'Proveedores de insumos y materiales generales', 2, TRUE),
-(3, 'Maquinaria', 'Proveedores de maquinaria, equipos y herramientas', 3, TRUE)
+INSERT INTO tipos_proveedor (id, nombre, descripcion, activo) VALUES
+(1, 'Oro', 'Proveedores de oro y metales preciosos', TRUE),
+(2, 'Insumos', 'Proveedores de insumos y materiales generales', TRUE),
+(3, 'Maquinaria', 'Proveedores de maquinaria, equipos y herramientas', TRUE)
 ON CONFLICT (id) DO UPDATE SET 
     nombre = EXCLUDED.nombre,
     descripcion = EXCLUDED.descripcion,
-    orden = EXCLUDED.orden;
+    activo = EXCLUDED.activo;
 
 -- TIPOS DE MAQUINARIA
-INSERT INTO tipos_maquinaria (id, nombre, descripcion, orden, activo) VALUES
-(1, 'Fundicion', 'Equipos para fundicion de metales', 1, TRUE),
-(2, 'Corte', 'Herramientas y equipos de corte', 2, TRUE),
-(3, 'Pulido', 'Equipos de pulido y acabado', 3, TRUE),
-(4, 'Soldadura', 'Equipos de soldadura', 4, TRUE),
-(5, 'Medicion', 'Instrumentos de medicion y precision', 5, TRUE),
-(6, 'Grabado', 'Equipos de grabado y marcado', 6, TRUE),
-(7, 'Otro', 'Otros equipos y herramientas', 7, TRUE)
+INSERT INTO tipos_maquinaria (id, nombre, descripcion, activo) VALUES
+(1, 'Fundicion', 'Equipos para fundicion de metales', TRUE),
+(2, 'Corte', 'Herramientas y equipos de corte', TRUE),
+(3, 'Pulido', 'Equipos de pulido y acabado', TRUE),
+(4, 'Soldadura', 'Equipos de soldadura', TRUE),
+(5, 'Medicion', 'Instrumentos de medicion y precision', TRUE),
+(6, 'Grabado', 'Equipos de grabado y marcado', TRUE),
+(7, 'Otro', 'Otros equipos y herramientas', TRUE)
 ON CONFLICT (id) DO UPDATE SET 
     nombre = EXCLUDED.nombre,
     descripcion = EXCLUDED.descripcion,
-    orden = EXCLUDED.orden;
+    activo = EXCLUDED.activo;
 
 -- ESPECIALIDADES DE ARTESANOS
 INSERT INTO cat_especialidad (id, nombre, descripcion, activo) VALUES
