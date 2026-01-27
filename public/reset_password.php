@@ -190,8 +190,9 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
                         contentType: 'application/json',
                         data: JSON.stringify({ token: token }),
                         success: function (data) {
-                            if (data.success) {
-                                $('#user-name').text(data.nombre || data.username);
+                            if (data && data.CODIGO === 200) {
+                                var info = data.DATOS || {};
+                                $('#user-name').text(info.nombre || info.username || '');
                                 $('#user-info').show();
                             }
                         },
@@ -199,7 +200,7 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
                             var msg = 'Token inválido o expirado.';
                             try {
                                 var resp = JSON.parse(xhr.responseText);
-                                msg = resp.error || msg;
+                                msg = resp.MENSAJE || msg;
                             } catch (e) { }
                             $('#error-msg').text(msg).show();
                             $('#reset-form').hide();
@@ -244,15 +245,19 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
                             password_confirm: $('#password_confirm').val()
                         }),
                         success: function (data) {
-                            if (data.success) {
+                            if (data && data.CODIGO === 200) {
                                 window.location.href = 'reset_password.php?success=1';
+                            } else {
+                                var msg = (data && data.MENSAJE) ? data.MENSAJE : 'Error al cambiar la contraseña';
+                                errorDiv.text(msg).show();
+                                btn.prop('disabled', false).text('Cambiar Contraseña');
                             }
                         },
                         error: function (xhr) {
                             var msg = 'Error al cambiar la contraseña';
                             try {
                                 var resp = JSON.parse(xhr.responseText);
-                                msg = resp.error || msg;
+                                msg = resp.MENSAJE || msg;
                             } catch (e) { }
                             errorDiv.text(msg).show();
                             btn.prop('disabled', false).text('Cambiar Contraseña');
@@ -277,11 +282,12 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
 
                         const data = await response.json();
 
-                        if (response.ok && data.success) {
-                            document.getElementById('user-name').textContent = data.nombre || data.username;
+                        if (response.ok && data.CODIGO === 200) {
+                            const info = data.DATOS || {};
+                            document.getElementById('user-name').textContent = info.nombre || info.username || '';
                             document.getElementById('user-info').style.display = 'block';
                         } else {
-                            throw new Error(data.error || 'Token inválido o expirado.');
+                            throw new Error(data.MENSAJE || 'Token inválido o expirado.');
                         }
                     } catch (error) {
                         document.getElementById('error-msg').textContent = error.message;
@@ -334,8 +340,8 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
 
                         const data = await response.json();
 
-                        if (!response.ok) {
-                            throw new Error(data.error || 'Error al cambiar la contraseña');
+                        if (!response.ok || data.CODIGO !== 200) {
+                            throw new Error(data.MENSAJE || 'Error al cambiar la contraseña');
                         }
 
                         window.location.href = 'reset_password.php?success=1';

@@ -34,12 +34,7 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'];
-
-// Solo aceptar POST
-if ($method !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+if (!validateHttpMethod('POST')) {
     exit;
 }
 
@@ -58,7 +53,7 @@ require_menu_access(3); // Menú: Producción
 //   - material_id (int, requerido): ID del material en su tabla correspondiente
 //   - cantidad (float, requerido): Cantidad consumida (> 0)
 //
-// Respuesta exitosa: { CODIGO: 201, MENSAJE: '...', ID: <consumo_id> }
+// Respuesta exitosa: { CODIGO: 201, MENSAJE: '...', DATOS: { id: <consumo_id> } }
 // Error de inventario: { CODIGO: 400, MENSAJE: 'Stock insuficiente' }
 
 // Leer y validar JSON del body
@@ -134,4 +129,8 @@ try {
 }
 
 // Retornar resultado exitoso con ID del consumo registrado
-echo json_encode(['CODIGO' => 201, 'MENSAJE' => $result['mensaje'], 'ID' => $result['consumo_id']]);
+echo json_encode([
+    'CODIGO' => 201,
+    'MENSAJE' => $result['mensaje'],
+    'DATOS' => ['id' => (int) $result['consumo_id']]
+]);

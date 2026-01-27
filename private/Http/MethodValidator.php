@@ -32,12 +32,14 @@ require_once __DIR__ . '/../Database/Guard.php';
  * - Envía JSON con código y mensaje de error
  * - Retorna FALSE para que el caller pueda hacer exit
  * 
- * @param string $method Método esperado ('GET', 'POST', 'PATCH', 'DELETE')
+ * @param string|array $method Método(s) esperado(s) ('GET', 'POST', 'PATCH', 'DELETE')
  * @return bool TRUE si el método coincide, FALSE si no
  */
-function validateHttpMethod(string $method): bool
+function validateHttpMethod($method): bool
 {
-    if ($_SERVER['REQUEST_METHOD'] !== $method) {
+    $allowed = is_array($method) ? $method : [$method];
+    $current = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if (!in_array($current, $allowed, true)) {
         http_response_code(405);
         header('Content-Type: application/json');
         echo json_encode([

@@ -37,12 +37,7 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'];
-
-// Solo aceptar POST
-if ($method !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+if (!validateHttpMethod('POST')) {
     exit;
 }
 
@@ -63,7 +58,7 @@ require_menu_access(3); // Menú: Producción
 //   - observaciones (string, opcional): Notas del artesano
 //
 // Respuesta exitosa: 
-//   { CODIGO: 201, MENSAJE: '...', ID: <creacion_id>, COSTO_MATERIALES: <float> }
+//   { CODIGO: 201, MENSAJE: '...', DATOS: { id: <creacion_id>, costo_materiales: <float> } }
 
 // Leer y validar JSON del body
 $input = json_decode(file_get_contents('php://input'), true);
@@ -125,6 +120,8 @@ try {
 echo json_encode([
     'CODIGO' => 201,
     'MENSAJE' => $result['mensaje'],
-    'ID' => $result['creacion_id'],
-    'COSTO_MATERIALES' => $result['costo_materiales']  // Costo calculado de materiales consumidos
+    'DATOS' => [
+        'id' => (int) $result['creacion_id'],
+        'costo_materiales' => $result['costo_materiales']
+    ]
 ]);

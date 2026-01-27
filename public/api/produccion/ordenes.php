@@ -27,14 +27,11 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-// Validar métodos permitidos
-if (!in_array($method, ['GET', 'POST', 'PATCH'], true)) {
-    http_response_code(405);
-    echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+if (!validateHttpMethod(['GET', 'POST', 'PATCH'])) {
     exit;
 }
+
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 // Verificar autenticación y autorización
 if (!require_api_auth()) {
@@ -55,7 +52,7 @@ $is_operador = ($rolid === 2);
 //   - limit (int): Cantidad de registros (default: 50)
 //   - estado (string): Filtrar por estado (opcional)
 //
-// Respuesta: { CODIGO: 200, DATOS: [...] }
+// Respuesta: { CODIGO: 200, MENSAJE: 'OK', DATOS: [...] }
 if ($method === 'GET') {
     // Parsear parámetros de paginación
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
@@ -79,7 +76,7 @@ if ($method === 'GET') {
         exit;
     }
 
-    echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
     exit;
 }
 
@@ -93,7 +90,7 @@ if ($method === 'GET') {
 //   - prioridad_id (int, opcional)
 //   - observaciones (text, opcional)
 //
-// Respuesta: { CODIGO: 200, MENSAJE: 'Orden creada.', ID: 123 }
+// Respuesta: { CODIGO: 200, MENSAJE: 'Orden creada.', DATOS: { id: 123 } }
 if ($method === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
 
@@ -151,7 +148,11 @@ if ($method === 'POST') {
         exit;
     }
 
-    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Orden creada.', 'ID' => (int) $new_id]);
+    echo json_encode([
+        'CODIGO' => 200,
+        'MENSAJE' => 'Orden creada.',
+        'DATOS' => ['id' => (int) $new_id]
+    ]);
     exit;
 }
 

@@ -27,6 +27,10 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
+if (!validateHttpMethod(['GET', 'POST', 'PATCH', 'DELETE'])) {
+    exit;
+}
+
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if (!require_api_auth()) {
@@ -91,7 +95,7 @@ if ($method === 'GET') {
         exit;
     }
 
-    echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
     exit;
 }
 
@@ -137,7 +141,11 @@ if ($method === 'POST') {
     }
 
     http_response_code(201);
-    echo json_encode(['CODIGO' => 201, 'MENSAJE' => 'Especialidad creada.', 'ID' => $id]);
+        echo json_encode([
+            'CODIGO' => 201,
+            'MENSAJE' => 'Especialidad creada.',
+            'DATOS' => ['id' => (int) $id]
+        ]);
     exit;
 }
 

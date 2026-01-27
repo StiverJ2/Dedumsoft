@@ -352,9 +352,10 @@ $(function() {
                         DsCrud.closeModal();
                         return;
                     }
+                    var newId = resp.DATOS && resp.DATOS.id ? resp.DATOS.id : resp.ID;
                     var compraPayload = {
                         tipo_inventario: 'insumos',
-                        item_id: resp.ID,
+                        item_id: newId,
                         cantidad: compraCantidad
                     };
                     DsCrud.api('api/compras.php', 'POST', compraPayload, function() {
@@ -656,7 +657,7 @@ $(function() {
                     }
                     var compraPayload = {
                         tipo_inventario: 'insumos',
-                        item_id: res.ID,
+                        item_id: (res.DATOS && res.DATOS.id ? res.DATOS.id : res.ID),
                         cantidad: compraCantidad
                     };
                     DsCrud.apiLegacy('api/compras.php', 'POST', compraPayload, function() {

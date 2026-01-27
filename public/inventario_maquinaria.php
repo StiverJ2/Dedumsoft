@@ -464,7 +464,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                             }
                             var compraPayload = {
                                 tipo_inventario: 'maquinaria',
-                                item_id: resp.ID,
+                                item_id: (resp.DATOS && resp.DATOS.id ? resp.DATOS.id : resp.ID),
                                 cantidad: 1
                             };
                             DsCrud.api('api/compras.php', 'POST', compraPayload, function () {
@@ -793,7 +793,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                             }
                             var compraPayload = {
                                 tipo_inventario: 'maquinaria',
-                                item_id: res.ID,
+                                item_id: (res.DATOS && res.DATOS.id ? res.DATOS.id : res.ID),
                                 cantidad: 1
                             };
                             DsCrud.apiLegacy('api/compras.php', 'POST', compraPayload, function () {

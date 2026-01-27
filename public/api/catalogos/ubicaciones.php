@@ -34,6 +34,10 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
+if (!validateHttpMethod(['GET', 'POST', 'PATCH', 'DELETE'])) {
+    exit;
+}
+
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 // Verificar autenticación y autorización
@@ -51,7 +55,7 @@ require_menu_access(2); // Menú: Inventario
 //   - area_id (int): Filtrar por área (opcional)
 //   - activo (bool): Filtrar por estado activo (default: true)
 //
-// Respuesta: { CODIGO: 200, DATOS: [...] }
+// Respuesta: { CODIGO: 200, MENSAJE: 'OK', DATOS: [...] }
 if ($method === 'GET') {
     // Parsear parámetros de paginación y filtros
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
@@ -77,7 +81,7 @@ if ($method === 'GET') {
         exit;
     }
 
-    echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
     exit;
 }
 
@@ -89,7 +93,7 @@ if ($method === 'GET') {
 //   - descripcion (string, opcional): Descripción detallada
 //   - area_id (int, opcional): ID del área (default: 1)
 //
-// Respuesta: { CODIGO: 201, MENSAJE: 'Ubicación creada.', id: <new_id> }
+// Respuesta: { CODIGO: 201, MENSAJE: 'Ubicación creada.', DATOS: { id: <new_id> } }
 if ($method === 'POST') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
@@ -117,7 +121,11 @@ if ($method === 'POST') {
         exit;
     }
 
-    echo json_encode(['CODIGO' => 201, 'MENSAJE' => 'Ubicación creada.', 'id' => $result]);
+    echo json_encode([
+        'CODIGO' => 201,
+        'MENSAJE' => 'Ubicación creada.',
+        'DATOS' => ['id' => (int) $result]
+    ]);
     exit;
 }
 

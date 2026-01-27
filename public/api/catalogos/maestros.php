@@ -27,6 +27,10 @@ require_once PRIVATE_PATH . '/Database/CatalogConfig.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
+if (!validateHttpMethod(['GET', 'POST', 'PATCH', 'DELETE'])) {
+    exit;
+}
+
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if (!require_api_auth()) {
@@ -197,7 +201,11 @@ if ($method === 'POST') {
         $stmt->execute();
         $id = $stmt->fetchColumn();
         http_response_code(201);
-        echo json_encode(['CODIGO' => 201, 'MENSAJE' => 'Registro creado.', 'ID' => (int) $id]);
+        echo json_encode([
+            'CODIGO' => 201,
+            'MENSAJE' => 'Registro creado.',
+            'DATOS' => ['id' => (int) $id]
+        ]);
     } catch (PDOException $e) {
         error_log('catalogos maestros POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         http_response_code(500);

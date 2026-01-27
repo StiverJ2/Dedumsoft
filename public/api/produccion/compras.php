@@ -48,7 +48,7 @@ require_menu_access(2); // Menú: Inventario
 //   - referencia (string, opcional): Número de factura, etc.
 //   - fecha (date, opcional): Fecha de la compra
 //
-// Respuesta: { CODIGO: 201, MENSAJE: 'Compra registrada.', ID: <mov_id> }
+// Respuesta: { CODIGO: 201, MENSAJE: 'Compra registrada.', DATOS: { id: <mov_id> } }
 
 $input = json_decode(file_get_contents('php://input'), true);
 
@@ -126,7 +126,11 @@ try {
     $mov_id = $stmt->fetchColumn();
 
     http_response_code(201);
-    echo json_encode(['CODIGO' => 201, 'MENSAJE' => 'Compra registrada.', 'ID' => (int) $mov_id]);
+    echo json_encode([
+        'CODIGO' => 201,
+        'MENSAJE' => 'Compra registrada.',
+        'DATOS' => ['id' => (int) $mov_id]
+    ]);
 } catch (PDOException $e) {
     error_log('compras POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 

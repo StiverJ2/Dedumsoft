@@ -35,16 +35,16 @@
 require_once __DIR__ . '/../../private/bootstrap.php';
 
 require_once PRIVATE_PATH . '/Database/Connection.php';
+require_once PRIVATE_PATH . '/Http/MethodValidator.php';
 require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-if (!in_array($method, ['POST', 'PATCH'], true)) {
-    http_response_code(405);
-    echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+if (!validateHttpMethod(['POST', 'PATCH'])) {
     exit;
 }
+
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if (!require_api_auth()) {
     exit;
@@ -151,7 +151,11 @@ if ($method === 'POST') {
     }
 
     http_response_code(201);
-    echo json_encode(['CODIGO' => 201, 'MENSAJE' => 'Usuario creado.', 'ID' => $id]);
+    echo json_encode([
+        'CODIGO' => 201,
+        'MENSAJE' => 'Usuario creado.',
+        'DATOS' => ['id' => (int) $id]
+    ]);
     exit;
 }
 

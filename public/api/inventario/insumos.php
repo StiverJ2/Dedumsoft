@@ -41,14 +41,11 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'];
-
-// Validar métodos HTTP permitidos
-if (!in_array($method, ['GET', 'POST', 'PATCH', 'DELETE'])) {
-    http_response_code(405);
-    echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+if (!validateHttpMethod(['GET', 'POST', 'PATCH', 'DELETE'])) {
     exit;
 }
+
+$method = $_SERVER['REQUEST_METHOD'];
 
 // Verificar autenticación
 if (!require_api_auth()) {
@@ -83,7 +80,7 @@ if ($method === 'GET') {
 //   - stock_bajo (bool): Solo mostrar items con stock < stock_minimo (default: false)
 //   - activo (bool): Filtrar por estado activo/inactivo (default: true)
 //
-// Respuesta: { CODIGO: 200, DATOS: [...] }
+// Respuesta: { CODIGO: 200, MENSAJE: 'OK', DATOS: [...] }
 if ($method === 'GET') {
     // Modo 1: Obtener insumo por ID específico
     if (isset($_GET['id']) && $_GET['id'] !== '') {
@@ -102,7 +99,7 @@ if ($method === 'GET') {
             echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
             exit;
         }
-        echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+        echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
         exit;
     }
 
@@ -143,7 +140,7 @@ if ($method === 'GET') {
         exit;
     }
 
-    echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
     exit;
 }
 
@@ -161,7 +158,7 @@ if ($method === 'GET') {
 //   - proveedor_id (int, opcional): ID del proveedor habitual
 //   - ubicacion_id (int, opcional): ID de ubicación en almacén
 //
-// Respuesta: { CODIGO: 201, MENSAJE: 'Insumo creado.', ID: <new_id> }
+// Respuesta: { CODIGO: 201, MENSAJE: 'Insumo creado.', DATOS: { id: <new_id> } }
 if ($method === 'POST') {
     // Leer y validar JSON del body
     $input = json_decode(file_get_contents('php://input'), true);
@@ -202,7 +199,11 @@ if ($method === 'POST') {
         $result = $stmt->fetchColumn();
 
         http_response_code(201);
-        echo json_encode(['CODIGO' => 201, 'MENSAJE' => 'Insumo creado.', 'ID' => (int) $result]);
+        echo json_encode([
+            'CODIGO' => 201,
+            'MENSAJE' => 'Insumo creado.',
+            'DATOS' => ['id' => (int) $result]
+        ]);
     } catch (PDOException $e) {
         error_log('inventario_insumos POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         http_response_code(500);

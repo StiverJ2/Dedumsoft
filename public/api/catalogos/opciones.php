@@ -40,10 +40,12 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
 // Verificar autenticación (todos los tipos requieren sesión válida)
 if (!require_api_auth()) {
+    exit;
+}
+
+if (!validateHttpMethod('GET')) {
     exit;
 }
 
@@ -53,13 +55,12 @@ if (!require_api_auth()) {
 // Este endpoint determina qué tipos de opciones puede ver el usuario
 // basándose en los permisos de menú asignados a su rol.
 
-if ($method === 'GET') {
-    // Obtener y sanitizar el parámetro 'tipo'
-    $tipo_raw = $_GET['tipo'] ?? null;
-    $tipo = $tipo_raw !== null ? trim((string) $tipo_raw) : null;
-    if ($tipo === '') {
-        $tipo = null;
-    }
+// Obtener y sanitizar el parámetro 'tipo'
+$tipo_raw = $_GET['tipo'] ?? null;
+$tipo = $tipo_raw !== null ? trim((string) $tipo_raw) : null;
+if ($tipo === '') {
+    $tipo = null;
+}
 
     // =========================================================================
     // CONTROL DE ACCESO: Determinar tipos permitidos según permisos
@@ -110,8 +111,8 @@ if ($method === 'GET') {
         dedumsoft_forbidden();
     }
 
-    try {
-        $opciones = [];
+try {
+    $opciones = [];
 
         // =====================================================================
         // PROCESAMIENTO DE CADA TIPO DE OPCIÓN
@@ -324,19 +325,13 @@ if ($method === 'GET') {
         // Si se solicitó un tipo específico, retornar solo ese array.
         // Si no, retornar objeto con todos los tipos como propiedades.
 
-        if ($tipo && isset($opciones[$tipo])) {
-            echo json_encode(['CODIGO' => 200, 'DATOS' => $opciones[$tipo]]);
-        } else {
-            echo json_encode(['CODIGO' => 200, 'DATOS' => $opciones]);
-        }
-    } catch (PDOException $e) {
-        error_log('opciones GET error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
+    if ($tipo && isset($opciones[$tipo])) {
+        echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $opciones[$tipo]]);
+    } else {
+        echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $opciones]);
     }
-    exit;
+} catch (PDOException $e) {
+    error_log('opciones GET error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    http_response_code(500);
+    echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
 }
-
-// Método no permitido
-http_response_code(405);
-echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);

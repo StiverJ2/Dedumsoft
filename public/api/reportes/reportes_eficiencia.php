@@ -65,4 +65,4 @@ try {
     exit;
 }
 
-echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);

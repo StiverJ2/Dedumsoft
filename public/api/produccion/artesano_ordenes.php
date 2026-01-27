@@ -30,14 +30,11 @@ require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'];
-
-// Validar métodos HTTP permitidos
-if (!in_array($method, ['GET', 'PATCH'])) {
-    http_response_code(405);
-    echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+if (!validateHttpMethod(['GET', 'PATCH'])) {
     exit;
 }
+
+$method = $_SERVER['REQUEST_METHOD'];
 
 // Verificar autenticación y autorización
 if (!require_api_auth()) {
@@ -53,7 +50,7 @@ require_menu_access(3); // Menú: Producción
 //   - offset (int): Inicio de paginación (default: 0)
 //   - limit (int): Cantidad de registros (default: 50)
 //
-// Respuesta: { CODIGO: 200, DATOS: [...] }
+// Respuesta: { CODIGO: 200, MENSAJE: 'OK', DATOS: [...] }
 if ($method === 'GET') {
     // Parsear parámetros
     $artesano_id = isset($_GET['artesano_id']) ? (int) $_GET['artesano_id'] : 0;
@@ -84,7 +81,7 @@ if ($method === 'GET') {
         exit;
     }
 
-    echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
     exit;
 }
 

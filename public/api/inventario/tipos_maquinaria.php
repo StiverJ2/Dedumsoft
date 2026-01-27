@@ -31,16 +31,12 @@
 require_once __DIR__ . '/../../../private/bootstrap.php';
 
 require_once PRIVATE_PATH . '/Database/Connection.php';
+require_once PRIVATE_PATH . '/Http/MethodValidator.php';
 require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 
 header('Content-Type: application/json');
 
-$method = $_SERVER['REQUEST_METHOD'];
-
-// Solo aceptar GET
-if ($method !== 'GET') {
-    http_response_code(405);
-    echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+if (!validateHttpMethod('GET')) {
     exit;
 }
 
@@ -79,4 +75,4 @@ try {
     exit;
 }
 
-echo json_encode(['CODIGO' => 200, 'DATOS' => $rows]);
+echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);

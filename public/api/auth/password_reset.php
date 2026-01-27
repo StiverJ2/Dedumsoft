@@ -60,12 +60,12 @@ try {
 
         default:
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Acción no válida']);
+            echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Acción no válida.']);
     }
 } catch (Exception $e) {
     error_log('password_reset error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Error interno del servidor']);
+    echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor']);
 }
 
 /**
@@ -80,8 +80,8 @@ function handleRequestReset(PDO $conn, array $input): void
         dedumsoft_log_rate_limited($rate['count'] ?? 0);
         http_response_code(429);
         echo json_encode([
-            'success' => false,
-            'error' => 'Demasiadas solicitudes. Intenta en ' . ceil($rate['retry_after'] / 60) . ' minutos.'
+            'CODIGO' => 429,
+            'MENSAJE' => 'Demasiadas solicitudes. Intenta en ' . ceil($rate['retry_after'] / 60) . ' minutos.'
         ]);
         return;
     }
@@ -92,14 +92,14 @@ function handleRequestReset(PDO $conn, array $input): void
     // Validar username
     if ($username === '') {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Usuario invalido']);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Usuario invalido.']);
         return;
     }
 
     // Validar formato de email
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Email inválido']);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Email inválido.']);
         return;
     }
 
@@ -134,8 +134,8 @@ function handleRequestReset(PDO $conn, array $input): void
 
     // Siempre responder igual al usuario (no revelar si usuario/email existe)
     $response = [
-        'success' => true,
-        'message' => 'Si el usuario y el email existen en nuestro sistema, recibiras instrucciones para recuperar tu contrasena.'
+        'CODIGO' => 200,
+        'MENSAJE' => 'Si el usuario y el email existen en nuestro sistema, recibiras instrucciones para recuperar tu contrasena.'
     ];
 
     // Si hay token, enviar email
@@ -162,9 +162,11 @@ function handleRequestReset(PDO $conn, array $input): void
 
         // En desarrollo, incluir info de debug
         if (!(ENV['PROD'] ?? false)) {
-            $response['dev_email_sent'] = $emailResult['success'];
-            $response['dev_email_error'] = $emailResult['error'];
-            $response['dev_link'] = $reset_link;
+            $response['DATOS'] = [
+                'email_sent' => $emailResult['success'],
+                'email_error' => $emailResult['error'] ?? null,
+                'link' => $reset_link
+            ];
         }
     }
 
@@ -180,7 +182,7 @@ function handleValidateToken(PDO $conn, array $input): void
 
     if ($token === '' || strlen($token) !== 64) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Token inválido']);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Token inválido.']);
         return;
     }
 
@@ -193,14 +195,17 @@ function handleValidateToken(PDO $conn, array $input): void
 
     if ((int) $result['codigo'] !== 200) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => $result['mensaje']]);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => $result['mensaje']]);
         return;
     }
 
     echo json_encode([
-        'success' => true,
-        'username' => $result['username'],
-        'nombre' => $result['nombre']
+        'CODIGO' => 200,
+        'MENSAJE' => 'OK',
+        'DATOS' => [
+            'username' => $result['username'],
+            'nombre' => $result['nombre']
+        ]
     ]);
 }
 
@@ -216,19 +221,19 @@ function handleResetPassword(PDO $conn, array $input): void
     // Validaciones
     if ($token === '' || strlen($token) !== 64) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Token inválido']);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Token inválido.']);
         return;
     }
 
     if ($password === '' || strlen($password) < 8) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'La contraseña debe tener al menos 8 caracteres']);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'La contraseña debe tener al menos 8 caracteres.']);
         return;
     }
 
     if ($password !== $password_confirm) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Las contraseñas no coinciden']);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Las contraseñas no coinciden.']);
         return;
     }
 
@@ -236,7 +241,7 @@ function handleResetPassword(PDO $conn, array $input): void
     $strength_error = validatePasswordStrength($password);
     if ($strength_error) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => $strength_error]);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => $strength_error]);
         return;
     }
 
@@ -253,15 +258,15 @@ function handleResetPassword(PDO $conn, array $input): void
     if ((int) $result['codigo'] !== 200) {
         dedumsoft_security_log('PASSWORD_RESET_FAILED', null, $result['mensaje']);
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => $result['mensaje']]);
+        echo json_encode(['CODIGO' => 400, 'MENSAJE' => $result['mensaje']]);
         return;
     }
 
     dedumsoft_security_log('PASSWORD_RESET_SUCCESS', null, 'Password changed via reset token');
 
     echo json_encode([
-        'success' => true,
-        'message' => 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.'
+        'CODIGO' => 200,
+        'MENSAJE' => $result['mensaje'] ?? 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.'
     ]);
 }
 
