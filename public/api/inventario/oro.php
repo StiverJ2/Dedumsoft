@@ -14,7 +14,9 @@
  * - DELETE: Eliminar registro (soft-delete)
  * 
  * Autenticación: Requerida (JWT en sesión)
- * Autorización: Menú 2 (Inventario)
+ * Autorización:
+ * - GET: Menú 2 (Inventario) o Menú 3 (Producción)
+ * - POST/PATCH/DELETE: Menú 2 (Inventario)
  * 
  * Campos principales:
  * - tipo_oro_id: Referencia al catálogo de tipos de oro
@@ -47,11 +49,23 @@ if (!in_array($method, ['GET', 'POST', 'PATCH', 'DELETE'])) {
     exit;
 }
 
-// Verificar autenticación y autorización
+// Verificar autenticación
 if (!require_api_auth()) {
     exit;
 }
-require_menu_access(2); // Menú: Inventario
+
+// Control de acceso especial:
+// - GET: Accesible desde Inventario (2) o Producción (3)
+// - POST/PATCH/DELETE: Solo desde Inventario (2)
+$can_inventario = dedumsoft_user_can_menu(2);
+$can_produccion = dedumsoft_user_can_menu(3);
+if ($method === 'GET') {
+    if (!$can_inventario && !$can_produccion) {
+        dedumsoft_forbidden();
+    }
+} elseif (!$can_inventario) {
+    dedumsoft_forbidden();
+}
 
 // =============================================================================
 // GET: Listar inventario de oro

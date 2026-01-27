@@ -67,8 +67,10 @@ RETURNS TABLE (
     valor_total numeric,
     activo boolean
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT
         io.id,
         io.tipo_oro_id,
@@ -91,6 +93,7 @@ AS $$
     ORDER BY io.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
+END;
 $$;
 
 -- ============================================
@@ -122,8 +125,10 @@ RETURNS TABLE (
     fecha_registro timestamp,
     activo boolean
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT
         ii.id,
         ii.nombre::text,
@@ -148,6 +153,7 @@ AS $$
     ORDER BY ii.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
+END;
 $$;
 
 -- ============================================
@@ -183,8 +189,10 @@ RETURNS TABLE (
     fecha_registro timestamp,
     activo boolean
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT
         im.id,
         im.sku::text AS sku,
@@ -213,6 +221,7 @@ AS $$
     ORDER BY im.fecha_registro DESC
     OFFSET par_offset
     LIMIT par_limit;
+END;
 $$;
 
 -- ============================================
@@ -226,12 +235,15 @@ RETURNS TABLE (
     descripcion text,
     color text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT em.id, em.nombre::text, em.descripcion::text, em.color::text
     FROM estados_maquinaria em
     WHERE em.activo = TRUE
     ORDER BY em.orden;
+END;
 $$;
 
 -- ============================================

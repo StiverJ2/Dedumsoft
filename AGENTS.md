@@ -159,15 +159,16 @@ require_menu_access(2);    // Bloquea si no tiene permiso al menú #2
 
 ### Menús del Sistema
 
-| ID  | Nombre        | Archivo Principal        |
-| --- | ------------- | ------------------------ |
-| 1   | Dashboard     | `index.php`              |
-| 2   | Inventario    | `inventario_insumos.php` |
-| 3   | Producción    | `produccion.php`         |
-| 4   | Reportes      | `reportes.php`           |
-| 5   | Usuarios      | `usuarios.php`           |
-| 6   | Proveedores   | `proveedores.php`        |
-| 7   | Configuración | `configuracion.php`      |
+| ID  | Nombre         | Archivo Principal        |
+| --- | -------------- | ------------------------ |
+| 1   | Dashboard      | `index.php`              |
+| 2   | Inventario     | `inventario_insumos.php` |
+| 3   | Producción     | `produccion.php`         |
+| 4   | Reportes       | `reportes.php`           |
+| 5   | Usuarios       | `usuarios.php`           |
+| 6   | Proveedores    | `proveedores.php`        |
+| 7   | Configuración  | `configuracion.php`      |
+| 8   | Especialidades | `especialidades.php`     |
 
 ### ⚠️ IMPORTANTE: Caché de Permisos
 
@@ -242,6 +243,8 @@ SELECT fun_eliminar_insumo(id);  -- Soft delete
 - `database/functions/07_ubicaciones.sql` - Ubicaciones físicas
 - `database/functions/08_catalog_functions.sql` - Catálogos
 - `database/functions/09_artesano.sql` - Gestión de artesanos
+  - Nota: al modificar funciones o la estructura de la base de datos, solo modificar los scripts SQL base, no generar migraciones.
+  - Nota: Si una query es demasiado compleja para solo manejarla en PHP, debe implementarse como función PostgreSQL PL/pgSQL. Así mismo, todas las funciones deben operar bajo LANGUAGE PLPGSQL, no LANGUAGE SQL.
 
 ### ⚠️ OBLIGATORIO: Validación con PGlite
 
@@ -357,11 +360,13 @@ Algunos clientes usan equipos antiguos con Windows XP/Vista que no pueden actual
 ### ⚠️ IMPORTANTE: Alcance de las restricciones legacy
 
 Las restricciones de compatibilidad IE8 **SOLO aplican a:**
+
 - Código JavaScript en `public/assets/js/`
 - Scripts inline en páginas PHP (`<script>` tags)
 - Cualquier JS que se ejecute en el navegador del usuario
 
 **NO aplican a:**
+
 - Herramientas de desarrollo (ej: `pglite-validator/`)
 - Scripts de Node.js
 - Código PHP del servidor

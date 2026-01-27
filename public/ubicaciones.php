@@ -45,7 +45,8 @@ require_menu_access(2); // Menú: Inventario
 $legacy = dedumsoft_is_legacy_browser();
 
 // Filtros de búsqueda (solo usados en modo legacy)
-$area = $_GET['area'] ?? '';
+$area = trim((string) ($_GET['area'] ?? ''));
+$area_id = null;
 $ubicaciones_rows = [];
 $area_options = [];
 
@@ -70,6 +71,19 @@ if ($legacy) {
             ['value' => 5, 'label' => 'Oficina'],
             ['value' => 6, 'label' => 'Taller']
         ];
+    }
+
+    if ($area !== '') {
+        if (ctype_digit($area) && (int) $area > 0) {
+            $area_id = (int) $area;
+        } else {
+            foreach ($area_options as $opt) {
+                if (strcasecmp((string) ($opt['label'] ?? ''), $area) === 0) {
+                    $area_id = (int) ($opt['value'] ?? 0);
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -124,19 +138,28 @@ function format_activo_badge($activo)
 // Cargar datos para modo legacy
 if ($legacy) {
     try {
+        $ubic_limit = $area_id !== null ? 200 : 50;
         $stmt = $connLogic->prepare(
             'SELECT id, nombre, descripcion, area_id, area_nombre, activo FROM fun_obtener_ubicaciones(:offset, :limit, :area_id, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', 50, PDO::PARAM_INT);
-        $stmt->bindValue(':area_id', $area !== '' ? (int) $area : null, $area !== '' ? PDO::PARAM_INT : PDO::PARAM_NULL);
+        $stmt->bindValue(':limit', $ubic_limit, PDO::PARAM_INT);
+        $stmt->bindValue(':area_id', $area_id !== null ? $area_id : null, $area_id !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $ubicaciones_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($area_id !== null) {
+            $ubicaciones_rows = array_values(array_filter($ubicaciones_rows, function ($row) use ($area_id) {
+                return (int) ($row['area_id'] ?? 0) === $area_id;
+            }));
+        }
     } catch (PDOException $e) {
         error_log('ubicaciones legacy error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 }
+
+$area_value = $area_id !== null ? (string) $area_id : $area;
 
 include VIEWS_PATH . '/layouts/header.php';
 include VIEWS_PATH . '/layouts/nav.php';
@@ -160,13 +183,11 @@ include VIEWS_PATH . '/layouts/nav.php';
                     <label class="form-label muted" for="ubic-area">Área</label>
                     <select id="ubic-area" name="area" class="form-select form-select-sm ds-field">
                         <option value="">Todas</option>
-                        <option value="Produccion" <?php echo $area === 'Produccion' ? 'selected' : ''; ?>>Producción
-                        </option>
-                        <option value="Almacen" <?php echo $area === 'Almacen' ? 'selected' : ''; ?>>Almacén</option>
-                        <option value="Ventas" <?php echo $area === 'Ventas' ? 'selected' : ''; ?>>Ventas</option>
-                        <option value="Oficina" <?php echo $area === 'Oficina' ? 'selected' : ''; ?>>Oficina</option>
-                        <option value="Taller" <?php echo $area === 'Taller' ? 'selected' : ''; ?>>Taller</option>
-                        <option value="General" <?php echo $area === 'General' ? 'selected' : ''; ?>>General</option>
+                        <?php foreach ($area_options as $opt): ?>
+                            <option value="<?php echo (int) $opt['value']; ?>" <?php echo (string) $area_value === (string) $opt['value'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars((string) $opt['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <button class="btn btn-sm" type="submit">Actualizar</button>

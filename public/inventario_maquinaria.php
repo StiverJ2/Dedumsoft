@@ -48,7 +48,8 @@ require_menu_access(2); // Menú: Inventario
 $legacy = dedumsoft_is_legacy_browser();
 
 // Filtros de búsqueda (solo usados en modo legacy)
-$maq_estado_id = isset($_GET['maq_estado_id']) && $_GET['maq_estado_id'] !== '' ? (int) $_GET['maq_estado_id'] : null;
+$maq_estado_raw = trim((string) ($_GET['maq_estado_id'] ?? ''));
+$maq_estado_id = null;
 $maq_rows = [];
 $proveedor_options = [];
 $ubicacion_options = [];
@@ -153,17 +154,37 @@ try {
     error_log('inventario estados_maquinaria error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
 }
 
+if ($maq_estado_raw !== '') {
+    if (ctype_digit($maq_estado_raw) && (int) $maq_estado_raw > 0) {
+        $maq_estado_id = (int) $maq_estado_raw;
+    } else {
+        foreach ($maq_estado_options as $opt) {
+            if (strcasecmp((string) ($opt['nombre'] ?? ''), $maq_estado_raw) === 0) {
+                $maq_estado_id = (int) ($opt['id'] ?? 0);
+                break;
+            }
+        }
+    }
+}
+
 if ($legacy) {
     try {
+        $maq_limit = $maq_estado_id !== null ? 200 : 20;
         $stmt = $connLogic->prepare(
             'SELECT id, sku, nombre, tipo_maquinaria_id, tipo_nombre, estado_id, estado_nombre, estado_color, ubicacion_id, ubicacion_nombre FROM fun_obtener_inventario_maquinaria(:offset, :limit, :estado_id, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $maq_limit, PDO::PARAM_INT);
         $stmt->bindValue(':estado_id', $maq_estado_id, $maq_estado_id !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $maq_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($maq_estado_id !== null) {
+            $maq_rows = array_values(array_filter($maq_rows, function ($row) use ($maq_estado_id) {
+                return (int) ($row['estado_id'] ?? 0) === $maq_estado_id;
+            }));
+        }
     } catch (PDOException $e) {
         error_log('inventario legacy maquinaria error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
@@ -300,10 +321,14 @@ include VIEWS_PATH . '/layouts/nav.php';
                     color: e.color
                 }));
 
-                proveedoresCache = (resProv.data.DATOS || []).map(p => ({
-                    value: p.id,
-                    label: `${p.nombre} (${p.tipo_nombre || p.tipo || ''})`
-                }));
+                proveedoresCache = (resProv.data.DATOS || []).map(p => {
+                    const tipoRaw = p.tipo_nombre || p.tipo || '';
+                    return {
+                        value: p.id,
+                        label: `${p.nombre}${tipoRaw ? ' (' + tipoRaw + ')' : ''}`,
+                        tipo: String(tipoRaw || '').toLowerCase()
+                    };
+                });
 
                 ubicacionesCache = (resUbi.data.DATOS || []).map(u => ({
                     value: u.id,
@@ -327,7 +352,11 @@ include VIEWS_PATH . '/layouts/nav.php';
                     value: '',
                     label: '-- Sin proveedor --'
                 }].concat(
-                    proveedoresCache.filter(p => p.label.indexOf('(maquinaria)') > -1 || !data.id)
+                    proveedoresCache.filter(p => {
+                        const isMaq = p.tipo === 'maquinaria';
+                        const isCurrent = String(p.value) === String(data.proveedor_id || '');
+                        return isMaq || !data.id || isCurrent;
+                    })
                 );
                 const ubOpts = [{
                     value: '',
@@ -665,7 +694,10 @@ include VIEWS_PATH . '/layouts/nav.php';
                 d = d || {};
                 var maqProveedores = [];
                 for (var i = 0; i < proveedorOptions.length; i++) {
-                    if (proveedorOptions[i].value === '' || proveedorOptions[i].label.indexOf('(maquinaria)') > -1) {
+                    var label = String(proveedorOptions[i].label || '').toLowerCase();
+                    var isMaq = label.indexOf('(maquinaria)') > -1;
+                    var isCurrent = String(proveedorOptions[i].value) === String(d.proveedor_id || '');
+                    if (proveedorOptions[i].value === '' || isMaq || isCurrent) {
                         maqProveedores.push(proveedorOptions[i]);
                     }
                 }

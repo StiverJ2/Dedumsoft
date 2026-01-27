@@ -48,8 +48,10 @@ RETURNS TABLE (
     activo boolean,
     created_at timestamp
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT
         u.id,
         u.nombre::text,
@@ -65,6 +67,7 @@ AS $$
     ORDER BY a.orden, u.nombre
     OFFSET par_offset
     LIMIT par_limit;
+END;
 $$;
 
 -- ============================================
@@ -156,10 +159,13 @@ RETURNS TABLE (
     descripcion text,
     orden int
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT a.id, a.nombre::text, a.descripcion::text, a.orden
     FROM areas a
     WHERE a.activo = TRUE
     ORDER BY a.orden, a.nombre;
+END;
 $$;

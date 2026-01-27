@@ -21,7 +21,8 @@
  * - Menú 2 (Inventario): areas, tipos_oro, estados_maquinaria
  * - Menú 6 (Proveedores): tipos_proveedor
  * - Menú 3 (Producción): estados_orden, prioridades, tipos_material,
- *                        niveles_calidad, artesanos
+ *                        niveles_calidad, artesanos, productos
+ * - Menú 5/8 (Usuarios/Especialidades): especialidades
  * 
  * Formato de respuesta:
  * Cada opción tiene la estructura { value: ID, label: NOMBRE, ...extras }
@@ -85,8 +86,14 @@ if ($method === 'GET') {
             'prioridades',
             'tipos_material',
             'niveles_calidad',
-            'artesanos'
+            'artesanos',
+            'productos'
         ]);
+    }
+
+    // Menú 5 (Usuarios) o Menú 8 (Especialidades): Acceso a especialidades
+    if (dedumsoft_user_can_menu(5) || dedumsoft_user_can_menu(8)) {
+        $allowed_types[] = 'especialidades';
     }
 
     // Eliminar duplicados y reindexar
@@ -216,6 +223,27 @@ if ($method === 'GET') {
                 }, $prioridades);
             }
             // -----------------------------------------------------------------
+            // PRODUCTOS: Catálogo de productos disponibles para órdenes
+            // -----------------------------------------------------------------
+            elseif ($requested === 'productos') {
+                $stmt = $connLogic->prepare('SELECT id, nombre, tipo, descripcion FROM productos WHERE activo = true ORDER BY nombre');
+                $stmt->execute();
+                $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $opciones['productos'] = array_map(function ($p) {
+                    $label = $p['nombre'];
+                    if ($p['tipo'] !== null && $p['tipo'] !== '') {
+                        $label .= ' (' . $p['tipo'] . ')';
+                    }
+                    return [
+                        'value' => $p['id'],
+                        'label' => $label,
+                        'tipo' => $p['tipo'],
+                        'descripcion' => $p['descripcion']
+                    ];
+                }, $productos);
+            }
+            // -----------------------------------------------------------------
             // TIPOS DE MATERIAL: Categorías de materiales consumibles
             // -----------------------------------------------------------------
             elseif ($requested === 'tipos_material') {
@@ -251,16 +279,42 @@ if ($method === 'GET') {
             // ARTESANOS: Lista de artesanos activos para asignación
             // -----------------------------------------------------------------
             elseif ($requested === 'artesanos') {
-                $stmt = $connLogic->prepare('SELECT id, nombre, apellido FROM artesanos WHERE activo = true ORDER BY nombre, apellido');
+                $stmt = $connLogic->prepare(
+                    'SELECT id, nombre, apellido, especialidades FROM fun_obtener_artesanos(:activo)'
+                );
+                $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
                 $stmt->execute();
                 $artesanos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 $opciones['artesanos'] = array_map(function ($a) {
+                    $nombre = trim($a['nombre'] . ' ' . $a['apellido']);
+                    $especialidades = $a['especialidades'] ?? '';
+                    $label = $nombre;
+                    if ($especialidades !== null && $especialidades !== '') {
+                        $label .= ' - ' . $especialidades;
+                    }
                     return [
                         'value' => $a['id'],
-                        'label' => trim($a['nombre'] . ' ' . $a['apellido'])
+                        'label' => $label,
+                        'especialidades' => $especialidades
                     ];
                 }, $artesanos);
+            }
+            // -----------------------------------------------------------------
+            // ESPECIALIDADES: Catálogo de especialidades de artesanos
+            // -----------------------------------------------------------------
+            elseif ($requested === 'especialidades') {
+                $stmt = $connLogic->prepare('SELECT id, nombre, descripcion FROM cat_especialidad WHERE activo = true ORDER BY id');
+                $stmt->execute();
+                $especialidades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $opciones['especialidades'] = array_map(function ($e) {
+                    return [
+                        'value' => $e['id'],
+                        'label' => $e['nombre'],
+                        'descripcion' => $e['descripcion']
+                    ];
+                }, $especialidades);
             }
         }
 

@@ -46,7 +46,8 @@ require_menu_access(2); // Menú: Inventario
 $legacy = dedumsoft_is_legacy_browser();
 
 // Filtros de búsqueda (solo usados en modo legacy)
-$oro_tipo = $_GET['oro_tipo'] ?? '';
+$oro_tipo = trim((string) ($_GET['oro_tipo'] ?? ''));
+$oro_tipo_id = null;
 $oro_rows = [];
 $proveedor_options = [];
 $oro_tipo_options = [];
@@ -80,23 +81,45 @@ if ($legacy) {
             ['value' => 5, 'label' => '24k']
         ];
     }
+
+    if ($oro_tipo !== '') {
+        if (ctype_digit($oro_tipo) && (int) $oro_tipo > 0) {
+            $oro_tipo_id = (int) $oro_tipo;
+        } else {
+            foreach ($oro_tipo_options as $opt) {
+                if (strcasecmp((string) ($opt['label'] ?? ''), $oro_tipo) === 0) {
+                    $oro_tipo_id = (int) ($opt['value'] ?? 0);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 if ($legacy) {
     try {
+        $oro_limit = $oro_tipo_id !== null ? 200 : 20;
         $stmt = $connLogic->prepare(
             'SELECT id, tipo_oro_id, tipo_oro_nombre, peso_gramos, precio_gramo, proveedor_nombre FROM fun_obtener_inventario_oro(:offset, :limit, :tipo_id, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
-        $stmt->bindValue(':tipo_id', $oro_tipo !== '' ? (int) $oro_tipo : null, $oro_tipo !== '' ? PDO::PARAM_INT : PDO::PARAM_NULL);
+        $stmt->bindValue(':limit', $oro_limit, PDO::PARAM_INT);
+        $stmt->bindValue(':tipo_id', $oro_tipo_id !== null ? $oro_tipo_id : null, $oro_tipo_id !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $oro_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($oro_tipo_id !== null) {
+            $oro_rows = array_values(array_filter($oro_rows, function ($row) use ($oro_tipo_id) {
+                return (int) ($row['tipo_oro_id'] ?? 0) === $oro_tipo_id;
+            }));
+        }
     } catch (PDOException $e) {
         error_log('inventario legacy oro error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 }
+
+$oro_tipo_value = $oro_tipo_id !== null ? (string) $oro_tipo_id : $oro_tipo;
 
 include VIEWS_PATH . '/layouts/header.php';
 include VIEWS_PATH . '/layouts/nav.php';
@@ -121,11 +144,11 @@ include VIEWS_PATH . '/layouts/nav.php';
                     <label class="form-label muted" for="oro-tipo">Tipo</label>
                     <select id="oro-tipo" name="oro_tipo" class="form-select form-select-sm ds-field">
                         <option value="">Todos</option>
-                        <option value="10k" <?php echo $oro_tipo === '10k' ? 'selected' : ''; ?>>10k</option>
-                        <option value="14k" <?php echo $oro_tipo === '14k' ? 'selected' : ''; ?>>14k</option>
-                        <option value="18k" <?php echo $oro_tipo === '18k' ? 'selected' : ''; ?>>18k</option>
-                        <option value="22k" <?php echo $oro_tipo === '22k' ? 'selected' : ''; ?>>22k</option>
-                        <option value="24k" <?php echo $oro_tipo === '24k' ? 'selected' : ''; ?>>24k</option>
+                        <?php foreach ($oro_tipo_options as $tipo): ?>
+                            <option value="<?php echo (int) $tipo['value']; ?>" <?php echo (string) $oro_tipo_value === (string) $tipo['value'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars((string) $tipo['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <button class="btn btn-sm" type="submit">Actualizar</button>

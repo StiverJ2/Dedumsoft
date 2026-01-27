@@ -147,6 +147,16 @@ CREATE TABLE IF NOT EXISTS tipos_maquinaria (
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Especialidades de artesanos
+CREATE TABLE IF NOT EXISTS cat_especialidad (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT,
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ============================================
 -- ESQUEMA LEGACY DE SEGURIDAD (seg_*)
 -- ============================================
@@ -300,7 +310,6 @@ CREATE TABLE IF NOT EXISTS artesanos (
     usuario_id INTEGER UNIQUE REFERENCES seguridad.seg_usuario(id_usuario) ON DELETE SET NULL,
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
-    especialidad VARCHAR(100),
     telefono VARCHAR(50),
     email VARCHAR(150),
     fecha_ingreso DATE DEFAULT CURRENT_DATE,
@@ -312,8 +321,8 @@ CREATE TABLE IF NOT EXISTS artesanos (
 CREATE TABLE IF NOT EXISTS artesano_especialidad (
     id SERIAL PRIMARY KEY,
     artesano_id INTEGER REFERENCES artesanos(id) ON DELETE CASCADE,
-    especialidad VARCHAR(100) NOT NULL,
-    UNIQUE(artesano_id, especialidad)
+    especialidad_id INTEGER NOT NULL REFERENCES cat_especialidad(id) ON DELETE RESTRICT,
+    UNIQUE(artesano_id, especialidad_id)
 );
 
 -- ============================================

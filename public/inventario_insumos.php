@@ -47,7 +47,7 @@ require_menu_access(2); // Menú: Inventario
 $legacy = dedumsoft_is_legacy_browser();
 
 // Filtros de búsqueda (solo usados en modo legacy)
-$insumo_categoria = $_GET['insumo_categoria'] ?? '';
+$insumo_categoria = trim((string) ($_GET['insumo_categoria'] ?? ''));
 $insumo_stock_bajo = isset($_GET['insumo_stock_bajo']) && $_GET['insumo_stock_bajo'] !== '0';
 $insumo_rows = [];
 $categoria_options = [];
@@ -98,16 +98,30 @@ try {
 
 if ($legacy) {
     try {
+        $insumo_limit = ($insumo_categoria !== '' || $insumo_stock_bajo) ? 200 : 20;
         $stmt = $connLogic->prepare(
-            'SELECT id, nombre, categoria, cantidad, proveedor_nombre FROM fun_obtener_inventario_insumos(:offset, :limit, :categoria, :stock_bajo, :activo)'
+            'SELECT id, nombre, categoria, cantidad, stock_minimo, proveedor_nombre FROM fun_obtener_inventario_insumos(:offset, :limit, :categoria, :stock_bajo, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $insumo_limit, PDO::PARAM_INT);
         $stmt->bindValue(':categoria', $insumo_categoria !== '' ? $insumo_categoria : null, $insumo_categoria !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':stock_bajo', $insumo_stock_bajo, PDO::PARAM_BOOL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $insumo_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($insumo_categoria !== '') {
+            $insumo_rows = array_values(array_filter($insumo_rows, function ($row) use ($insumo_categoria) {
+                return strcasecmp(trim((string) ($row['categoria'] ?? '')), $insumo_categoria) === 0;
+            }));
+        }
+        if ($insumo_stock_bajo) {
+            $insumo_rows = array_values(array_filter($insumo_rows, function ($row) {
+                $cantidad = isset($row['cantidad']) ? (float) $row['cantidad'] : 0;
+                $stock_minimo = isset($row['stock_minimo']) ? (float) $row['stock_minimo'] : 0;
+                return $cantidad <= $stock_minimo;
+            }));
+        }
     } catch (PDOException $e) {
         error_log('inventario legacy insumos error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
@@ -216,9 +230,12 @@ $(function() {
 
     $.getJSON('api/proveedores.php?limit=500', function(res) {
         proveedoresCache = (res.DATOS || []).map(function(p) {
+            var tipoRaw = p.tipo_nombre || p.tipo || '';
+            var tipoLower = String(tipoRaw || '').toLowerCase();
             return {
                 value: p.id,
-                label: p.nombre + ' (' + p.tipo + ')'
+                label: p.nombre + (tipoRaw ? ' (' + tipoRaw + ')' : ''),
+                tipo: tipoLower
             };
         });
     });
@@ -227,7 +244,9 @@ $(function() {
         data = data || {};
         var provOpts = [{ value: '', label: '-- Sin proveedor --' }].concat(
             proveedoresCache.filter(function(p) {
-                return p.label.indexOf('(insumos)') > -1 || !data.id;
+                var isInsumo = p.tipo === 'insumos';
+                var isCurrent = String(p.value) === String(data.proveedor_id || '');
+                return isInsumo || !data.id || isCurrent;
             })
         );
         return DsCrud.field({

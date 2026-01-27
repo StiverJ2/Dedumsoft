@@ -288,6 +288,7 @@ INSERT INTO seguridad.seg_rol VALUES
 | 5   | Usuarios      | /usuarios            | `public/usuarios.php`     |
 | 6   | Proveedores   | /proveedores         | `public/proveedores.php`  |
 | 7   | Configuracion | /configuracion       | `public/configuracion.php` |
+| 8   | Especialidades | /especialidades     | `public/especialidades.php` |
 
 **Nota:** `seg_menu.ruta` es una ruta lógica. La navegación real usa archivos PHP
 en `public/` (ver `views/layouts/nav.php`). Para operadores sin menú 1, el home
@@ -513,7 +514,7 @@ La gestión de usuarios se realiza desde `public/usuarios.php` y la API
   "username": "juan",
   "nombre": "Juan Perez",
   "apellido": "Gomez",
-  "especialidad": "Grabado",
+  "especialidad_id": 3,
   "telefono": "555-1234",
   "email": "juan@empresa.com",
   "rolid": 2,
@@ -524,12 +525,48 @@ La gestión de usuarios se realiza desde `public/usuarios.php` y la API
 - Para rol **OPERADOR (2)**, `apellido` es obligatorio y se crea registro en `joyeria.artesanos`.
 - El hash de contraseña se genera en PHP (`password_hash`).
 - Inserta vía `seguridad.fun_crear_usuario(...)`.
+- La especialidad se guarda en `joyeria.artesano_especialidad` y referencia `joyeria.cat_especialidad` (fuente de verdad).
+- Para cargar opciones de especialidad usar `api/catalogos/opciones.php?tipo=especialidades`.
 - En `public/usuarios.php`, los campos de artesano se muestran solo cuando el rol seleccionado es **Operador**.
 
 **Activar/Desactivar (PATCH):**
 
 ```json
 { "id": 12, "activo": false }
+```
+
+**Catálogo de especialidades (Menú 8):**
+
+- API: `api/catalogos/especialidades.php` (GET/POST/PATCH/DELETE).
+- Tabla fuente: `joyeria.cat_especialidad` (activo, descripción).
+- UI: `public/especialidades.php`.
+
+### API de Órdenes de Producción (crear/asignar)
+
+La gestión de órdenes se realiza desde `public/produccion.php` y la API
+`public/api/produccion/ordenes.php` (Menú 3).
+
+**Crear orden (POST):**
+
+```json
+{
+  "producto_id": 12,
+  "cantidad": 3,
+  "prioridad_id": 2,
+  "artesano_id": null,
+  "observaciones": "Pedido urgente"
+}
+```
+
+- Inserta vía `joyeria.fun_crear_orden(...)`.
+- `prioridad_id` opcional (default 2 si no se envía).
+- `artesano_id` es opcional y puede quedar sin asignar.
+- Para poblar el formulario usar `api/catalogos/opciones.php?tipo=productos`, `prioridades` y `artesanos`.
+
+**Asignar artesano (PATCH):**
+
+```json
+{ "id": 15, "artesano_id": 7 }
 ```
 
 ---

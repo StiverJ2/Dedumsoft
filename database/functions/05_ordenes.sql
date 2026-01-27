@@ -70,10 +70,13 @@ RETURNS TABLE (
     artesano_nombre text,
     estado text,
     prioridad text,
-    observaciones text
+    observaciones text,
+    observaciones_terminada text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT
         op.id,
         op.producto_id,
@@ -87,7 +90,14 @@ AS $$
         (a.nombre || ' ' || a.apellido)::text AS artesano_nombre,
         eo.nombre::text AS estado,
         p.nombre::text AS prioridad,
-        op.observaciones::text
+        op.observaciones::text,
+        (
+            SELECT ct.observaciones::text
+            FROM creaciones_terminadas ct
+            WHERE ct.orden_id = op.id
+            ORDER BY ct.fecha_terminado DESC, ct.id DESC
+            LIMIT 1
+        ) AS observaciones_terminada
     FROM ordenes_produccion op
     INNER JOIN productos pr ON op.producto_id = pr.id
     LEFT JOIN artesanos a ON op.artesano_id = a.id
@@ -97,6 +107,7 @@ AS $$
     ORDER BY p.orden DESC, op.fecha_creacion DESC
     OFFSET par_offset
     LIMIT par_limit;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION fun_obtener_ordenes(
@@ -121,10 +132,13 @@ RETURNS TABLE (
     prioridad_id int,
     prioridad_nombre text,
     prioridad_color text,
-    observaciones text
+    observaciones text,
+    observaciones_terminada text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT
         op.id,
         op.producto_id,
@@ -142,7 +156,14 @@ AS $$
         op.prioridad_id,
         p.nombre::text AS prioridad_nombre,
         p.color::text AS prioridad_color,
-        op.observaciones::text
+        op.observaciones::text,
+        (
+            SELECT ct.observaciones::text
+            FROM creaciones_terminadas ct
+            WHERE ct.orden_id = op.id
+            ORDER BY ct.fecha_terminado DESC, ct.id DESC
+            LIMIT 1
+        ) AS observaciones_terminada
     FROM ordenes_produccion op
     INNER JOIN productos pr ON op.producto_id = pr.id
     LEFT JOIN artesanos a ON op.artesano_id = a.id
@@ -152,6 +173,7 @@ AS $$
     ORDER BY p.orden DESC, op.fecha_creacion DESC
     OFFSET par_offset
     LIMIT par_limit;
+END;
 $$;
 
 -- ============================================
@@ -165,12 +187,15 @@ RETURNS TABLE (
     descripcion text,
     color text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT eo.id, eo.nombre::text, eo.descripcion::text, eo.color::text
     FROM estados_orden eo
     WHERE eo.activo = TRUE
     ORDER BY eo.orden;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION fun_obtener_prioridades()
@@ -180,12 +205,15 @@ RETURNS TABLE (
     descripcion text,
     color text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT p.id, p.nombre::text, p.descripcion::text, p.color::text
     FROM prioridades p
     WHERE p.activo = TRUE
     ORDER BY p.orden DESC;
+END;
 $$;
 
 -- ============================================
@@ -342,12 +370,15 @@ RETURNS TABLE (
     nombre text,
     descripcion text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT tm.id, tm.nombre::text, tm.descripcion::text
     FROM tipos_material tm
     WHERE tm.activo = TRUE
     ORDER BY tm.id;
+END;
 $$;
 
 -- ============================================
@@ -360,10 +391,13 @@ RETURNS TABLE (
     nombre text,
     descripcion text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT nc.id, nc.nombre::text, nc.descripcion::text
     FROM niveles_calidad nc
     WHERE nc.activo = TRUE
     ORDER BY nc.orden;
+END;
 $$;

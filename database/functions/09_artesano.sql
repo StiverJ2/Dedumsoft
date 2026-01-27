@@ -65,9 +65,11 @@ RETURNS TABLE (
     fecha_fin_real timestamp,
     observaciones text
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 AS $$
+BEGIN
+    RETURN QUERY
     SELECT
         op.id,
         op.producto_id,
@@ -87,9 +89,11 @@ AS $$
     LEFT JOIN estados_orden eo ON op.estado_id = eo.id
     LEFT JOIN prioridades pr ON op.prioridad_id = pr.id
     WHERE op.artesano_id = par_artesano_id
+      AND op.estado_id <> 3
     ORDER BY COALESCE(pr.orden, 99), op.fecha_creacion DESC
     OFFSET par_offset
     LIMIT par_limit;
+END;
 $$;
 
 -- ============================================
@@ -357,9 +361,12 @@ CREATE OR REPLACE FUNCTION fun_calcular_costo_materiales_orden(
     par_orden_id int
 )
 RETURNS numeric
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 AS $$
+DECLARE
+    v_total numeric;
+BEGIN
     SELECT COALESCE(
         (SELECT SUM(co.cantidad_consumida * io.precio_gramo)
          FROM consumo_oro co
@@ -370,5 +377,9 @@ AS $$
          FROM consumo_insumos ci
          JOIN inventario_insumos ii ON ci.inventario_insumos_id = ii.id
          WHERE ci.orden_produccion_id = par_orden_id), 0
-    );
+    )
+    INTO v_total;
+
+    RETURN v_total;
+END;
 $$;

@@ -45,7 +45,8 @@ require_menu_access(6); // Menú: Proveedores
 $legacy = dedumsoft_is_legacy_browser();
 
 // Filtros de búsqueda (solo usados en modo legacy)
-$tipo = $_GET['tipo'] ?? '';
+$tipo = trim((string) ($_GET['tipo'] ?? ''));
+$tipo_id = null;
 $proveedores_rows = [];
 $tipo_proveedor_options = [];
 
@@ -68,24 +69,46 @@ if ($legacy) {
             ['value' => 3, 'label' => 'Maquinaria']
         ];
     }
+
+    if ($tipo !== '') {
+        if (ctype_digit($tipo) && (int) $tipo > 0) {
+            $tipo_id = (int) $tipo;
+        } else {
+            foreach ($tipo_proveedor_options as $opt) {
+                if (strcasecmp((string) ($opt['label'] ?? ''), $tipo) === 0) {
+                    $tipo_id = (int) ($opt['value'] ?? 0);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 // Cargar datos para modo legacy
 if ($legacy) {
     try {
+        $prov_limit = $tipo_id !== null ? 200 : 20;
         $stmt = $connLogic->prepare(
             'SELECT id, nombre, tipo_proveedor_id, tipo_nombre, contacto, telefono FROM fun_obtener_proveedores(:offset, :limit, :tipo_id, :activo)'
         );
         $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', 20, PDO::PARAM_INT);
-        $stmt->bindValue(':tipo_id', $tipo !== '' ? (int) $tipo : null, $tipo !== '' ? PDO::PARAM_INT : PDO::PARAM_NULL);
+        $stmt->bindValue(':limit', $prov_limit, PDO::PARAM_INT);
+        $stmt->bindValue(':tipo_id', $tipo_id !== null ? $tipo_id : null, $tipo_id !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
         $stmt->bindValue(':activo', true, PDO::PARAM_BOOL);
         $stmt->execute();
         $proveedores_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($tipo_id !== null) {
+            $proveedores_rows = array_values(array_filter($proveedores_rows, function ($row) use ($tipo_id) {
+                return (int) ($row['tipo_proveedor_id'] ?? 0) === $tipo_id;
+            }));
+        }
     } catch (PDOException $e) {
         error_log('proveedores legacy error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
     }
 }
+
+$tipo_value = $tipo_id !== null ? (string) $tipo_id : $tipo;
 
 include VIEWS_PATH . '/layouts/header.php';
 include VIEWS_PATH . '/layouts/nav.php';
@@ -109,10 +132,11 @@ include VIEWS_PATH . '/layouts/nav.php';
                     <label class="form-label muted" for="prov-tipo">Tipo</label>
                     <select id="prov-tipo" name="tipo" class="form-select form-select-sm ds-field">
                         <option value="">Todos</option>
-                        <option value="oro" <?php echo $tipo === 'oro' ? 'selected' : ''; ?>>Oro</option>
-                        <option value="insumos" <?php echo $tipo === 'insumos' ? 'selected' : ''; ?>>Insumos</option>
-                        <option value="maquinaria" <?php echo $tipo === 'maquinaria' ? 'selected' : ''; ?>>Maquinaria
-                        </option>
+                        <?php foreach ($tipo_proveedor_options as $opt): ?>
+                            <option value="<?php echo (int) $opt['value']; ?>" <?php echo (string) $tipo_value === (string) $opt['value'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars((string) $opt['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <button class="btn btn-sm" type="submit">Actualizar</button>

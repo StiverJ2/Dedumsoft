@@ -48,9 +48,59 @@ $current_user = get_session_user();
 $current_user_id = (int) ($current_user['id_usuario'] ?? 0);
 
 // Filtros de búsqueda (solo usados en modo legacy)
-$rol_filter = $_GET['rol'] ?? '';
+$rol_filter = trim((string) ($_GET['rol'] ?? ''));
+$rol_filter_value = $rol_filter;
 $activo_filter = $_GET['activo'] ?? '';
 $usuarios_rows = [];
+$rol_options = [];
+$rol_id_map = [];
+
+if ($legacy) {
+    try {
+        $stmt = $connLogic->prepare('SELECT id_rol, nombre FROM seguridad.seg_rol ORDER BY id_rol');
+        $stmt->execute();
+        $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rol_options = array_map(function ($r) use (&$rol_id_map) {
+            $nombre = trim((string) $r['nombre']);
+            $key = strtolower($nombre);
+            $label = $nombre;
+            if ($key === 'admin') {
+                $label = 'Administrador';
+            } elseif ($key === 'operador') {
+                $label = 'Operador';
+            } elseif ($key === 'lectura') {
+                $label = 'Lectura';
+            }
+            $rol_id_map[(string) ($r['id_rol'] ?? '')] = $nombre;
+            return [
+                'value' => $nombre,
+                'label' => $label
+            ];
+        }, $roles);
+    } catch (PDOException $e) {
+        error_log('usuarios roles error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        $rol_options = [
+            ['value' => 'ADMIN', 'label' => 'Administrador'],
+            ['value' => 'OPERADOR', 'label' => 'Operador'],
+            ['value' => 'LECTURA', 'label' => 'Lectura']
+        ];
+    }
+
+    if ($rol_filter !== '') {
+        if (ctype_digit($rol_filter) && isset($rol_id_map[$rol_filter])) {
+            $rol_filter_value = (string) $rol_id_map[$rol_filter];
+        } else {
+            $key = strtolower($rol_filter);
+            if ($key === 'administrador' || $key === 'admin') {
+                $rol_filter_value = 'ADMIN';
+            } elseif ($key === 'operador') {
+                $rol_filter_value = 'OPERADOR';
+            } elseif ($key === 'lectura') {
+                $rol_filter_value = 'LECTURA';
+            }
+        }
+    }
+}
 
 /**
  * Genera un badge HTML con color según el rol.
@@ -66,10 +116,17 @@ function format_rol_badge($rol)
         return '';
     $key = strtolower($rol);
     $label = ucwords($rol);
+    if ($key === 'admin') {
+        $label = 'Administrador';
+    } elseif ($key === 'operador') {
+        $label = 'Operador';
+    } elseif ($key === 'lectura') {
+        $label = 'Lectura';
+    }
 
     // Asignar color según nivel de acceso
     $cls = 'ds-badge--neutral';
-    if ($key === 'administrador')
+    if ($key === 'administrador' || $key === 'admin')
         $cls = 'ds-badge--danger';    // Rojo: acceso total
     elseif ($key === 'operador')
         $cls = 'ds-badge--info';      // Azul: acceso operativo
@@ -104,7 +161,7 @@ if ($legacy) {
 
         // Filtrar en PHP para modo legacy (la función no acepta parámetros)
         foreach ($all_rows as $row) {
-            if ($rol_filter !== '' && strtolower($row['rol']) !== strtolower($rol_filter)) {
+            if ($rol_filter_value !== '' && strtolower($row['rol']) !== strtolower($rol_filter_value)) {
                 continue;
             }
             if ($activo_filter !== '') {
@@ -145,11 +202,11 @@ include VIEWS_PATH . '/layouts/nav.php';
                     <label class="form-label muted" for="usuario-rol">Rol</label>
                     <select id="usuario-rol" name="rol" class="form-select form-select-sm ds-field">
                         <option value="">Todos</option>
-                        <option value="administrador" <?php echo $rol_filter === 'administrador' ? 'selected' : ''; ?>>
-                            Administrador</option>
-                        <option value="operador" <?php echo $rol_filter === 'operador' ? 'selected' : ''; ?>>Operador
-                        </option>
-                        <option value="lectura" <?php echo $rol_filter === 'lectura' ? 'selected' : ''; ?>>Lectura</option>
+                        <?php foreach ($rol_options as $opt): ?>
+                            <option value="<?php echo htmlspecialchars((string) $opt['value']); ?>" <?php echo (string) $rol_filter_value === (string) $opt['value'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars((string) $opt['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div>
@@ -260,116 +317,145 @@ include VIEWS_PATH . '/layouts/nav.php';
         };
 
         let usuariosTable;
+        let especialidadesOptions = null;
         const roleOptions = [
             { value: 1, label: 'Administrador' },
             { value: 2, label: 'Operador' },
             { value: 3, label: 'Lectura' }
         ];
 
-        const openCreateModal = () => {
-            const operatorFields = [
-                DsCrud.field({ name: 'apellido', label: 'Apellido (Operador)', placeholder: 'Requerido para Operador' }),
-                DsCrud.field({ name: 'especialidad', label: 'Especialidad (Operador)', placeholder: 'Opcional' }),
-                DsCrud.field({ name: 'telefono', label: 'Teléfono (Operador)', placeholder: 'Opcional' })
-            ].join('');
-
-            const body = [
-                DsCrud.field({ name: 'username', label: 'Usuario', required: true, placeholder: 'usuario' }),
-                DsCrud.field({ name: 'nombre', label: 'Nombre', required: true, placeholder: 'Nombre' }),
-                '<div class="ds-operator-fields" style="display:none;">' + operatorFields + '</div>',
-                DsCrud.field({ name: 'email', label: 'Email', type: 'email', placeholder: 'correo@dominio.com' }),
-                DsCrud.field({ name: 'rolid', label: 'Rol', type: 'select', required: true, options: roleOptions }),
-                DsCrud.field({ name: 'password', label: 'Contraseña', type: 'password', required: true, attrs: 'autocomplete="new-password"' }),
-                DsCrud.field({ name: 'password_confirm', label: 'Confirmar contraseña', type: 'password', required: true, attrs: 'autocomplete="new-password"' }),
-                '<p class="muted">Campos de artesano se usan solo para rol Operador.</p>'
-            ].join('');
-
-            const modalRef = DsCrud.openModal({
-                title: 'Nuevo usuario',
-                body,
-                saveText: 'Crear',
-                cancelText: 'Cancelar',
-                onSave: (modalEl, close, formData) => {
-                    const username = (formData.username || '').trim();
-                    const nombre = (formData.nombre || '').trim();
-                    const apellido = (formData.apellido || '').trim();
-                    const especialidad = (formData.especialidad || '').trim();
-                    const telefono = (formData.telefono || '').trim();
-                    const email = (formData.email || '').trim();
-                    const rolid = Number(formData.rolid || 0);
-                    const password = String(formData.password || '');
-                    const passwordConfirm = String(formData.password_confirm || '');
-
-                    if (!username || !nombre || !rolid || !password) {
-                        DsCrud.toast('Complete los campos requeridos.', 'error');
-                        return;
-                    }
-                    if (password.length < 8) {
-                        DsCrud.toast('La contraseña debe tener al menos 8 caracteres.', 'error');
-                        return;
-                    }
-                    if (password !== passwordConfirm) {
-                        DsCrud.toast('Las contraseñas no coinciden.', 'error');
-                        return;
-                    }
-                    if (rolid === 2 && !apellido) {
-                        DsCrud.toast('Apellido requerido para rol Operador.', 'error');
-                        return;
-                    }
-
-                    DsCrud.api('api/usuarios.php', 'POST', {
-                        username,
-                        nombre,
-                        apellido,
-                        especialidad,
-                        telefono,
-                        email,
-                        rolid,
-                        password
-                    }, (success, resp) => {
-                        if (success) {
-                            DsCrud.toast(resp.MENSAJE || 'Usuario creado');
-                            if (usuariosTable) {
-                                usuariosTable.ajax.reload(null, false);
-                            }
-                            close();
-                        } else {
-                            DsCrud.toast(resp.MENSAJE || 'Error al crear usuario', 'error');
-                        }
-                    });
-                }
-            });
-
-            const modalEl = modalRef && modalRef.modal ? modalRef.modal : null;
-            if (!modalEl) return;
-            const rolSelect = modalEl.querySelector('select[name="rolid"]');
-            const operatorWrap = modalEl.querySelector('.ds-operator-fields');
-            const apellidoInput = modalEl.querySelector('input[name="apellido"]');
-            const especialidadInput = modalEl.querySelector('input[name="especialidad"]');
-            const telefonoInput = modalEl.querySelector('input[name="telefono"]');
-
-            const toggleOperatorFields = () => {
-                if (!rolSelect || !operatorWrap) return;
-                const isOperador = Number(rolSelect.value) === 2;
-                operatorWrap.style.display = isOperador ? 'block' : 'none';
-                if (apellidoInput) {
-                    if (isOperador) {
-                        apellidoInput.setAttribute('required', 'required');
-                    } else {
-                        apellidoInput.removeAttribute('required');
-                        apellidoInput.value = '';
-                    }
-                }
-                if (!isOperador) {
-                    if (especialidadInput) especialidadInput.value = '';
-                    if (telefonoInput) telefonoInput.value = '';
-                }
-            };
-
-            if (rolSelect) {
-                rolSelect.addEventListener('change', toggleOperatorFields);
+        const loadEspecialidades = (done) => {
+            if (Array.isArray(especialidadesOptions)) {
+                done(especialidadesOptions);
+                return;
             }
-            toggleOperatorFields();
+            DsCrud.api('api/catalogos/opciones.php?tipo=especialidades', 'GET', null, (success, resp) => {
+                if (!success) {
+                    DsCrud.toast(resp.MENSAJE || 'No se pudieron cargar las especialidades.', 'error');
+                    especialidadesOptions = [];
+                    done(especialidadesOptions);
+                    return;
+                }
+                const data = Array.isArray(resp.DATOS) ? resp.DATOS : [];
+                especialidadesOptions = data.map((item) => ({
+                    value: item.value,
+                    label: item.label
+                }));
+                done(especialidadesOptions);
+            }, (err) => {
+                DsCrud.toast(err || 'No se pudieron cargar las especialidades.', 'error');
+                especialidadesOptions = [];
+                done(especialidadesOptions);
+            });
+        };
+
+        const openCreateModal = () => {
+            loadEspecialidades((especialidades) => {
+                const especialidadOptions = [{ value: '', label: 'Seleccione una especialidad' }].concat(especialidades);
+                const operatorFields = [
+                    DsCrud.field({ name: 'apellido', label: 'Apellido (Operador)', placeholder: 'Requerido para Operador' }),
+                    DsCrud.field({ name: 'especialidad_id', label: 'Especialidad (Operador)', type: 'select', options: especialidadOptions }),
+                    DsCrud.field({ name: 'telefono', label: 'Teléfono (Operador)', placeholder: 'Opcional' })
+                ].join('');
+
+                const body = [
+                    DsCrud.field({ name: 'username', label: 'Usuario', required: true, placeholder: 'usuario' }),
+                    DsCrud.field({ name: 'nombre', label: 'Nombre', required: true, placeholder: 'Nombre' }),
+                    '<div class="ds-operator-fields" style="display:none;">' + operatorFields + '</div>',
+                    DsCrud.field({ name: 'email', label: 'Email', type: 'email', placeholder: 'correo@dominio.com' }),
+                    DsCrud.field({ name: 'rolid', label: 'Rol', type: 'select', required: true, options: roleOptions }),
+                    DsCrud.field({ name: 'password', label: 'Contraseña', type: 'password', required: true, attrs: 'autocomplete="new-password"' }),
+                    DsCrud.field({ name: 'password_confirm', label: 'Confirmar contraseña', type: 'password', required: true, attrs: 'autocomplete="new-password"' }),
+                    '<p class="muted">Campos de artesano se usan solo para rol Operador.</p>'
+                ].join('');
+
+                const modalRef = DsCrud.openModal({
+                    title: 'Nuevo usuario',
+                    body,
+                    saveText: 'Crear',
+                    cancelText: 'Cancelar',
+                    onSave: (modalEl, close, formData) => {
+                        const username = (formData.username || '').trim();
+                        const nombre = (formData.nombre || '').trim();
+                        const apellido = (formData.apellido || '').trim();
+                        const especialidadId = Number(formData.especialidad_id || 0);
+                        const telefono = (formData.telefono || '').trim();
+                        const email = (formData.email || '').trim();
+                        const rolid = Number(formData.rolid || 0);
+                        const password = String(formData.password || '');
+                        const passwordConfirm = String(formData.password_confirm || '');
+
+                        if (!username || !nombre || !rolid || !password) {
+                            DsCrud.toast('Complete los campos requeridos.', 'error');
+                            return;
+                        }
+                        if (password.length < 8) {
+                            DsCrud.toast('La contraseña debe tener al menos 8 caracteres.', 'error');
+                            return;
+                        }
+                        if (password !== passwordConfirm) {
+                            DsCrud.toast('Las contraseñas no coinciden.', 'error');
+                            return;
+                        }
+                        if (rolid === 2 && !apellido) {
+                            DsCrud.toast('Apellido requerido para rol Operador.', 'error');
+                            return;
+                        }
+
+                        DsCrud.api('api/usuarios.php', 'POST', {
+                            username,
+                            nombre,
+                            apellido,
+                            especialidad_id: especialidadId > 0 ? especialidadId : null,
+                            telefono,
+                            email,
+                            rolid,
+                            password
+                        }, (success, resp) => {
+                            if (success) {
+                                DsCrud.toast(resp.MENSAJE || 'Usuario creado');
+                                if (usuariosTable) {
+                                    usuariosTable.ajax.reload(null, false);
+                                }
+                                close();
+                            } else {
+                                DsCrud.toast(resp.MENSAJE || 'Error al crear usuario', 'error');
+                            }
+                        });
+                    }
+                });
+
+                const modalEl = modalRef && modalRef.modal ? modalRef.modal : null;
+                if (!modalEl) return;
+                const rolSelect = modalEl.querySelector('select[name="rolid"]');
+                const operatorWrap = modalEl.querySelector('.ds-operator-fields');
+                const apellidoInput = modalEl.querySelector('input[name="apellido"]');
+                const especialidadSelect = modalEl.querySelector('select[name="especialidad_id"]');
+                const telefonoInput = modalEl.querySelector('input[name="telefono"]');
+
+                const toggleOperatorFields = () => {
+                    if (!rolSelect || !operatorWrap) return;
+                    const isOperador = Number(rolSelect.value) === 2;
+                    operatorWrap.style.display = isOperador ? 'block' : 'none';
+                    if (apellidoInput) {
+                        if (isOperador) {
+                            apellidoInput.setAttribute('required', 'required');
+                        } else {
+                            apellidoInput.removeAttribute('required');
+                            apellidoInput.value = '';
+                        }
+                    }
+                    if (!isOperador) {
+                        if (especialidadSelect) especialidadSelect.value = '';
+                        if (telefonoInput) telefonoInput.value = '';
+                    }
+                };
+
+                if (rolSelect) {
+                    rolSelect.addEventListener('change', toggleOperatorFields);
+                }
+                toggleOperatorFields();
+            });
         };
 
         $(() => {
@@ -479,106 +565,140 @@ include VIEWS_PATH . '/layouts/nav.php';
                 { value: '3', label: 'Lectura' }
             ];
 
-            function openCreateModal() {
-                var operatorFields = '';
-                operatorFields += DsCrud.field({ name: 'apellido', label: 'Apellido (Operador)', placeholder: 'Requerido para Operador' });
-                operatorFields += DsCrud.field({ name: 'especialidad', label: 'Especialidad (Operador)', placeholder: 'Opcional' });
-                operatorFields += DsCrud.field({ name: 'telefono', label: 'Telefono (Operador)', placeholder: 'Opcional' });
+            var especialidadesOptions = null;
 
-                var body = '';
-                body += DsCrud.field({ name: 'username', label: 'Usuario', required: true, placeholder: 'usuario' });
-                body += DsCrud.field({ name: 'nombre', label: 'Nombre', required: true, placeholder: 'Nombre' });
-                body += '<div class="ds-operator-fields" style="display:none;">' + operatorFields + '</div>';
-                body += DsCrud.field({ name: 'email', label: 'Email', type: 'text', placeholder: 'correo@dominio.com' });
-                body += DsCrud.field({ name: 'rolid', label: 'Rol', type: 'select', required: true, options: roleOptions });
-                body += DsCrud.field({ name: 'password', label: 'Contrasena', type: 'password', required: true, attrs: 'autocomplete="new-password"' });
-                body += DsCrud.field({ name: 'password_confirm', label: 'Confirmar contrasena', type: 'password', required: true, attrs: 'autocomplete="new-password"' });
-                body += '<p class="muted">Campos de artesano se usan solo para rol Operador.</p>';
-
-                var modalRef = DsCrud.openModal({
-                    title: 'Nuevo usuario',
-                    body: body,
-                    saveText: 'Crear',
-                    cancelText: 'Cancelar',
-                    onSave: function (modal) {
-                        if (!DsCrud.validateForm(modal)) return;
-                        var data = DsCrud.getFormData(modal);
-                        var username = (data.username || '').replace(/^\s+|\s+$/g, '');
-                        var nombre = (data.nombre || '').replace(/^\s+|\s+$/g, '');
-                        var apellido = (data.apellido || '').replace(/^\s+|\s+$/g, '');
-                        var especialidad = (data.especialidad || '').replace(/^\s+|\s+$/g, '');
-                        var telefono = (data.telefono || '').replace(/^\s+|\s+$/g, '');
-                        var email = (data.email || '').replace(/^\s+|\s+$/g, '');
-                        var rolid = parseInt(data.rolid || '0', 10);
-                        var password = String(data.password || '');
-                        var passwordConfirm = String(data.password_confirm || '');
-
-                        if (!username || !nombre || !rolid || !password) {
-                            DsCrud.toast('Complete los campos requeridos.', 'error');
-                            return;
-                        }
-                        if (password.length < 8) {
-                            DsCrud.toast('La contrasena debe tener al menos 8 caracteres.', 'error');
-                            return;
-                        }
-                        if (password !== passwordConfirm) {
-                            DsCrud.toast('Las contrasenas no coinciden.', 'error');
-                            return;
-                        }
-                        if (rolid === 2 && !apellido) {
-                            DsCrud.toast('Apellido requerido para rol Operador.', 'error');
-                            return;
-                        }
-
-                        DsCrud.apiLegacy('api/usuarios.php', 'POST', {
-                            username: username,
-                            nombre: nombre,
-                            apellido: apellido,
-                            especialidad: especialidad,
-                            telefono: telefono,
-                            email: email,
-                            rolid: rolid,
-                            password: password
-                        }, function (resp) {
-                            DsCrud.toast(resp.MENSAJE || 'Usuario creado', 'success');
-                            DsCrud.closeModal();
-                            location.reload();
-                        }, function (err) {
-                            DsCrud.toast(err || 'Error al crear usuario', 'error');
+            function loadEspecialidades(done) {
+                if (especialidadesOptions && typeof especialidadesOptions.length === 'number') {
+                    done(especialidadesOptions);
+                    return;
+                }
+                DsCrud.apiLegacy('api/catalogos/opciones.php', 'GET', { tipo: 'especialidades' }, function (resp) {
+                    var data = resp && resp.DATOS && resp.DATOS.length ? resp.DATOS : [];
+                    especialidadesOptions = [];
+                    for (var i = 0; i < data.length; i++) {
+                        especialidadesOptions.push({
+                            value: data[i].value,
+                            label: data[i].label
                         });
                     }
+                    done(especialidadesOptions);
+                }, function (err) {
+                    DsCrud.toast(err || 'No se pudieron cargar las especialidades.', 'error');
+                    especialidadesOptions = [];
+                    done(especialidadesOptions);
                 });
+            }
 
-                var modalEl = modalRef && modalRef.modal ? modalRef.modal : null;
-                if (!modalEl) return;
-                var rolSelect = DsCrud.query('select[name="rolid"]', modalEl);
-                var operatorWrap = DsCrud.query('.ds-operator-fields', modalEl);
-                var apellidoInput = DsCrud.query('input[name="apellido"]', modalEl);
-                var especialidadInput = DsCrud.query('input[name="especialidad"]', modalEl);
-                var telefonoInput = DsCrud.query('input[name="telefono"]', modalEl);
+            function openCreateModal() {
+                loadEspecialidades(function (especialidades) {
+                    var especialidadOptions = [{ value: '', label: 'Seleccione una especialidad' }];
+                    for (var i = 0; i < especialidades.length; i++) {
+                        especialidadOptions.push(especialidades[i]);
+                    }
 
-                function toggleOperatorFields() {
-                    if (!rolSelect || !operatorWrap) return;
-                    var isOperador = String(rolSelect.value) === '2';
-                    operatorWrap.style.display = isOperador ? 'block' : 'none';
-                    if (apellidoInput) {
-                        if (isOperador) {
-                            apellidoInput.setAttribute('required', 'required');
-                        } else {
-                            apellidoInput.removeAttribute('required');
-                            apellidoInput.value = '';
+                    var operatorFields = '';
+                    operatorFields += DsCrud.field({ name: 'apellido', label: 'Apellido (Operador)', placeholder: 'Requerido para Operador' });
+                    operatorFields += DsCrud.field({ name: 'especialidad_id', label: 'Especialidad (Operador)', type: 'select', options: especialidadOptions });
+                    operatorFields += DsCrud.field({ name: 'telefono', label: 'Telefono (Operador)', placeholder: 'Opcional' });
+
+                    var body = '';
+                    body += DsCrud.field({ name: 'username', label: 'Usuario', required: true, placeholder: 'usuario' });
+                    body += DsCrud.field({ name: 'nombre', label: 'Nombre', required: true, placeholder: 'Nombre' });
+                    body += '<div class="ds-operator-fields" style="display:none;">' + operatorFields + '</div>';
+                    body += DsCrud.field({ name: 'email', label: 'Email', type: 'text', placeholder: 'correo@dominio.com' });
+                    body += DsCrud.field({ name: 'rolid', label: 'Rol', type: 'select', required: true, options: roleOptions });
+                    body += DsCrud.field({ name: 'password', label: 'Contrasena', type: 'password', required: true, attrs: 'autocomplete="new-password"' });
+                    body += DsCrud.field({ name: 'password_confirm', label: 'Confirmar contrasena', type: 'password', required: true, attrs: 'autocomplete="new-password"' });
+                    body += '<p class="muted">Campos de artesano se usan solo para rol Operador.</p>';
+
+                    var modalRef = DsCrud.openModal({
+                        title: 'Nuevo usuario',
+                        body: body,
+                        saveText: 'Crear',
+                        cancelText: 'Cancelar',
+                        onSave: function (modal) {
+                            if (!DsCrud.validateForm(modal)) return;
+                            var data = DsCrud.getFormData(modal);
+                            var username = (data.username || '').replace(/^\s+|\s+$/g, '');
+                            var nombre = (data.nombre || '').replace(/^\s+|\s+$/g, '');
+                            var apellido = (data.apellido || '').replace(/^\s+|\s+$/g, '');
+                            var especialidadId = parseInt(data.especialidad_id || '0', 10);
+                            var telefono = (data.telefono || '').replace(/^\s+|\s+$/g, '');
+                            var email = (data.email || '').replace(/^\s+|\s+$/g, '');
+                            var rolid = parseInt(data.rolid || '0', 10);
+                            var password = String(data.password || '');
+                            var passwordConfirm = String(data.password_confirm || '');
+
+                            if (!username || !nombre || !rolid || !password) {
+                                DsCrud.toast('Complete los campos requeridos.', 'error');
+                                return;
+                            }
+                            if (password.length < 8) {
+                                DsCrud.toast('La contrasena debe tener al menos 8 caracteres.', 'error');
+                                return;
+                            }
+                            if (password !== passwordConfirm) {
+                                DsCrud.toast('Las contrasenas no coinciden.', 'error');
+                                return;
+                            }
+                            if (rolid === 2 && !apellido) {
+                                DsCrud.toast('Apellido requerido para rol Operador.', 'error');
+                                return;
+                            }
+                            if (isNaN(especialidadId) || especialidadId <= 0) {
+                                especialidadId = null;
+                            }
+
+                            DsCrud.apiLegacy('api/usuarios.php', 'POST', {
+                                username: username,
+                                nombre: nombre,
+                                apellido: apellido,
+                                especialidad_id: especialidadId,
+                                telefono: telefono,
+                                email: email,
+                                rolid: rolid,
+                                password: password
+                            }, function (resp) {
+                                DsCrud.toast(resp.MENSAJE || 'Usuario creado', 'success');
+                                DsCrud.closeModal();
+                                location.reload();
+                            }, function (err) {
+                                DsCrud.toast(err || 'Error al crear usuario', 'error');
+                            });
+                        }
+                    });
+
+                    var modalEl = modalRef && modalRef.modal ? modalRef.modal : null;
+                    if (!modalEl) return;
+                    var rolSelect = DsCrud.query('select[name="rolid"]', modalEl);
+                    var operatorWrap = DsCrud.query('.ds-operator-fields', modalEl);
+                    var apellidoInput = DsCrud.query('input[name="apellido"]', modalEl);
+                    var especialidadSelect = DsCrud.query('select[name="especialidad_id"]', modalEl);
+                    var telefonoInput = DsCrud.query('input[name="telefono"]', modalEl);
+
+                    function toggleOperatorFields() {
+                        if (!rolSelect || !operatorWrap) return;
+                        var isOperador = String(rolSelect.value) === '2';
+                        operatorWrap.style.display = isOperador ? 'block' : 'none';
+                        if (apellidoInput) {
+                            if (isOperador) {
+                                apellidoInput.setAttribute('required', 'required');
+                            } else {
+                                apellidoInput.removeAttribute('required');
+                                apellidoInput.value = '';
+                            }
+                        }
+                        if (!isOperador) {
+                            if (especialidadSelect) especialidadSelect.value = '';
+                            if (telefonoInput) telefonoInput.value = '';
                         }
                     }
-                    if (!isOperador) {
-                        if (especialidadInput) especialidadInput.value = '';
-                        if (telefonoInput) telefonoInput.value = '';
-                    }
-                }
 
-                if (rolSelect) {
-                    DsCrud.addEvent(rolSelect, 'change', toggleOperatorFields);
-                }
-                toggleOperatorFields();
+                    if (rolSelect) {
+                        DsCrud.addEvent(rolSelect, 'change', toggleOperatorFields);
+                    }
+                    toggleOperatorFields();
+                });
             }
 
             DsCrud.addEvent(table, 'click', function (e) {

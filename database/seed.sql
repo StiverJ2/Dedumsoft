@@ -118,7 +118,8 @@ INSERT INTO seguridad.seg_menu (id_menu, nombre, comentario, ruta) VALUES
 (4, 'Reportes', 'Reportes del sistema', '/reportes'),
 (5, 'Usuarios', 'Administracion de usuarios y roles', '/usuarios'),
 (6, 'Proveedores', 'Gestion de proveedores', '/proveedores'),
-(7, 'Configuracion', 'Preferencias y ajustes', '/configuracion')
+(7, 'Configuracion', 'Preferencias y ajustes', '/configuracion'),
+(8, 'Especialidades', 'Catalogo de especialidades', '/especialidades')
 ON CONFLICT (id_menu) DO UPDATE
 SET nombre = EXCLUDED.nombre, comentario = EXCLUDED.comentario, ruta = EXCLUDED.ruta;
 
@@ -130,15 +131,18 @@ INSERT INTO seguridad.seg_menurol (abrir, guardar, editar, eliminar, rolid, menu
 (TRUE, TRUE, TRUE, TRUE, 1, 5),
 (TRUE, TRUE, TRUE, TRUE, 1, 6),
 (TRUE, TRUE, TRUE, TRUE, 1, 7),
+(TRUE, TRUE, TRUE, TRUE, 1, 8),
 (TRUE, FALSE, FALSE, FALSE, 2, 3),
 (TRUE, FALSE, FALSE, FALSE, 2, 7),
+(TRUE, FALSE, FALSE, FALSE, 2, 8),
 (TRUE, FALSE, FALSE, FALSE, 3, 1),
 (TRUE, FALSE, FALSE, FALSE, 3, 2),
 (TRUE, FALSE, FALSE, FALSE, 3, 3),
 (TRUE, FALSE, FALSE, FALSE, 3, 4),
 (FALSE, FALSE, FALSE, FALSE, 3, 5),
 (TRUE, FALSE, FALSE, FALSE, 3, 6),
-(FALSE, FALSE, FALSE, FALSE, 3, 7)
+(FALSE, FALSE, FALSE, FALSE, 3, 7),
+(FALSE, FALSE, FALSE, FALSE, 3, 8)
 ON CONFLICT (rolid, menuid) DO UPDATE
 SET abrir = EXCLUDED.abrir, guardar = EXCLUDED.guardar, editar = EXCLUDED.editar, eliminar = EXCLUDED.eliminar;
 
@@ -235,11 +239,30 @@ ON CONFLICT (id) DO UPDATE SET
     descripcion = EXCLUDED.descripcion,
     orden = EXCLUDED.orden;
 
+-- ESPECIALIDADES DE ARTESANOS
+INSERT INTO cat_especialidad (id, nombre, descripcion, activo) VALUES
+(1, 'Joyeria fina', 'Piezas finas con alto detalle', TRUE),
+(2, 'Engaste', 'Montaje de piedras en joyeria', TRUE),
+(3, 'Grabado', 'Grabado y marcado de piezas', TRUE),
+(4, 'Detalle', 'Acabados de precision y detalle', TRUE),
+(5, 'Fundicion', 'Fundicion de metales preciosos', TRUE),
+(6, 'Moldeo', 'Modelado y moldeo de piezas', TRUE),
+(7, 'Pulido', 'Pulido y acabado superficial', TRUE),
+(8, 'Modelado', 'Modelado artesanal de piezas', TRUE),
+(9, 'Microengaste', 'Microengaste de piedras', TRUE),
+(10, 'Cadeneria', 'Fabricacion de cadenas', TRUE),
+(11, 'Diseno CAD', 'Diseno asistido por computadora', TRUE),
+(12, 'Soldadura', 'Soldadura y ensamble', TRUE)
+ON CONFLICT (id) DO UPDATE SET
+    nombre = EXCLUDED.nombre,
+    descripcion = EXCLUDED.descripcion;
+
 -- Actualizar secuencias de catalogos
 SELECT setval('areas_id_seq', (SELECT MAX(id) FROM areas));
 SELECT setval('tipos_oro_id_seq', (SELECT MAX(id) FROM tipos_oro));
 SELECT setval('tipos_proveedor_id_seq', (SELECT MAX(id) FROM tipos_proveedor));
 SELECT setval('tipos_maquinaria_id_seq', (SELECT MAX(id) FROM tipos_maquinaria));
+SELECT setval('cat_especialidad_id_seq', (SELECT MAX(id) FROM cat_especialidad));
 
 -- ============================================
 -- UBICACIONES
@@ -275,10 +298,10 @@ SELECT setval('proveedores_id_seq', (SELECT MAX(id) FROM proveedores));
 -- ARTESANOS DE EJEMPLO
 -- Vinculados con usuarios OPERADOR via usuario_id
 -- ============================================
-INSERT INTO artesanos (id, usuario_id, nombre, apellido, especialidad, telefono, email, fecha_ingreso, activo) VALUES
-(1, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'artesano'), 'Roberto', 'Martinez', 'Joyeria fina', '555-1111', 'roberto@dedumsoft.com', '2020-01-15', TRUE),
-(2, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'ana'), 'Ana', 'Sanchez', 'Grabado y detalle', '555-2222', 'ana@dedumsoft.com', '2021-03-20', TRUE),
-(3, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'miguel'), 'Miguel', 'Torres', 'Fundicion', '555-3333', 'miguel@dedumsoft.com', '2019-06-10', TRUE)
+INSERT INTO artesanos (id, usuario_id, nombre, apellido, telefono, email, fecha_ingreso, activo) VALUES
+(1, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'artesano'), 'Roberto', 'Martinez', '555-1111', 'roberto@dedumsoft.com', '2020-01-15', TRUE),
+(2, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'ana'), 'Ana', 'Sanchez', '555-2222', 'ana@dedumsoft.com', '2021-03-20', TRUE),
+(3, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'miguel'), 'Miguel', 'Torres', '555-3333', 'miguel@dedumsoft.com', '2019-06-10', TRUE)
 ON CONFLICT (id) DO UPDATE SET usuario_id = EXCLUDED.usuario_id;
 
 SELECT setval('artesanos_id_seq', (SELECT MAX(id) FROM artesanos));
@@ -448,31 +471,31 @@ INSERT INTO proveedores (id, nombre, tipo_proveedor_id, tipo, contacto, telefono
 (10, 'Herramientas Orion', 3, 'maquinaria', 'Rafael Diaz', '555-8877', 'contacto@herramientasorion.com', 'Carretera Norte 45', 'HOR88779900', TRUE)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO artesanos (id, usuario_id, nombre, apellido, especialidad, telefono, email, fecha_ingreso, activo) VALUES
-(4, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'lucia'), 'Lucia', 'Ramirez', 'Engaste', '555-4444', 'lucia@dedumsoft.com', '2021-05-12', TRUE),
-(5, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'diego'), 'Diego', 'Morales', 'Pulido', '555-5555', 'diego@dedumsoft.com', '2022-02-10', TRUE),
-(6, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'camila'), 'Camila', 'Vargas', 'Modelado', '555-6666', 'camila@dedumsoft.com', '2021-08-18', TRUE),
-(7, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'sofia'), 'Sofia', 'Perez', 'Microengaste', '555-7777', 'sofia@dedumsoft.com', '2020-09-01', TRUE),
-(8, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'jorge'), 'Jorge', 'Ibarra', 'Cadeneria', '555-8888', 'jorge@dedumsoft.com', '2018-11-03', TRUE),
-(9, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'valentina'), 'Valentina', 'Rios', 'Diseno', '555-9990', 'valentina@dedumsoft.com', '2023-01-15', TRUE),
-(10, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'hector'), 'Hector', 'Salazar', 'Fundicion', '555-0001', 'hector@dedumsoft.com', '2019-04-22', TRUE)
+INSERT INTO artesanos (id, usuario_id, nombre, apellido, telefono, email, fecha_ingreso, activo) VALUES
+(4, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'lucia'), 'Lucia', 'Ramirez', '555-4444', 'lucia@dedumsoft.com', '2021-05-12', TRUE),
+(5, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'diego'), 'Diego', 'Morales', '555-5555', 'diego@dedumsoft.com', '2022-02-10', TRUE),
+(6, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'camila'), 'Camila', 'Vargas', '555-6666', 'camila@dedumsoft.com', '2021-08-18', TRUE),
+(7, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'sofia'), 'Sofia', 'Perez', '555-7777', 'sofia@dedumsoft.com', '2020-09-01', TRUE),
+(8, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'jorge'), 'Jorge', 'Ibarra', '555-8888', 'jorge@dedumsoft.com', '2018-11-03', TRUE),
+(9, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'valentina'), 'Valentina', 'Rios', '555-9990', 'valentina@dedumsoft.com', '2023-01-15', TRUE),
+(10, (SELECT id_usuario FROM seguridad.seg_usuario WHERE username = 'hector'), 'Hector', 'Salazar', '555-0001', 'hector@dedumsoft.com', '2019-04-22', TRUE)
 ON CONFLICT (id) DO UPDATE SET usuario_id = EXCLUDED.usuario_id;
 
-INSERT INTO artesano_especialidad (id, artesano_id, especialidad) VALUES
-(1, 1, 'Joyeria fina'),
-(2, 1, 'Engaste'),
-(3, 2, 'Grabado'),
-(4, 2, 'Detalle'),
-(5, 3, 'Fundicion'),
-(6, 3, 'Moldeo'),
-(7, 4, 'Engaste'),
-(8, 5, 'Pulido'),
-(9, 6, 'Modelado'),
-(10, 7, 'Microengaste'),
-(11, 8, 'Cadeneria'),
-(12, 9, 'Diseno CAD'),
-(13, 10, 'Fundicion'),
-(14, 10, 'Soldadura')
+INSERT INTO artesano_especialidad (id, artesano_id, especialidad_id) VALUES
+(1, 1, (SELECT id FROM cat_especialidad WHERE nombre = 'Joyeria fina')),
+(2, 1, (SELECT id FROM cat_especialidad WHERE nombre = 'Engaste')),
+(3, 2, (SELECT id FROM cat_especialidad WHERE nombre = 'Grabado')),
+(4, 2, (SELECT id FROM cat_especialidad WHERE nombre = 'Detalle')),
+(5, 3, (SELECT id FROM cat_especialidad WHERE nombre = 'Fundicion')),
+(6, 3, (SELECT id FROM cat_especialidad WHERE nombre = 'Moldeo')),
+(7, 4, (SELECT id FROM cat_especialidad WHERE nombre = 'Engaste')),
+(8, 5, (SELECT id FROM cat_especialidad WHERE nombre = 'Pulido')),
+(9, 6, (SELECT id FROM cat_especialidad WHERE nombre = 'Modelado')),
+(10, 7, (SELECT id FROM cat_especialidad WHERE nombre = 'Microengaste')),
+(11, 8, (SELECT id FROM cat_especialidad WHERE nombre = 'Cadeneria')),
+(12, 9, (SELECT id FROM cat_especialidad WHERE nombre = 'Diseno CAD')),
+(13, 10, (SELECT id FROM cat_especialidad WHERE nombre = 'Fundicion')),
+(14, 10, (SELECT id FROM cat_especialidad WHERE nombre = 'Soldadura'))
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO productos (id, nombre, tipo, descripcion, tiempo_fabricacion_horas, precio_venta, activo) VALUES

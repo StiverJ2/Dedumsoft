@@ -96,6 +96,7 @@ if ($legacy && $artesano_id) {
              LEFT JOIN estados_orden eo ON op.estado_id = eo.id
              LEFT JOIN prioridades pr ON op.prioridad_id = pr.id
              WHERE op.artesano_id = :artesano_id
+               AND op.estado_id <> 3
              ORDER BY COALESCE(pr.orden, 99), op.fecha_creacion DESC
              LIMIT 50'
         );

@@ -337,10 +337,13 @@ $$;
 -- fun_crear_usuario: Crea un nuevo usuario del sistema
 -- Parámetros:
 --   par_username: Username único
---   par_nombre: Nombre completo
+--   par_nombre: Nombre
 --   par_clave: Hash bcrypt de la contraseña (generado en PHP)
---   par_email: Email (opcional)
 --   par_rolid: ID del rol
+--   par_email: Email (opcional)
+--   par_apellido: Apellido (obligatorio si rol=OPERADOR)
+--   par_especialidad_id: ID de especialidad (opcional, se guarda en artesano_especialidad)
+--   par_telefono: Teléfono (opcional)
 -- Retorna:
 --   ID del usuario creado
 -- -----------------------------------------------------------------------------
@@ -351,7 +354,7 @@ CREATE OR REPLACE FUNCTION seguridad.fun_crear_usuario(
     par_rolid int,
     par_email text DEFAULT NULL,
     par_apellido text DEFAULT NULL,
-    par_especialidad text DEFAULT NULL,
+    par_especialidad_id int DEFAULT NULL,
     par_telefono text DEFAULT NULL
 )
 RETURNS int
@@ -363,20 +366,25 @@ DECLARE
     v_exists int;
     v_email text;
     v_apellido text;
-    v_especialidad text;
+    v_especialidad_id int;
+    v_especialidad_exists int;
     v_telefono text;
     v_nombre_seg text;
+    v_artesano_id int;
 BEGIN
     par_username := btrim(par_username);
     par_nombre := btrim(par_nombre);
     par_clave := NULLIF(par_clave, '');
     v_email := NULLIF(btrim(par_email), '');
     v_apellido := NULLIF(btrim(par_apellido), '');
-    v_especialidad := NULLIF(btrim(par_especialidad), '');
+    v_especialidad_id := par_especialidad_id;
     v_telefono := NULLIF(btrim(par_telefono), '');
     v_nombre_seg := par_nombre;
     IF v_apellido IS NOT NULL AND v_apellido <> '' THEN
         v_nombre_seg := par_nombre || ' ' || v_apellido;
+    END IF;
+    IF v_especialidad_id IS NOT NULL AND v_especialidad_id <= 0 THEN
+        v_especialidad_id := NULL;
     END IF;
 
     IF par_username IS NULL OR par_username = '' THEN
@@ -428,13 +436,31 @@ BEGIN
         END IF;
     END IF;
 
+    IF par_rolid = 2 AND v_especialidad_id IS NOT NULL THEN
+        SELECT e.id INTO v_especialidad_exists
+        FROM joyeria.cat_especialidad e
+        WHERE e.id = v_especialidad_id
+          AND e.activo = TRUE;
+
+        IF v_especialidad_exists IS NULL THEN
+            RAISE EXCEPTION 'Especialidad invalida.' USING ERRCODE = 'P0001';
+        END IF;
+    END IF;
+
     INSERT INTO seguridad.seg_usuario (username, nombre, clave, email, rolid)
     VALUES (par_username, v_nombre_seg, par_clave, v_email, par_rolid)
     RETURNING id_usuario INTO v_id;
 
     IF par_rolid = 2 THEN
-        INSERT INTO joyeria.artesanos (usuario_id, nombre, apellido, especialidad, telefono, email, activo)
-        VALUES (v_id, par_nombre, v_apellido, v_especialidad, v_telefono, v_email, TRUE);
+        INSERT INTO joyeria.artesanos (usuario_id, nombre, apellido, telefono, email, activo)
+        VALUES (v_id, par_nombre, v_apellido, v_telefono, v_email, TRUE)
+        RETURNING id INTO v_artesano_id;
+
+        IF v_especialidad_id IS NOT NULL THEN
+            INSERT INTO joyeria.artesano_especialidad (artesano_id, especialidad_id)
+            VALUES (v_artesano_id, v_especialidad_id)
+            ON CONFLICT (artesano_id, especialidad_id) DO NOTHING;
+        END IF;
     END IF;
 
     RETURN v_id;

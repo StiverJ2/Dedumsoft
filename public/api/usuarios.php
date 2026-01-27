@@ -21,7 +21,7 @@
  * - rolid (int, requerido)
  * - password (string, requerido)
  * - apellido (string, requerido si rol=OPERADOR)
- * - especialidad (string, opcional)
+ * - especialidad_id (int, opcional, se guarda en artesano_especialidad)
  * - telefono (string, opcional)
  *
  * Entrada JSON (PATCH):
@@ -68,7 +68,7 @@ if ($method === 'POST') {
     $rolid = isset($input['rolid']) ? (int) $input['rolid'] : 0;
     $password = (string) ($input['password'] ?? '');
     $apellido = trim((string) ($input['apellido'] ?? ''));
-    $especialidad = trim((string) ($input['especialidad'] ?? ''));
+    $especialidad_id = isset($input['especialidad_id']) ? (int) $input['especialidad_id'] : 0;
     $telefono = trim((string) ($input['telefono'] ?? ''));
 
     if ($username === '' || $nombre === '' || $rolid <= 0 || $password === '') {
@@ -91,7 +91,7 @@ if ($method === 'POST') {
     }
 
     $apellido = $apellido === '' ? null : $apellido;
-    $especialidad = $especialidad === '' ? null : $especialidad;
+    $especialidad_id = $especialidad_id > 0 ? $especialidad_id : null;
     $telefono = $telefono === '' ? null : $telefono;
 
     if ($rolid === 2 && $apellido === null) {
@@ -109,7 +109,7 @@ if ($method === 'POST') {
 
     try {
         $stmt = $connLogic->prepare(
-            'SELECT seguridad.fun_crear_usuario(:username, :nombre, :clave, :rolid, :email, :apellido, :especialidad, :telefono) AS id_usuario'
+            'SELECT seguridad.fun_crear_usuario(:username, :nombre, :clave, :rolid, :email, :apellido, :especialidad_id, :telefono) AS id_usuario'
         );
         $stmt->bindValue(':username', $username, PDO::PARAM_STR);
         $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
@@ -117,7 +117,7 @@ if ($method === 'POST') {
         $stmt->bindValue(':rolid', $rolid, PDO::PARAM_INT);
         $stmt->bindValue(':email', $email, $email === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
         $stmt->bindValue(':apellido', $apellido, $apellido === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-        $stmt->bindValue(':especialidad', $especialidad, $especialidad === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->bindValue(':especialidad_id', $especialidad_id, $especialidad_id === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
         $stmt->bindValue(':telefono', $telefono, $telefono === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
         $stmt->execute();
         $id = (int) ($stmt->fetchColumn() ?: 0);
@@ -135,6 +135,9 @@ if ($method === 'POST') {
         } elseif (strpos($message, 'Apellido requerido') !== false) {
             $code = 400;
             $clientMessage = 'Apellido requerido para rol Operador.';
+        } elseif (strpos($message, 'Especialidad invalida') !== false) {
+            $code = 400;
+            $clientMessage = 'Especialidad inválida.';
         }
         http_response_code($code);
         echo json_encode(['CODIGO' => $code, 'MENSAJE' => $clientMessage]);
