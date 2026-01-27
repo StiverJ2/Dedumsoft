@@ -171,6 +171,15 @@ require_menu_access(2);    // Bloquea si no tiene permiso al menú #2
 
 **Nota:** Especialidades se gestiona dentro de **Ajustes > Catálogos** (`catalogos.php`) usando el mismo menú 7.
 
+**Catálogos maestros (Ajustes > Catálogos):**
+
+- Configuración central: `private/Database/CatalogConfig.php` (tabla, columnas, campos, orden).
+- API genérica: `public/api/catalogos/maestros.php?catalog=...`.
+- UI: `public/catalogos.php` (modo moderno y legacy).
+- Catálogos incluidos: `areas`, `tipos_oro`, `tipos_proveedor`, `tipos_maquinaria`, `especialidades`,
+  `estados_maquinaria`, `estados_orden`, `prioridades`, `tipos_material`, `niveles_calidad`, `productos`.
+- Iconos: en legacy PNG de `public/assets/icons/fatcow/16`, en moderno emojis del config.
+
 ### ⚠️ IMPORTANTE: Caché de Permisos
 
 Los permisos se cargan **UNA VEZ** durante el login y se almacenan en `$_SESSION['user']['permisos_menu']`. Si se modifican permisos en la BD, el usuario debe cerrar sesión y volver a entrar.

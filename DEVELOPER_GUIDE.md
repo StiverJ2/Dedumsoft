@@ -542,6 +542,15 @@ La gestión de usuarios se realiza desde `public/usuarios.php` y la API
 - Tabla fuente: `joyeria.cat_especialidad` (activo, descripción).
 - UI: `public/catalogos.php?catalog=especialidades`.
 
+**Catálogos maestros (Ajustes > Catálogos):**
+
+- Configuración central: `private/Database/CatalogConfig.php` (define tabla, columnas, campos y orden).
+- API genérica: `public/api/catalogos/maestros.php?catalog=...`.
+- UI: `public/catalogos.php` (modo moderno y legacy).
+- Catálogos incluidos: `areas`, `tipos_oro`, `tipos_proveedor`, `tipos_maquinaria`, `especialidades`,
+  `estados_maquinaria`, `estados_orden`, `prioridades`, `tipos_material`, `niveles_calidad`, `productos`.
+- Iconos: en legacy se usan PNG de `public/assets/icons/fatcow/16`, en moderno emojis definidos en el config.
+
 ### API de Órdenes de Producción (crear/asignar)
 
 La gestión de órdenes se realiza desde `public/produccion.php` y la API
