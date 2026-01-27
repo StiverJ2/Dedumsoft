@@ -62,7 +62,7 @@ try {
 
 // Obtener opciones de tipos de oro desde tabla de catálogo
 try {
-    $stmt = $connLogic->prepare('SELECT id, codigo, nombre FROM tipos_oro WHERE activo = true ORDER BY kilates, nombre');
+    $stmt = $connLogic->prepare('SELECT id, nombre FROM tipos_oro WHERE activo = true ORDER BY kilates, nombre');
     $stmt->execute();
     $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

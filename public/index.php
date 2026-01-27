@@ -96,17 +96,14 @@ try {
     $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
     $ventas_mes_total = (float) $stmt->fetchColumn();
 
-    // Órdenes activas: estados distintos de terminada/cancelada
-    $ordenes_activas = (int) $connLogic
-        ->query("SELECT COUNT(1) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre NOT IN ('terminada', 'cancelada')")
-        ->fetchColumn();
-
-    // Órdenes completadas este mes
+    // Órdenes activas / completadas del mes (vía función de reporte)
     $stmt = $connLogic->prepare(
-        "SELECT COUNT(1) FROM ordenes_produccion op INNER JOIN estados_orden eo ON op.estado_id = eo.id WHERE eo.nombre = 'terminada' AND op.fecha_fin_real IS NOT NULL AND op.fecha_fin_real::date BETWEEN :desde AND :hasta"
+        'SELECT ordenes_activas, ordenes_completadas FROM fun_reporte_ordenes_dashboard(:desde, :hasta)'
     );
     $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
-    $ordenes_completadas_mes = (int) $stmt->fetchColumn();
+    $ordenes_dashboard = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $ordenes_activas = (int) ($ordenes_dashboard['ordenes_activas'] ?? 0);
+    $ordenes_completadas_mes = (int) ($ordenes_dashboard['ordenes_completadas'] ?? 0);
 
     // Datos para gráfico de ventas (serie temporal)
     $stmt = $connLogic->prepare(
@@ -123,7 +120,7 @@ try {
 
     // Datos para gráfico de órdenes por estado
     $ordenes_estado = $connLogic
-        ->query('SELECT eo.nombre AS estado, COUNT(1) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY eo.nombre ORDER BY eo.nombre')
+        ->query('SELECT estado, total FROM fun_reporte_ordenes_estado()')
         ->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     // En caso de error, mantener valores en cero

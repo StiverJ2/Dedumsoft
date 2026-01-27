@@ -10,6 +10,8 @@
 -- PRODUCCIÓN:
 -- - fun_reporte_produccion(desde, hasta): Órdenes en rango de fechas
 -- - fun_reporte_eficiencia_artesanos(desde, hasta): Piezas por artesano
+-- - fun_reporte_ordenes_estado(): Conteo de órdenes por estado
+-- - fun_reporte_ordenes_dashboard(desde, hasta): KPIs de órdenes para dashboard
 --
 -- INVENTARIO:
 -- - fun_reporte_inventario(): Resumen de stock actual
@@ -215,6 +217,63 @@ BEGIN
     WHERE ct.vendida = TRUE
       AND ct.fecha_venta::date BETWEEN par_desde AND par_hasta
     ORDER BY ct.fecha_venta DESC;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_reporte_ordenes_estado()
+RETURNS TABLE (
+    estado text,
+    total int
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COALESCE(eo.nombre, 'sin_estado')::text AS estado,
+        COUNT(1)::int AS total
+    FROM ordenes_produccion op
+    LEFT JOIN estados_orden eo ON op.estado_id = eo.id
+    GROUP BY COALESCE(eo.nombre, 'sin_estado')
+    ORDER BY COALESCE(eo.nombre, 'sin_estado');
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fun_reporte_ordenes_dashboard(
+    par_desde date,
+    par_hasta date
+)
+RETURNS TABLE (
+    ordenes_activas int,
+    ordenes_completadas int
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_activas int;
+    v_completadas int;
+BEGIN
+    SELECT COUNT(1)::int
+    INTO v_activas
+    FROM ordenes_produccion op
+    INNER JOIN estados_orden eo ON op.estado_id = eo.id
+    WHERE eo.nombre NOT IN ('terminada', 'cancelada');
+
+    SELECT COUNT(1)::int
+    INTO v_completadas
+    FROM ordenes_produccion op
+    INNER JOIN estados_orden eo ON op.estado_id = eo.id
+    WHERE eo.nombre = 'terminada'
+      AND op.fecha_fin_real IS NOT NULL
+      AND op.fecha_fin_real::date BETWEEN par_desde AND par_hasta;
+
+    RETURN QUERY SELECT COALESCE(v_activas, 0), COALESCE(v_completadas, 0);
 EXCEPTION
     WHEN OTHERS THEN
         RAISE EXCEPTION 'Reporte no disponible.' USING ERRCODE = SQLSTATE;

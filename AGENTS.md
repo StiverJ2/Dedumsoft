@@ -207,6 +207,11 @@ CREATE SCHEMA seguridad;  -- Autenticación y autorización
 | `seg_`  | Seguridad   | `seg_usuario`, `seg_rol`, `seg_menu`          |
 | `fun_`  | Funciones   | `fun_obtener_ordenes()`, `fun_crear_insumo()` |
 
+**Reportes usados en el dashboard (fun_rep_*):**
+
+- `fun_reporte_ordenes_estado()` → conteo de órdenes por estado (gráficas / legacy_chart).
+- `fun_reporte_ordenes_dashboard(desde, hasta)` → KPIs de órdenes activas y completadas del mes (dashboard).
+
 ### Reglas SQL Obligatorias
 
 ⚠️ **NUNCA usar `SELECT *` ni `COUNT(*)`:**

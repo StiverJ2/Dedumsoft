@@ -160,7 +160,7 @@ try {
             break;
         case 'ordenes_estado':
             $rows = dedumsoft_query(
-                'SELECT COALESCE(eo.nombre, \'sin_estado\') AS estado, COUNT(1) AS total FROM ordenes_produccion op LEFT JOIN estados_orden eo ON op.estado_id = eo.id GROUP BY COALESCE(eo.nombre, \'sin_estado\') ORDER BY COALESCE(eo.nombre, \'sin_estado\')',
+                'SELECT estado, total FROM fun_reporte_ordenes_estado()',
                 []
             );
             dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);

@@ -157,7 +157,7 @@ El sistema incluye un flujo completo de recuperación de contraseña:
                                   Genera token (1h)
                                          │
                                          ▼
-                              [Email con link] (TODO)
+                              [Email con link de recuperación]
                                          │
                                          ▼
 [Usuario] → reset_password.php?token=xxx → API/password_reset.php?action=reset
@@ -401,6 +401,11 @@ FROM joyeria.fun_inv_buscar_insumos('oro', 10, 0);
 | `fun_prov_*` | Proveedores y compras     |
 | `fun_seg_*`  | Seguridad y auditoría     |
 | `fun_rep_*`  | Reportes                  |
+
+**Reportes usados en el dashboard (fun_rep_*):**
+
+- `fun_reporte_ordenes_estado()` → conteo de órdenes por estado (gráficas / legacy_chart).
+- `fun_reporte_ordenes_dashboard(desde, hasta)` → KPIs de órdenes activas y completadas del mes (dashboard).
 
 ---
 

@@ -88,19 +88,13 @@ try {
 if ($legacy && $artesano_id) {
     try {
         $stmt = $connLogic->prepare(
-            'SELECT op.id, p.nombre AS producto_nombre, op.cantidad, 
-                    eo.nombre AS estado, pr.nombre AS prioridad,
-                    op.fecha_inicio, op.fecha_fin_estimada, op.observaciones
-             FROM ordenes_produccion op
-             LEFT JOIN productos p ON op.producto_id = p.id
-             LEFT JOIN estados_orden eo ON op.estado_id = eo.id
-             LEFT JOIN prioridades pr ON op.prioridad_id = pr.id
-             WHERE op.artesano_id = :artesano_id
-               AND op.estado_id <> 3
-             ORDER BY COALESCE(pr.id, 99), op.fecha_creacion DESC
-             LIMIT 50'
+            'SELECT id, producto_nombre, cantidad, estado, prioridad, fecha_inicio, fecha_fin_estimada, observaciones
+             FROM fun_obtener_ordenes_artesano(:artesano_id, :offset, :limit)'
         );
-        $stmt->execute([':artesano_id' => $artesano_id]);
+        $stmt->bindValue(':artesano_id', $artesano_id, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', 50, PDO::PARAM_INT);
+        $stmt->execute();
         $ordenes_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log('artesano ordenes legacy error: ' . $e->getMessage());
