@@ -221,16 +221,16 @@ function format_estado_badge($estado)
 
 <?php if (!$legacy && $artesano_id): ?>
 <script>
-$(function() {
-    var dtLang = {
+$(() => {
+    const dtLang = {
         url: 'assets/dataTables.es-ES.json'
     };
-    var artesanoId = <?php echo (int) $artesano_id; ?>;
-    var ordenesTable;
-    var estadosCache = [];
-    var oroCache = [];
-    var insumosCache = [];
-    var calidadCache = [];
+    const artesanoId = <?php echo (int) $artesano_id; ?>;
+    let ordenesTable;
+    let estadosCache = [];
+    let oroCache = [];
+    let insumosCache = [];
+    let calidadCache = [];
 
     // Cargar datos de referencia
     Promise.all([
@@ -238,44 +238,43 @@ $(function() {
         axios.get('api/opciones.php?tipo=niveles_calidad'),
         axios.get('api/inventario_oro.php?limit=500'),
         axios.get('api/inventario_insumos.php?limit=500')
-    ]).then(function(results) {
+    ]).then((results) => {
         estadosCache = results[0].data.DATOS || [];
         calidadCache = results[1].data.DATOS || [];
-        oroCache = (results[2].data.DATOS || []).map(function(o) {
-            return {
-                value: o.id,
-                label: (o.tipo_oro_nombre || 'Oro') + ' #' + o.id + ' (' + o.peso_gramos + 'g)'
-            };
-        });
-        insumosCache = (results[3].data.DATOS || []).map(function(i) {
-            return {
-                value: i.id,
-                label: i.nombre + ' (' + i.cantidad + ' disp.)'
-            };
-        });
+        oroCache = (results[2].data.DATOS || []).map((o) => ({
+            value: o.id,
+            label: `${o.tipo_oro_nombre || 'Oro'} #${o.id} (${o.peso_gramos}g)`
+        }));
+        insumosCache = (results[3].data.DATOS || []).map((i) => ({
+            value: i.id,
+            label: `${i.nombre} (${i.cantidad} disp.)`
+        }));
     });
 
-    function formatPrioridad(v) {
-        var val = (v || 'normal').toString().toLowerCase();
-        var cls = 'ds-badge--neutral';
+    const esc = (value) => DsCrud.escapeHtml(value === null || value === undefined ? '' : String(value));
+
+    const formatPrioridad = (v) => {
+        const val = String(v || 'normal').toLowerCase();
+        let cls = 'ds-badge--neutral';
         if (val === 'alta' || val === 'urgente') cls = 'ds-badge--danger';
         else if (val === 'media' || val === 'normal') cls = 'ds-badge--warning';
         else if (val === 'baja') cls = 'ds-badge--muted';
-        return '<span class="ds-badge ' + cls + '">' + val.charAt(0).toUpperCase() + val.slice(1) + '</span>';
-    }
+        const label = esc(val.charAt(0).toUpperCase() + val.slice(1));
+        return `<span class="ds-badge ${cls}">${label}</span>`;
+    };
 
-    function formatEstado(v) {
-        var raw = (v || '').toString();
-        var label = raw.replace(/_/g, ' ').toUpperCase();
-        var key = raw.toLowerCase();
-        var cls = 'ds-badge--neutral';
+    const formatEstado = (v) => {
+        const raw = String(v || '');
+        const label = esc(raw.replace(/_/g, ' ').toUpperCase());
+        const key = raw.toLowerCase();
+        let cls = 'ds-badge--neutral';
         if (key === 'pendiente') cls = 'ds-badge--warning';
         else if (key === 'en_proceso') cls = 'ds-badge--info';
         else if (key === 'terminada') cls = 'ds-badge--success';
         else if (key === 'cancelada') cls = 'ds-badge--danger';
         else if (key === 'pausada') cls = 'ds-badge--muted';
-        return '<span class="ds-badge ' + cls + '">' + label + '</span>';
-    }
+        return `<span class="ds-badge ${cls}">${label}</span>`;
+    };
 
     ordenesTable = $('#ordenes-artesano-table').DataTable({
         ajax: {
@@ -301,21 +300,17 @@ $(function() {
             },
             {
                 data: 'fecha_inicio',
-                render: function(v) {
-                    return v ? v.split('T')[0] : '-';
-                }
+                render: (v) => (v ? v.split('T')[0] : '-')
             },
             {
                 data: 'fecha_fin_estimada',
-                render: function(v) {
-                    return v ? v.split('T')[0] : '-';
-                }
+                render: (v) => (v ? v.split('T')[0] : '-')
             },
             {
                 data: null,
                 orderable: false,
                 searchable: false,
-                render: function(data, type, row) {
+                render: (data, type, row) => {
                     if (type !== 'display') return '';
                     return '<button class="ds-action-btn" data-action="estado" title="Cambiar estado">🔄</button>' +
                         '<button class="ds-action-btn" data-action="consumo" title="Registrar consumo">📦</button>' +
@@ -331,14 +326,12 @@ $(function() {
     });
 
     // Cambiar estado
-    function openCambiarEstado(row) {
-        var estadoOpts = estadosCache.map(function(e) {
-            return {
-                value: e.value || e.id,
-                label: e.label || e.nombre
-            };
-        });
-        var body = '<form id="frm-estado">' +
+    const openCambiarEstado = (row) => {
+        const estadoOpts = estadosCache.map((e) => ({
+            value: e.value || e.id,
+            label: e.label || e.nombre
+        }));
+        const body = '<form id="frm-estado">' +
             DsCrud.field({
                 name: 'estado_id',
                 label: 'Nuevo estado',
@@ -350,31 +343,31 @@ $(function() {
         DsCrud.openModal({
             title: 'Cambiar estado - Orden #' + row.id,
             body: body,
-            onSave: function(m) {
-                var f = m.querySelector('#frm-estado');
+            onSave: (m) => {
+                const f = m.querySelector('#frm-estado');
                 if (!f.checkValidity()) {
                     f.reportValidity();
                     return;
                 }
-                var fd = new FormData(f);
-                var payload = {
+                const fd = new FormData(f);
+                const payload = {
                     id: row.id,
                     estado_id: fd.get('estado_id')
                 };
-                DsCrud.api('api/artesano_ordenes.php', 'PATCH', payload, function() {
+                DsCrud.api('api/artesano_ordenes.php', 'PATCH', payload, () => {
                     DsCrud.toast('Estado actualizado', 'success');
                     ordenesTable.ajax.reload();
                     DsCrud.closeModal();
-                }, function(e) {
+                }, (e) => {
                     DsCrud.toast(e, 'error');
                 });
             }
         });
-    }
+    };
 
     // Registrar consumo de materiales
-    function openRegistrarConsumo(row) {
-        var body = '<form id="frm-consumo">' +
+    const openRegistrarConsumo = (row) => {
+        const body = '<form id="frm-consumo">' +
             DsCrud.field({
                 name: 'tipo_material',
                 label: 'Tipo de material',
@@ -402,36 +395,36 @@ $(function() {
         DsCrud.openModal({
             title: 'Registrar consumo - Orden #' + row.id,
             body: body,
-            onSave: function(m) {
-                var f = m.querySelector('#frm-consumo');
+            onSave: (m) => {
+                const f = m.querySelector('#frm-consumo');
                 if (!f.checkValidity()) {
                     f.reportValidity();
                     return;
                 }
-                var fd = new FormData(f);
-                var payload = {
+                const fd = new FormData(f);
+                const payload = {
                     orden_id: row.id,
                     tipo_material: fd.get('tipo_material'),
                     material_id: fd.get('material_id'),
                     cantidad: parseFloat(fd.get('cantidad'))
                 };
-                DsCrud.api('api/artesano_consumo.php', 'POST', payload, function() {
+                DsCrud.api('api/artesano_consumo.php', 'POST', payload, () => {
                     DsCrud.toast('Consumo registrado', 'success');
                     DsCrud.closeModal();
-                }, function(e) {
+                }, (e) => {
                     DsCrud.toast(e, 'error');
                 });
             }
         });
 
         // Cambiar opciones de material según tipo
-        setTimeout(function() {
-            var tipoSelect = document.querySelector('[name="tipo_material"]');
-            var container = document.getElementById('material-select-container');
+        setTimeout(() => {
+            const tipoSelect = document.querySelector('[name="tipo_material"]');
+            const container = document.getElementById('material-select-container');
 
-            function updateMaterialOptions() {
-                var tipo = tipoSelect.value;
-                var opts = tipo === 'oro' ? oroCache : insumosCache;
+            const updateMaterialOptions = () => {
+                const tipo = tipoSelect.value;
+                const opts = tipo === 'oro' ? oroCache : insumosCache;
                 container.innerHTML = DsCrud.field({
                     name: 'material_id',
                     label: 'Material',
@@ -439,21 +432,19 @@ $(function() {
                     options: opts,
                     required: true
                 });
-            }
+            };
             tipoSelect.addEventListener('change', updateMaterialOptions);
             updateMaterialOptions();
         }, 100);
-    }
+    };
 
     // Registrar pieza terminada
-    function openRegistrarTerminada(row) {
-        var calidadOpts = calidadCache.map(function(c) {
-            return {
-                value: c.value || c.id,
-                label: c.label || c.nombre
-            };
-        });
-        var body = '<form id="frm-terminada">' +
+    const openRegistrarTerminada = (row) => {
+        const calidadOpts = calidadCache.map((c) => ({
+            value: c.value || c.id,
+            label: c.label || c.nombre
+        }));
+        const body = '<form id="frm-terminada">' +
             DsCrud.field({
                 name: 'peso_final',
                 label: 'Peso final (gramos)',
@@ -482,14 +473,14 @@ $(function() {
         DsCrud.openModal({
             title: 'Registrar pieza terminada - Orden #' + row.id,
             body: body,
-            onSave: function(m) {
-                var f = m.querySelector('#frm-terminada');
+            onSave: (m) => {
+                const f = m.querySelector('#frm-terminada');
                 if (!f.checkValidity()) {
                     f.reportValidity();
                     return;
                 }
-                var fd = new FormData(f);
-                var payload = {
+                const fd = new FormData(f);
+                const payload = {
                     orden_id: row.id,
                     peso_final: parseFloat(fd.get('peso_final')),
                     tiempo_real: fd.get('tiempo_real') ? parseFloat(fd.get('tiempo_real')) :
@@ -497,25 +488,28 @@ $(function() {
                     calidad_id: fd.get('calidad_id') || null,
                     observaciones: fd.get('observaciones') || null
                 };
-                DsCrud.api('api/artesano_terminada.php', 'POST', payload, function() {
+                DsCrud.api('api/artesano_terminada.php', 'POST', payload, () => {
                     DsCrud.toast('Pieza terminada registrada', 'success');
                     ordenesTable.ajax.reload();
                     DsCrud.closeModal();
-                }, function(e) {
+                }, (e) => {
                     DsCrud.toast(e, 'error');
                 });
             }
         });
-    }
+    };
 
-    $('#ordenes-artesano-table').on('click', '.ds-action-btn[data-action="estado"]', function() {
-        openCambiarEstado(ordenesTable.row($(this).closest('tr')).data());
+    $('#ordenes-artesano-table').on('click', '.ds-action-btn[data-action="estado"]', (e) => {
+        const row = ordenesTable.row($(e.currentTarget).closest('tr')).data();
+        openCambiarEstado(row);
     });
-    $('#ordenes-artesano-table').on('click', '.ds-action-btn[data-action="consumo"]', function() {
-        openRegistrarConsumo(ordenesTable.row($(this).closest('tr')).data());
+    $('#ordenes-artesano-table').on('click', '.ds-action-btn[data-action="consumo"]', (e) => {
+        const row = ordenesTable.row($(e.currentTarget).closest('tr')).data();
+        openRegistrarConsumo(row);
     });
-    $('#ordenes-artesano-table').on('click', '.ds-action-btn[data-action="terminar"]', function() {
-        openRegistrarTerminada(ordenesTable.row($(this).closest('tr')).data());
+    $('#ordenes-artesano-table').on('click', '.ds-action-btn[data-action="terminar"]', (e) => {
+        const row = ordenesTable.row($(e.currentTarget).closest('tr')).data();
+        openRegistrarTerminada(row);
     });
 });
 </script>

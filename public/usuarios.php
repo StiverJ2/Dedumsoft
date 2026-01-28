@@ -300,8 +300,8 @@ include VIEWS_PATH . '/layouts/nav.php';
         const currentUserId = <?php echo $current_user_id; ?>;
         const formatRol = (rol) => {
             if (!rol) return '';
-            const key = rol.toLowerCase();
-            const label = rol.charAt(0).toUpperCase() + rol.slice(1);
+            const key = String(rol).toLowerCase();
+            const label = DsCrud.escapeHtml(String(rol).charAt(0).toUpperCase() + String(rol).slice(1));
             let cls = 'ds-badge--neutral';
             if (key === 'administrador') cls = 'ds-badge--danger';
             else if (key === 'operador') cls = 'ds-badge--info';

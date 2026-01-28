@@ -265,42 +265,43 @@ include VIEWS_PATH . '/layouts/nav.php';
 <?php include VIEWS_PATH . '/layouts/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
-        function formatStatus(v) {
-            var raw = (v || '').toString();
-            var label = raw.replace(/_/g, ' ').toUpperCase();
-            var key = raw.toLowerCase();
-            var cls = 'ds-badge--neutral';
+        const esc = (value) => DsCrud.escapeHtml(value === null || value === undefined ? '' : String(value));
+        const formatStatus = (v) => {
+            const raw = String(v || '');
+            const label = esc(raw.replace(/_/g, ' ').toUpperCase());
+            const key = raw.toLowerCase();
+            let cls = 'ds-badge--neutral';
             if (key === 'pendiente') cls = 'ds-badge--warning';
             else if (key === 'en_proceso') cls = 'ds-badge--info';
             else if (key === 'terminada') cls = 'ds-badge--success';
             else if (key === 'cancelada') cls = 'ds-badge--danger';
             else if (key === 'pausada') cls = 'ds-badge--muted';
-            return '<span class="ds-badge ' + cls + '">' + label + '</span>';
-        }
-        function formatFecha(v) {
+            return `<span class="ds-badge ${cls}">${label}</span>`;
+        };
+        const formatFecha = (v) => {
             if (!v) return '';
-            return v.replace('T', ' ').split('.')[0];
-        }
-        $(function () {
-            var ordenesTable;
-            var artesanosCache = [];
-            var productosCache = [];
-            var prioridadesCache = [];
-            var estadoFilter = '';
+            return String(v).replace('T', ' ').split('.')[0];
+        };
+        $(() => {
+            let ordenesTable;
+            let artesanosCache = [];
+            let productosCache = [];
+            let prioridadesCache = [];
+            let estadoFilter = '';
 
-            function applyOrdenFilters() {
-                var estadoEl = $('#orden-estado-modern');
+            const applyOrdenFilters = () => {
+                const estadoEl = $('#orden-estado-modern');
                 estadoFilter = estadoEl.length ? estadoEl.val() : '';
                 if (ordenesTable) {
                     ordenesTable.ajax.reload();
                 }
-            }
+            };
 
-            axios.get('api/opciones.php?tipo=artesanos').then(function (res) {
-                artesanosCache = (res.data.DATOS || []).map(function (a) {
-                    var label = a.label || '';
+            axios.get('api/opciones.php?tipo=artesanos').then((res) => {
+                artesanosCache = (res.data.DATOS || []).map((a) => {
+                    let label = a.label || '';
                     if (!label) {
-                        var fullName = ((a.nombre || '') + ' ' + (a.apellido || '')).replace(/\s+/g, ' ').trim();
+                        const fullName = ((a.nombre || '') + ' ' + (a.apellido || '')).replace(/\s+/g, ' ').trim();
                         label = fullName || (a.nombre || '');
                         if (a.especialidades) {
                             label += ' - ' + a.especialidades;
@@ -311,36 +312,36 @@ include VIEWS_PATH . '/layouts/nav.php';
                         label: label
                     };
                 });
-            }).catch(function () {
+            }).catch(() => {
                 artesanosCache = [];
             });
 
-            axios.get('api/opciones.php?tipo=productos').then(function (res) {
-                productosCache = (res.data.DATOS || []).map(function (p) {
+            axios.get('api/opciones.php?tipo=productos').then((res) => {
+                productosCache = (res.data.DATOS || []).map((p) => {
                     return {
                         value: p.value || p.id,
                         label: p.label || p.nombre || ''
                     };
                 });
-            }).catch(function () {
+            }).catch(() => {
                 productosCache = [];
             });
 
-            axios.get('api/opciones.php?tipo=prioridades').then(function (res) {
-                prioridadesCache = (res.data.DATOS || []).map(function (p) {
+            axios.get('api/opciones.php?tipo=prioridades').then((res) => {
+                prioridadesCache = (res.data.DATOS || []).map((p) => {
                     return {
                         value: p.value || p.id,
                         label: p.label || p.nombre || ''
                     };
                 });
-            }).catch(function () {
+            }).catch(() => {
                 prioridadesCache = [];
             });
 
             ordenesTable = $('#ordenes-table').DataTable({
                 ajax: {
                     url: 'api/ordenes.php',
-                    data: function (d) {
+                    data: (d) => {
                         d.limit = 100;
                         d.offset = 0;
                         if (estadoFilter) d.estado = estadoFilter;
@@ -357,7 +358,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                         data: null,
                         orderable: false,
                         searchable: false,
-                        render: function (data, type) {
+                        render: (data, type) => {
                             if (type !== 'display') return '';
                             return '<button type="button" class="ds-action-btn" data-action="detalles" title="Ver detalles">ℹ️</button>' +
                                 '<button type="button" class="ds-action-btn" data-action="asignar" title="Asignar artesano">👤➕</button>';
@@ -367,14 +368,14 @@ include VIEWS_PATH . '/layouts/nav.php';
                 language: { url: 'assets/dataTables.es-ES.json' }
             });
 
-            function openDetalles(row) {
+            const openDetalles = (row) => {
                 if (!row) return;
-                var producto = DsCrud.escapeHtml(row.producto_nombre || '');
-                var artesano = DsCrud.escapeHtml(row.artesano_nombre || '');
-                var estado = DsCrud.escapeHtml((row.estado || '').toString().replace(/_/g, ' ').toUpperCase());
-                var prioridad = DsCrud.escapeHtml(row.prioridad || '');
-                var observaciones = DsCrud.escapeHtml(row.observaciones_terminada || row.observaciones || '');
-                var body = '<div class="ds-detail-list">' +
+                const producto = DsCrud.escapeHtml(row.producto_nombre || '');
+                const artesano = DsCrud.escapeHtml(row.artesano_nombre || '');
+                const estado = DsCrud.escapeHtml((row.estado || '').toString().replace(/_/g, ' ').toUpperCase());
+                const prioridad = DsCrud.escapeHtml(row.prioridad || '');
+                const observaciones = DsCrud.escapeHtml(row.observaciones_terminada || row.observaciones || '');
+                const body = '<div class="ds-detail-list">' +
                     '<p><strong>Producto:</strong> ' + producto + '</p>' +
                     '<p><strong>Cantidad:</strong> ' + DsCrud.escapeHtml(row.cantidad || '') + '</p>' +
                     '<p><strong>Artesano:</strong> ' + artesano + '</p>' +
@@ -391,15 +392,15 @@ include VIEWS_PATH . '/layouts/nav.php';
                     body: body,
                     saveText: 'Cerrar',
                     cancelText: 'Cerrar',
-                    onSave: function () {
+                    onSave: () => {
                         DsCrud.closeModal();
                     }
                 });
-            }
+            };
 
-            function getDefaultPrioridad() {
-                var valor = '';
-                for (var i = 0; i < prioridadesCache.length; i++) {
+            const getDefaultPrioridad = () => {
+                let valor = '';
+                for (let i = 0; i < prioridadesCache.length; i++) {
                     if (String(prioridadesCache[i].value) === '2') {
                         valor = prioridadesCache[i].value;
                         break;
@@ -409,19 +410,19 @@ include VIEWS_PATH . '/layouts/nav.php';
                     valor = prioridadesCache[0].value;
                 }
                 return valor;
-            }
+            };
 
-            function openCrear() {
+            const openCrear = () => {
                 if (!productosCache.length) {
                     DsCrud.toast('No hay productos disponibles', 'error');
                     return;
                 }
-                var productoOpts = [{ value: '', label: '-- Seleccione --' }].concat(productosCache);
-                var prioridadOpts = [{ value: '', label: '-- Seleccione --' }].concat(prioridadesCache);
-                var artesanoOpts = [{ value: '', label: '-- Sin asignar --' }].concat(artesanosCache);
-                var prioridadDefault = getDefaultPrioridad();
+                const productoOpts = [{ value: '', label: '-- Seleccione --' }].concat(productosCache);
+                const prioridadOpts = [{ value: '', label: '-- Seleccione --' }].concat(prioridadesCache);
+                const artesanoOpts = [{ value: '', label: '-- Sin asignar --' }].concat(artesanosCache);
+                const prioridadDefault = getDefaultPrioridad();
 
-                var body = '<form id="frm-crear-orden">' +
+                const body = '<form id="frm-crear-orden">' +
                     DsCrud.field({
                         name: 'producto_id',
                         label: 'Producto',
@@ -463,25 +464,25 @@ include VIEWS_PATH . '/layouts/nav.php';
                     body: body,
                     saveText: 'Crear',
                     cancelText: 'Cancelar',
-                    onSave: function (m) {
-                        var f = m.querySelector('#frm-crear-orden');
+                    onSave: (m) => {
+                        const f = m.querySelector('#frm-crear-orden');
                         if (!f.checkValidity()) {
                             f.reportValidity();
                             return;
                         }
-                        var fd = new FormData(f);
-                        var productoId = parseInt(fd.get('producto_id'), 10) || 0;
-                        var cantidad = parseInt(fd.get('cantidad'), 10) || 0;
-                        var prioridadId = parseInt(fd.get('prioridad_id'), 10) || 0;
-                        var artesanoId = parseInt(fd.get('artesano_id'), 10) || 0;
-                        var observaciones = (fd.get('observaciones') || '').toString().trim();
+                        const fd = new FormData(f);
+                        const productoId = parseInt(fd.get('producto_id'), 10) || 0;
+                        const cantidad = parseInt(fd.get('cantidad'), 10) || 0;
+                        const prioridadId = parseInt(fd.get('prioridad_id'), 10) || 0;
+                        const artesanoId = parseInt(fd.get('artesano_id'), 10) || 0;
+                        const observaciones = (fd.get('observaciones') || '').toString().trim();
 
                         if (productoId <= 0 || cantidad <= 0) {
                             DsCrud.toast('Producto y cantidad son requeridos', 'error');
                             return;
                         }
 
-                        var payload = {
+                        const payload = {
                             producto_id: productoId,
                             cantidad: cantidad,
                             prioridad_id: prioridadId > 0 ? prioridadId : null,
@@ -489,24 +490,24 @@ include VIEWS_PATH . '/layouts/nav.php';
                             observaciones: observaciones ? observaciones : null
                         };
 
-                        DsCrud.api('api/ordenes.php', 'POST', payload, function () {
+                        DsCrud.api('api/ordenes.php', 'POST', payload, () => {
                             DsCrud.toast('Orden creada', 'success');
                             ordenesTable.ajax.reload();
                             DsCrud.closeModal();
-                        }, function (e) {
+                        }, (e) => {
                             DsCrud.toast(e, 'error');
                         });
                     }
                 });
-            }
+            };
 
-            function openAsignar(row) {
+            const openAsignar = (row) => {
                 if (!artesanosCache.length) {
                     DsCrud.toast('No hay artesanos disponibles', 'error');
                     return;
                 }
-                var opts = [{ value: '', label: '-- Seleccione --' }].concat(artesanosCache);
-                var body = '<form id="frm-asignar">' +
+                const opts = [{ value: '', label: '-- Seleccione --' }].concat(artesanosCache);
+                const body = '<form id="frm-asignar">' +
                     DsCrud.field({
                         name: 'artesano_id',
                         label: 'Artesano',
@@ -519,48 +520,46 @@ include VIEWS_PATH . '/layouts/nav.php';
                 DsCrud.openModal({
                     title: 'Asignar artesano - Orden #' + row.id,
                     body: body,
-                    onSave: function (m) {
-                        var f = m.querySelector('#frm-asignar');
+                    onSave: (m) => {
+                        const f = m.querySelector('#frm-asignar');
                         if (!f.checkValidity()) {
                             f.reportValidity();
                             return;
                         }
-                        var fd = new FormData(f);
-                        var payload = {
+                        const fd = new FormData(f);
+                        const payload = {
                             id: row.id,
                             artesano_id: fd.get('artesano_id')
                         };
-                        DsCrud.api('api/ordenes.php', 'PATCH', payload, function () {
+                        DsCrud.api('api/ordenes.php', 'PATCH', payload, () => {
                             DsCrud.toast('Orden actualizada', 'success');
                             ordenesTable.ajax.reload();
                             DsCrud.closeModal();
-                        }, function (e) {
+                        }, (e) => {
                             DsCrud.toast(e, 'error');
                         });
                     }
                 });
-            }
+            };
 
-            $('#btn-add-orden').on('click', function () {
-                openCrear();
-            });
+            $('#btn-add-orden').on('click', openCrear);
             $('#orden-filtrar-modern').on('click', applyOrdenFilters);
-            $('#orden-limpiar-modern').on('click', function () {
-                var estadoEl = $('#orden-estado-modern');
+            $('#orden-limpiar-modern').on('click', () => {
+                const estadoEl = $('#orden-estado-modern');
                 if (estadoEl.length) estadoEl.val('');
                 applyOrdenFilters();
             });
             $('#orden-estado-modern').on('change', applyOrdenFilters);
 
-            $('#ordenes-table').on('click', '.ds-action-btn[data-action="asignar"]', function () {
-                var row = ordenesTable.row($(this).closest('tr')).data();
+            $('#ordenes-table').on('click', '.ds-action-btn[data-action="asignar"]', (e) => {
+                const row = ordenesTable.row($(e.currentTarget).closest('tr')).data();
                 if (row) {
                     openAsignar(row);
                 }
             });
 
-            $('#ordenes-table').on('click', '.ds-action-btn[data-action="detalles"]', function () {
-                var row = ordenesTable.row($(this).closest('tr')).data();
+            $('#ordenes-table').on('click', '.ds-action-btn[data-action="detalles"]', (e) => {
+                const row = ordenesTable.row($(e.currentTarget).closest('tr')).data();
                 if (row) {
                     openDetalles(row);
                 }

@@ -466,6 +466,12 @@ include VIEWS_PATH . '/layouts/nav.php';
 
 <?php if (!$legacy): ?>
 <script>
+const esc = (value) => {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(value === null || value === undefined ? '' : String(value)));
+    return div.innerHTML;
+};
+
 const getDateParams = () => {
     const desde = document.getElementById('desde').value;
     const hasta = document.getElementById('hasta').value;
@@ -491,7 +497,7 @@ const formatNumber = (value) => {
 
 const formatStatus = (value) => {
     const raw = (value || '').toString();
-    const label = raw.replace(/_/g, ' ').toUpperCase();
+    const label = esc(raw.replace(/_/g, ' ').toUpperCase());
     const key = raw.toLowerCase();
     let cls = 'ds-badge--neutral';
     if (key === 'pendiente') cls = 'ds-badge--warning';
@@ -694,31 +700,31 @@ const buildLineOptions = (seriesLabel) => {
 
 const loadAllReports = async () => {
     const produccionRows = await loadReport('api/reportes_produccion.php', '#rep-produccion', row =>
-        `<td>${row.id}</td><td>${row.producto}</td><td>${row.cantidad}</td><td>${row.artesano || ''}</td><td>${formatStatus(row.estado)}</td>`,
+        `<td>${esc(row.id)}</td><td>${esc(row.producto)}</td><td>${esc(row.cantidad)}</td><td>${esc(row.artesano || '')}</td><td>${formatStatus(row.estado)}</td>`,
         5
     );
     const inventarioRows = await loadReport('api/reportes_inventario.php', '#rep-inventario', row =>
-        `<td>${row.tipo}</td><td>${row.item_id}</td><td>${row.nombre}</td><td>${formatNumber(row.cantidad)}</td><td>${formatNumber(row.stock_minimo)}</td><td>${row.proveedor || ''}</td>`,
+        `<td>${esc(row.tipo)}</td><td>${esc(row.item_id)}</td><td>${esc(row.nombre)}</td><td>${formatNumber(row.cantidad)}</td><td>${formatNumber(row.stock_minimo)}</td><td>${esc(row.proveedor || '')}</td>`,
         6
     );
     const eficienciaRows = await loadReport('api/reportes_eficiencia.php', '#rep-eficiencia', row =>
-        `<td>${row.artesano || ''}</td><td>${row.piezas}</td><td>${formatNumber(row.horas)}</td><td>${formatNumber(row.promedio_horas)}</td>`,
+        `<td>${esc(row.artesano || '')}</td><td>${esc(row.piezas)}</td><td>${formatNumber(row.horas)}</td><td>${formatNumber(row.promedio_horas)}</td>`,
         4
     );
     const materialesRows = await loadReport('api/reportes_materiales.php', '#rep-materiales', row =>
-        `<td>${row.tipo_material}</td><td>${row.material_id}</td><td>${row.material_nombre || ''}</td><td>${formatNumber(row.cantidad_total)}</td><td>${formatNumber(row.costo_total)}</td>`,
+        `<td>${esc(row.tipo_material)}</td><td>${esc(row.material_id)}</td><td>${esc(row.material_nombre || '')}</td><td>${formatNumber(row.cantidad_total)}</td><td>${formatNumber(row.costo_total)}</td>`,
         5
     );
     const ventasRows = await loadReport('api/reportes_ventas.php', '#rep-ventas', row =>
-        `<td>${row.id}</td><td>${row.producto_id}</td><td>${formatDateTime(row.fecha_venta)}</td><td>${formatNumber(row.precio_venta)}</td><td>${formatNumber(row.utilidad)}</td>`,
+        `<td>${esc(row.id)}</td><td>${esc(row.producto_id)}</td><td>${esc(formatDateTime(row.fecha_venta))}</td><td>${formatNumber(row.precio_venta)}</td><td>${formatNumber(row.utilidad)}</td>`,
         5
     );
     const comprasRows = await loadReport('api/reportes_compras.php', '#rep-compras', row =>
-        `<td>${row.tipo_inventario}</td><td>${formatNumber(row.cantidad_total)}</td><td>${row.movimientos}</td>`,
+        `<td>${esc(row.tipo_inventario)}</td><td>${formatNumber(row.cantidad_total)}</td><td>${esc(row.movimientos)}</td>`,
         3
     );
     const usuariosRows = await loadReport('api/reportes_usuarios.php', '#rep-usuarios', row =>
-        `<td>${row.id_usuario}</td><td>${row.username}</td><td>${row.nombre}</td><td>${row.rol}</td><td>${row.activo ? 'Si' : 'No'}</td>`,
+        `<td>${esc(row.id_usuario)}</td><td>${esc(row.username)}</td><td>${esc(row.nombre)}</td><td>${esc(row.rol)}</td><td>${row.activo ? 'Si' : 'No'}</td>`,
         5
     );
 

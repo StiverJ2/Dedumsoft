@@ -209,7 +209,7 @@ include VIEWS_PATH . '/layouts/nav.php';
 <?php include VIEWS_PATH . '/layouts/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
-        $(function () {
+        $(() => {
             const dtLang = {
                 url: 'assets/dataTables.es-ES.json'
             };
@@ -218,13 +218,13 @@ include VIEWS_PATH . '/layouts/nav.php';
             let oroTipoOptions = [];
             let tipoFilter = '';
 
-            function applyOroFilters() {
+            const applyOroFilters = () => {
                 const tipoEl = $('#oro-tipo-modern');
                 tipoFilter = tipoEl.length ? tipoEl.val() : '';
                 if (oroTable) {
                     oroTable.ajax.reload();
                 }
-            }
+            };
 
             // Cargar opciones y proveedores en paralelo
             Promise.all([
@@ -257,7 +257,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                     value: p.id,
                     label: `${p.nombre} (${p.tipo_nombre})`
                 }));
-            }).catch(error => {
+            }).catch((error) => {
                 console.error('Error cargando datos:', error);
                 // Usar valores por defecto y continuar
                 oroTipoOptions = [{
@@ -283,15 +283,13 @@ include VIEWS_PATH . '/layouts/nav.php';
                 ];
             });
 
-            function buildOroForm(data) {
+            const buildOroForm = (data) => {
                 data = data || {};
-                var provOpts = [{
+                const provOpts = [{
                     value: '',
                     label: '-- Sin proveedor --'
                 }].concat(
-                    proveedoresCache.filter(function (p) {
-                        return p.label.indexOf('(oro)') > -1 || !data.id;
-                    })
+                    proveedoresCache.filter((p) => p.label.indexOf('(oro)') > -1 || !data.id)
                 );
                 return DsCrud.field({
                     name: 'tipo_oro_id',
@@ -324,28 +322,28 @@ include VIEWS_PATH . '/layouts/nav.php';
                         value: data.proveedor_id,
                         options: provOpts
                     });
-            }
+            };
 
-            function openOroCreate() {
+            const openOroCreate = () => {
                 DsCrud.openModal({
                     title: 'Nuevo Inventario Oro',
                     body: '<form id="frm-oro">' + buildOroForm() + '</form>',
-                    onSave: function (m) {
-                        var f = m.querySelector('#frm-oro');
+                    onSave: (m) => {
+                        const f = m.querySelector('#frm-oro');
                         if (!f.checkValidity()) {
                             f.reportValidity();
                             return;
                         }
-                        var fd = new FormData(f),
-                            payload = {};
-                        fd.forEach(function (v, k) {
+                        const fd = new FormData(f);
+                        const payload = {};
+                        fd.forEach((v, k) => {
                             payload[k] = v;
                         });
-                        DsCrud.api('api/inventario_oro.php', 'POST', payload, function () {
+                        DsCrud.api('api/inventario_oro.php', 'POST', payload, () => {
                             DsCrud.toast('Oro creado', 'success');
                             oroTable.ajax.reload();
                             DsCrud.closeModal();
-                        }, function (e) {
+                        }, (e) => {
                             DsCrud.toast(e, 'error');
                         });
                     }
@@ -353,29 +351,27 @@ include VIEWS_PATH . '/layouts/nav.php';
             };
 
             const openOroEdit = (row) => {
-                DsCrud.api('api/inventario_oro.php?id=' + row.id, 'GET', null, function (res) {
-                    var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
+                DsCrud.api('api/inventario_oro.php?id=' + row.id, 'GET', null, (res) => {
+                    const d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
                     DsCrud.openModal({
                         title: 'Editar Oro #' + d.id,
                         body: '<form id="frm-oro">' + buildOroForm(d) + '</form>',
-                        onSave: function (m) {
-                            var f = m.querySelector('#frm-oro');
+                        onSave: (m) => {
+                            const f = m.querySelector('#frm-oro');
                             if (!f.checkValidity()) {
                                 f.reportValidity();
                                 return;
                             }
-                            var fd = new FormData(f),
-                                payload = {
-                                    id: d.id
-                                };
-                            fd.forEach(function (v, k) {
+                            const fd = new FormData(f);
+                            const payload = { id: d.id };
+                            fd.forEach((v, k) => {
                                 payload[k] = v;
                             });
-                            DsCrud.api('api/inventario_oro.php', 'PATCH', payload, function () {
+                            DsCrud.api('api/inventario_oro.php', 'PATCH', payload, () => {
                                 DsCrud.toast('Oro actualizado', 'success');
                                 oroTable.ajax.reload();
                                 DsCrud.closeModal();
-                            }, function (e) {
+                            }, (e) => {
                                 DsCrud.toast(e, 'error');
                             });
                         }
@@ -384,19 +380,19 @@ include VIEWS_PATH . '/layouts/nav.php';
             };
 
             const openOroDelete = (row) => {
-                DsCrud.confirm('Eliminar registro de oro #' + row.id + '?', function () {
+                DsCrud.confirm('Eliminar registro de oro #' + row.id + '?', () => {
                     DsCrud.api('api/inventario_oro.php', 'DELETE', {
                         id: row.id
-                    }, function () {
+                    }, () => {
                         DsCrud.toast('Oro eliminado', 'success');
                         oroTable.ajax.reload();
-                    }, function (e) {
+                    }, (e) => {
                         DsCrud.toast(e, 'error');
                     });
                 });
             };
 
-            function buildCompraOroForm(options, data) {
+            const buildCompraOroForm = (options, data) => {
                 data = data || {};
                 return DsCrud.field({
                     name: 'item_id',
@@ -430,63 +426,58 @@ include VIEWS_PATH . '/layouts/nav.php';
                         type: 'datetime-local',
                         value: data.fecha
                     });
-            }
+            };
 
-            function openOroCompra() {
-                axios.get('api/inventario_oro.php?limit=500').then(function (res) {
-                    var items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
+            const openOroCompra = () => {
+                axios.get('api/inventario_oro.php?limit=500').then((res) => {
+                    const items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
                     if (!items.length) {
                         DsCrud.toast('No hay inventario de oro disponible', 'warning');
                         return;
                     }
-                    var options = [{
+                    const options = [{
                         value: '',
                         label: '-- Seleccione --'
-                    }].concat(items.map(function (it) {
-                        var label = (it.tipo_oro_nombre || 'Oro') + ' #' + it.id;
-                        return {
-                            value: it.id,
-                            label: label
-                        };
-                    }));
+                    }].concat(items.map((it) => ({
+                        value: it.id,
+                        label: `${it.tipo_oro_nombre || 'Oro'} #${it.id}`
+                    })));
 
                     DsCrud.openModal({
                         title: 'Registrar compra de oro',
                         body: '<form id="frm-compra-oro">' + buildCompraOroForm(options) + '</form>',
-                        onSave: function (m) {
-                            var f = m.querySelector('#frm-compra-oro');
+                        onSave: (m) => {
+                            const f = m.querySelector('#frm-compra-oro');
                             if (!f.checkValidity()) {
                                 f.reportValidity();
                                 return;
                             }
-                            var fd = new FormData(f),
-                                payload = {
-                                    tipo_inventario: 'oro'
-                                };
-                            fd.forEach(function (v, k) {
+                            const fd = new FormData(f);
+                            const payload = { tipo_inventario: 'oro' };
+                            fd.forEach((v, k) => {
                                 payload[k] = v;
                             });
                             if (payload.fecha) {
                                 payload.fecha = payload.fecha.replace('T', ' ');
                             }
-                            DsCrud.api('api/compras.php', 'POST', payload, function () {
+                            DsCrud.api('api/compras.php', 'POST', payload, () => {
                                 DsCrud.toast('Compra registrada', 'success');
                                 oroTable.ajax.reload();
                                 DsCrud.closeModal();
-                            }, function (e) {
+                            }, (e) => {
                                 DsCrud.toast(e, 'error');
                             });
                         }
                     });
-                }).catch(function () {
+                }).catch(() => {
                     DsCrud.toast('Error cargando inventario', 'error');
                 });
-            }
+            };
 
             oroTable = $('#oro-table').DataTable({
                 ajax: {
                     url: 'api/inventario_oro.php',
-                    data: function (d) {
+                    data: (d) => {
                         d.limit = 500;
                         d.offset = 0;
                         if (tipoFilter) d.tipo_id = tipoFilter;
@@ -513,7 +504,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                     data: null,
                     orderable: false,
                     searchable: false,
-                    render: function (data, type, row) {
+                    render: (data, type, row) => {
                         if (type !== 'display') return '';
                         return DsCrud.actionButtons(row.id);
                     }
@@ -525,17 +516,19 @@ include VIEWS_PATH . '/layouts/nav.php';
             $('#btn-add-oro').on('click', openOroCreate);
             $('#btn-compra-oro').on('click', openOroCompra);
             $('#oro-filtrar-modern').on('click', applyOroFilters);
-            $('#oro-limpiar-modern').on('click', function () {
+            $('#oro-limpiar-modern').on('click', () => {
                 const tipoEl = $('#oro-tipo-modern');
                 if (tipoEl.length) tipoEl.val('');
                 applyOroFilters();
             });
             $('#oro-tipo-modern').on('change', applyOroFilters);
-            $('#oro-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
-                openOroEdit(oroTable.row($(this).closest('tr')).data());
+            $('#oro-table').on('click', '.ds-action-btn[data-action="edit"]', (e) => {
+                const row = oroTable.row($(e.currentTarget).closest('tr')).data();
+                openOroEdit(row);
             });
-            $('#oro-table').on('click', '.ds-action-btn[data-action="delete"]', function () {
-                openOroDelete(oroTable.row($(this).closest('tr')).data());
+            $('#oro-table').on('click', '.ds-action-btn[data-action="delete"]', (e) => {
+                const row = oroTable.row($(e.currentTarget).closest('tr')).data();
+                openOroDelete(row);
             });
         });
     </script>

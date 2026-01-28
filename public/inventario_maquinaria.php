@@ -208,39 +208,40 @@ include VIEWS_PATH . '/layouts/nav.php';
             </div>
         </div>
         <?php if (!$legacy): ?>
-            <form class="d-flex flex-wrap gap-2 align-items-end" id="maq-filtros-modern">
-                <div>
-                    <label class="form-label muted" for="maq-estado-modern">Estado</label>
-                    <select id="maq-estado-modern" class="form-select form-select-sm ds-field">
-                        <option value="">Todos</option>
-                        <?php foreach ($maq_estado_options as $est): ?>
-                            <option value="<?php echo (int) $est['id']; ?>">
-                                <?php echo htmlspecialchars((string) $est['nombre']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <button class="btn btn-sm" type="button" id="maq-filtrar-modern">Aplicar</button>
-                <button class="btn btn-sm btn-secondary" type="button" id="maq-limpiar-modern">Limpiar</button>
-            </form>
+        <form class="d-flex flex-wrap gap-2 align-items-end" id="maq-filtros-modern">
+            <div>
+                <label class="form-label muted" for="maq-estado-modern">Estado</label>
+                <select id="maq-estado-modern" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <?php foreach ($maq_estado_options as $est): ?>
+                    <option value="<?php echo (int) $est['id']; ?>">
+                        <?php echo htmlspecialchars((string) $est['nombre']); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button class="btn btn-sm" type="button" id="maq-filtrar-modern">Aplicar</button>
+            <button class="btn btn-sm btn-secondary" type="button" id="maq-limpiar-modern">Limpiar</button>
+        </form>
         <?php endif; ?>
         <?php if ($legacy): ?>
-            <form method="get" action="inventario_maquinaria.php#inv-maquinaria"
-                class="d-flex flex-wrap gap-2 align-items-end">
-                <div>
-                    <label class="form-label muted" for="maq-estado-id">Estado</label>
-                    <select id="maq-estado-id" name="maq_estado_id" class="form-select form-select-sm ds-field">
-                        <option value="">Todos</option>
-                        <?php foreach ($maq_estado_options as $est): ?>
-                            <option value="<?php echo (int) $est['id']; ?>" <?php echo $maq_estado_id === (int) $est['id'] ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($est['nombre']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <button class="btn btn-sm" type="submit">Actualizar</button>
-                <a href="inventario_maquinaria.php#inv-maquinaria" class="btn btn-sm btn-secondary">Limpiar</a>
-            </form>
+        <form method="get" action="inventario_maquinaria.php#inv-maquinaria"
+            class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label muted" for="maq-estado-id">Estado</label>
+                <select id="maq-estado-id" name="maq_estado_id" class="form-select form-select-sm ds-field">
+                    <option value="">Todos</option>
+                    <?php foreach ($maq_estado_options as $est): ?>
+                    <option value="<?php echo (int) $est['id']; ?>"
+                        <?php echo $maq_estado_id === (int) $est['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($est['nombre']); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button class="btn btn-sm" type="submit">Actualizar</button>
+            <a href="inventario_maquinaria.php#inv-maquinaria" class="btn btn-sm btn-secondary">Limpiar</a>
+        </form>
         <?php endif; ?>
         <div class="table-responsive">
             <table id="maq-table" class="table table-sm">
@@ -257,18 +258,18 @@ include VIEWS_PATH . '/layouts/nav.php';
                 </thead>
                 <tbody>
                     <?php if ($legacy): ?>
-                        <?php foreach ($maq_rows as $row): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
-                                <td><?php echo htmlspecialchars((string) ($row['sku'] ?? '')); ?></td>
-                                <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
-                                <td><?php echo format_maq_tipo_badge($row['tipo_nombre'] ?? ''); ?></td>
-                                <td><?php echo format_maq_estado_badge($row['estado_nombre'] ?? '', $row['estado_color'] ?? null); ?>
-                                </td>
-                                <td><?php echo htmlspecialchars((string) ($row['ubicacion_nombre'] ?? '')); ?></td>
-                                <td class="ds-actions-col"></td>
-                            </tr>
-                        <?php endforeach; ?>
+                    <?php foreach ($maq_rows as $row): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars((string) $row['id']); ?></td>
+                        <td><?php echo htmlspecialchars((string) ($row['sku'] ?? '')); ?></td>
+                        <td><?php echo htmlspecialchars((string) $row['nombre']); ?></td>
+                        <td><?php echo format_maq_tipo_badge($row['tipo_nombre'] ?? ''); ?></td>
+                        <td><?php echo format_maq_estado_badge($row['estado_nombre'] ?? '', $row['estado_color'] ?? null); ?>
+                        </td>
+                        <td><?php echo htmlspecialchars((string) ($row['ubicacion_nombre'] ?? '')); ?></td>
+                        <td class="ds-actions-col"></td>
+                    </tr>
+                    <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -277,609 +278,641 @@ include VIEWS_PATH . '/layouts/nav.php';
 </div>
 
 <?php if (!$legacy): ?>
-    <script>
-        window.DEDUMSOFT_ICON_MODE = 'emoji';
-    </script>
+<script>
+window.DEDUMSOFT_ICON_MODE = 'emoji';
+</script>
 <?php endif; ?>
 <?php include VIEWS_PATH . '/layouts/footer.php'; ?>
 <?php if (!$legacy): ?>
-    <script>
-        function formatMaqTipo(tipo) {
-            if (!tipo) return '';
-            var key = tipo.toLowerCase();
-            var label = tipo.replace(/_/g, ' ').replace(/\b\w/g, function (c) {
-                return c.toUpperCase();
-            });
-            var cls = 'ds-badge--neutral';
-            if (key.indexOf('corte') > -1 || key.indexOf('sierra') > -1) cls = 'ds-badge--danger';
-            else if (key.indexOf('pulido') > -1 || key.indexOf('acabado') > -1) cls = 'ds-badge--info';
-            else if (key.indexOf('fundicion') > -1 || key.indexOf('horno') > -1) cls = 'ds-badge--warning';
-            else if (key.indexOf('soldadura') > -1) cls = 'ds-badge--success';
-            return '<span class="ds-badge ' + cls + '">' + label + '</span>';
+<script>
+const esc = (value) => DsCrud.escapeHtml(value === null || value === undefined ? '' : String(value));
+const sanitizeColor = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw)) return raw;
+    if (/^(rgb|rgba)\([0-9.,\s%]+\)$/i.test(raw)) return raw;
+    if (/^[a-z]+$/i.test(raw)) return raw;
+    return '';
+};
+
+const formatMaqTipo = (tipo) => {
+    if (!tipo) return '';
+    const key = String(tipo).toLowerCase();
+    const labelRaw = String(tipo).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const label = esc(labelRaw);
+    let cls = 'ds-badge--neutral';
+    if (key.indexOf('corte') > -1 || key.indexOf('sierra') > -1) cls = 'ds-badge--danger';
+    else if (key.indexOf('pulido') > -1 || key.indexOf('acabado') > -1) cls = 'ds-badge--info';
+    else if (key.indexOf('fundicion') > -1 || key.indexOf('horno') > -1) cls = 'ds-badge--warning';
+    else if (key.indexOf('soldadura') > -1) cls = 'ds-badge--success';
+    return `<span class="ds-badge ${cls}">${label}</span>`;
+};
+
+const formatMaqEstado = (estadoNombre, estadoColor) => {
+    if (!estadoNombre) return '';
+    const labelRaw = String(estadoNombre).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const label = esc(labelRaw);
+    const safeColor = sanitizeColor(estadoColor);
+    if (safeColor) {
+        return `<span class="ds-badge" style="background-color:${safeColor}">${label}</span>`;
+    }
+    const key = String(estadoNombre).toLowerCase();
+    let cls = 'ds-badge--neutral';
+    if (key === 'operativa') cls = 'ds-badge--success';
+    else if (key === 'mantenimiento') cls = 'ds-badge--warning';
+    else if (key === 'averiada') cls = 'ds-badge--danger';
+    else if (key === 'fuera de servicio' || key.indexOf('fuera') > -1) cls = 'ds-badge--muted';
+    return `<span class="ds-badge ${cls}">${label}</span>`;
+};
+
+$(() => {
+    const dtLang = {
+        url: 'assets/dataTables.es-ES.json'
+    };
+    let maqTable;
+    let proveedoresCache = [];
+    let ubicacionesCache = [];
+    let tipoMaquinariaCache = [];
+    let maqEstadoOptions = [];
+    let estadoFilter = '';
+
+    const applyMaqFilter = () => {
+        const estadoEl = $('#maq-estado-modern');
+        estadoFilter = estadoEl.length ? estadoEl.val() : '';
+        if (maqTable) {
+            maqTable.ajax.reload();
         }
+    };
 
-        function formatMaqEstado(estadoNombre, estadoColor) {
-            if (!estadoNombre) return '';
-            var label = estadoNombre.replace(/_/g, ' ').replace(/\b\w/g, function (c) {
-                return c.toUpperCase();
-            });
-            if (estadoColor) {
-                return '<span class="ds-badge" style="background-color:' + estadoColor + '">' + label + '</span>';
-            }
-            var key = estadoNombre.toLowerCase();
-            var cls = 'ds-badge--neutral';
-            if (key === 'operativa') cls = 'ds-badge--success';
-            else if (key === 'mantenimiento') cls = 'ds-badge--warning';
-            else if (key === 'averiada') cls = 'ds-badge--danger';
-            else if (key === 'fuera de servicio' || key.indexOf('fuera') > -1) cls = 'ds-badge--muted';
-            return '<span class="ds-badge ' + cls + '">' + label + '</span>';
-        }
+    // Cargar todas las opciones en paralelo
+    Promise.all([
+        axios.get('api/opciones.php?tipo=estados_maquinaria'),
+        axios.get('api/proveedores.php?limit=500'),
+        axios.get('api/ubicaciones.php?limit=500'),
+        axios.get('api/tipos_maquinaria.php')
+    ]).then(([resEstados, resProv, resUbi, resTipos]) => {
+        maqEstadoOptions = (resEstados.data.DATOS || []).map(e => ({
+            value: e.value,
+            label: e.label,
+            color: e.color
+        }));
 
-        $(function () {
-            const dtLang = {
-                url: 'assets/dataTables.es-ES.json'
-            };
-            let maqTable;
-            let proveedoresCache = [];
-            let ubicacionesCache = [];
-            let tipoMaquinariaCache = [];
-            let maqEstadoOptions = [];
-            let estadoFilter = '';
-
-            function applyMaqFilter() {
-                var estadoEl = $('#maq-estado-modern');
-                estadoFilter = estadoEl.length ? estadoEl.val() : '';
-                if (maqTable) {
-                    maqTable.ajax.reload();
-                }
-            }
-
-            // Cargar todas las opciones en paralelo
-            Promise.all([
-                axios.get('api/opciones.php?tipo=estados_maquinaria'),
-                axios.get('api/proveedores.php?limit=500'),
-                axios.get('api/ubicaciones.php?limit=500'),
-                axios.get('api/tipos_maquinaria.php')
-            ]).then(([resEstados, resProv, resUbi, resTipos]) => {
-                maqEstadoOptions = (resEstados.data.DATOS || []).map(e => ({
-                    value: e.value,
-                    label: e.label,
-                    color: e.color
-                }));
-
-                proveedoresCache = (resProv.data.DATOS || []).map(p => {
-                    const tipoRaw = p.tipo_nombre || p.tipo || '';
-                    return {
-                        value: p.id,
-                        label: `${p.nombre}${tipoRaw ? ' (' + tipoRaw + ')' : ''}`,
-                        tipo: String(tipoRaw || '').toLowerCase()
-                    };
-                });
-
-                ubicacionesCache = (resUbi.data.DATOS || []).map(u => ({
-                    value: u.id,
-                    label: u.nombre
-                }));
-
-                tipoMaquinariaCache = (resTipos.data.DATOS || []).map(t => ({
-                    value: t.id,
-                    label: t.nombre
-                }));
-
-                initMaqTable();
-            }).catch(error => {
-                console.error('Error cargando datos:', error);
-                initMaqTable();
-            });
-
-            const buildMaqForm = (data) => {
-                data = data || {};
-                const provOpts = [{
-                    value: '',
-                    label: '-- Sin proveedor --'
-                }].concat(
-                    proveedoresCache.filter(p => {
-                        const isMaq = p.tipo === 'maquinaria';
-                        const isCurrent = String(p.value) === String(data.proveedor_id || '');
-                        return isMaq || !data.id || isCurrent;
-                    })
-                );
-                const ubOpts = [{
-                    value: '',
-                    label: '-- Sin ubicacion --'
-                }].concat(ubicacionesCache);
-                const tipoOpts = [{
-                    value: '',
-                    label: '-- Seleccione tipo --'
-                }].concat(tipoMaquinariaCache);
-                return DsCrud.field({
-                    name: 'nombre',
-                    label: 'Nombre',
-                    value: data.nombre,
-                    required: true
-                }) +
-                    DsCrud.field({
-                        name: 'sku',
-                        label: 'SKU / Serial',
-                        value: data.sku,
-                        required: true
-                    }) +
-                    DsCrud.field({
-                        name: 'tipo_maquinaria_id',
-                        label: 'Tipo',
-                        type: 'select',
-                        value: data.tipo_maquinaria_id,
-                        options: tipoOpts,
-                        required: true
-                    }) +
-                    DsCrud.field({
-                        name: 'estado_id',
-                        label: 'Estado',
-                        type: 'select',
-                        value: data.estado_id,
-                        options: maqEstadoOptions,
-                        required: true
-                    }) +
-                    DsCrud.field({
-                        name: 'ubicacion_id',
-                        label: 'Ubicacion',
-                        type: 'select',
-                        value: data.ubicacion_id,
-                        options: ubOpts
-                    }) +
-                    DsCrud.field({
-                        name: 'proveedor_id',
-                        label: 'Proveedor',
-                        type: 'select',
-                        value: data.proveedor_id,
-                        options: provOpts
-                    });
-            };
-
-            const openMaqCreate = () => {
-                var compraToggle = '<div class="ds-form-group"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
-                DsCrud.openModal({
-                    title: 'Nueva Maquinaria',
-                    body: '<form id="frm-maq">' + buildMaqForm() + compraToggle + '</form>',
-                    onSave: function (m) {
-                        var f = m.querySelector('#frm-maq');
-                        if (!f.checkValidity()) {
-                            f.reportValidity();
-                            return;
-                        }
-                        var fd = new FormData(f),
-                            payload = {};
-                        fd.forEach(function (v, k) {
-                            payload[k] = v;
-                        });
-                        var registrarCompra = payload.registrar_compra === 'on';
-                        delete payload.registrar_compra;
-
-                        DsCrud.api('api/inventario_maquinaria.php', 'POST', payload, function (success, resp) {
-                            if (!registrarCompra) {
-                                DsCrud.toast('Maquinaria creada', 'success');
-                                maqTable.ajax.reload();
-                                DsCrud.closeModal();
-                                return;
-                            }
-                            var compraPayload = {
-                                tipo_inventario: 'maquinaria',
-                                item_id: (resp.DATOS && resp.DATOS.id ? resp.DATOS.id : resp.ID),
-                                cantidad: 1
-                            };
-                            DsCrud.api('api/compras.php', 'POST', compraPayload, function () {
-                                DsCrud.toast('Maquinaria creada y compra registrada', 'success');
-                                maqTable.ajax.reload();
-                                DsCrud.closeModal();
-                            }, function (e) {
-                                DsCrud.toast('Maquinaria creada, pero no se pudo registrar la compra: ' + e, 'error');
-                                maqTable.ajax.reload();
-                                DsCrud.closeModal();
-                            });
-                        }, function (e) {
-                            DsCrud.toast(e, 'error');
-                        });
-                    }
-                });
-            };
-
-            const openMaqEdit = (row) => {
-                DsCrud.api('api/inventario_maquinaria.php?id=' + row.id, 'GET', null, function (res) {
-                    var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
-                    DsCrud.openModal({
-                        title: 'Editar Maquinaria #' + d.id,
-                        body: '<form id="frm-maq">' + buildMaqForm(d) + '</form>',
-                        onSave: function (m) {
-                            var f = m.querySelector('#frm-maq');
-                            if (!f.checkValidity()) {
-                                f.reportValidity();
-                                return;
-                            }
-                            var fd = new FormData(f),
-                                payload = {
-                                    id: d.id
-                                };
-                            fd.forEach(function (v, k) {
-                                payload[k] = v;
-                            });
-                            DsCrud.api('api/inventario_maquinaria.php', 'PATCH', payload,
-                                function () {
-                                    DsCrud.toast('Maquinaria actualizada', 'success');
-                                    maqTable.ajax.reload();
-                                    DsCrud.closeModal();
-                                },
-                                function (e) {
-                                    DsCrud.toast(e, 'error');
-                                });
-                        }
-                    });
-                });
-            };
-
-            const openMaqDelete = (row) => {
-                DsCrud.confirm('Eliminar maquinaria "' + row.nombre + '"?', function () {
-                    DsCrud.api('api/inventario_maquinaria.php', 'DELETE', {
-                        id: row.id
-                    }, function () {
-                        DsCrud.toast('Maquinaria eliminada', 'success');
-                        maqTable.ajax.reload();
-                    }, function (e) {
-                        DsCrud.toast(e, 'error');
-                    });
-                });
-            };
-
-            const buildCompraMaqForm = (options, data) => {
-                data = data || {};
-                return DsCrud.field({
-                    name: 'item_id',
-                    label: 'Maquinaria',
-                    type: 'select',
-                    value: data.item_id,
-                    options: options,
-                    required: true
-                }) +
-                    DsCrud.field({
-                        name: 'cantidad',
-                        label: 'Cantidad',
-                        type: 'number',
-                        value: data.cantidad || 1,
-                        required: true,
-                        attrs: 'step="1" min="1"'
-                    }) +
-                    DsCrud.field({
-                        name: 'motivo',
-                        label: 'Motivo',
-                        value: data.motivo || 'Compra proveedor'
-                    }) +
-                    DsCrud.field({
-                        name: 'referencia',
-                        label: 'Referencia',
-                        value: data.referencia
-                    }) +
-                    DsCrud.field({
-                        name: 'fecha',
-                        label: 'Fecha',
-                        type: 'datetime-local',
-                        value: data.fecha
-                    });
-            };
-
-            const openMaqCompra = () => {
-                axios.get('api/inventario_maquinaria.php?limit=500').then(function (res) {
-                    var items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
-                    if (!items.length) {
-                        DsCrud.toast('No hay maquinaria disponible', 'warning');
-                        return;
-                    }
-                    var options = [{ value: '', label: '-- Seleccione --' }].concat(items.map(function (it) {
-                        var label = (it.sku ? it.sku + ' - ' : '') + (it.nombre || 'Maquinaria');
-                        label += ' #' + it.id;
-                        return { value: it.id, label: label };
-                    }));
-
-                    DsCrud.openModal({
-                        title: 'Registrar compra de maquinaria',
-                        body: '<form id="frm-compra-maq">' + buildCompraMaqForm(options) + '</form>',
-                        onSave: function (m) {
-                            var f = m.querySelector('#frm-compra-maq');
-                            if (!f.checkValidity()) {
-                                f.reportValidity();
-                                return;
-                            }
-                            var fd = new FormData(f),
-                                payload = { tipo_inventario: 'maquinaria' };
-                            fd.forEach(function (v, k) {
-                                payload[k] = v;
-                            });
-                            if (payload.fecha) {
-                                payload.fecha = payload.fecha.replace('T', ' ');
-                            }
-                            DsCrud.api('api/compras.php', 'POST', payload, function () {
-                                DsCrud.toast('Compra registrada', 'success');
-                                maqTable.ajax.reload();
-                                DsCrud.closeModal();
-                            }, function (e) {
-                                DsCrud.toast(e, 'error');
-                            });
-                        }
-                    });
-                }).catch(function () {
-                    DsCrud.toast('Error cargando inventario', 'error');
-                });
-            };
-
-            const initMaqTable = () => {
-                maqTable = $('#maq-table').DataTable({
-                    ajax: {
-                        url: 'api/inventario_maquinaria.php',
-                        data: function (d) {
-                            d.limit = 500;
-                            d.offset = 0;
-                            if (estadoFilter) d.estado_id = estadoFilter;
-                        },
-                        dataSrc: 'DATOS'
-                    },
-                    columns: [{
-                        data: 'id'
-                    },
-                    {
-                        data: 'sku',
-                        defaultContent: ''
-                    },
-                    {
-                        data: 'nombre'
-                    },
-                    {
-                        data: 'tipo_nombre',
-                        render: formatMaqTipo
-                    },
-                    {
-                        data: null,
-                        render: function (data, type, row) {
-                            return formatMaqEstado(row.estado_nombre, row.estado_color);
-                        }
-                    },
-                    {
-                        data: 'ubicacion_nombre',
-                        defaultContent: ''
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        searchable: false,
-                        render: function (data, type, row) {
-                            if (type !== 'display') return '';
-                            return DsCrud.actionButtons(row.id);
-                        }
-                    }
-                    ],
-                    language: dtLang
-                });
-
-                $('#btn-add-maquinaria').on('click', openMaqCreate);
-                $('#btn-compra-maquinaria').on('click', openMaqCompra);
-                $('#maq-filtrar-modern').on('click', applyMaqFilter);
-                $('#maq-limpiar-modern').on('click', function () {
-                    var estadoEl = $('#maq-estado-modern');
-                    if (estadoEl.length) estadoEl.val('');
-                    applyMaqFilter();
-                });
-                $('#maq-estado-modern').on('change', applyMaqFilter);
-                $('#maq-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
-                    openMaqEdit(maqTable.row($(this).closest('tr')).data());
-                });
-                $('#maq-table').on('click', '.ds-action-btn[data-action="delete"]', function () {
-                    openMaqDelete(maqTable.row($(this).closest('tr')).data());
-                });
+        proveedoresCache = (resProv.data.DATOS || []).map(p => {
+            const tipoRaw = p.tipo_nombre || p.tipo || '';
+            return {
+                value: p.id,
+                label: `${p.nombre}${tipoRaw ? ' (' + tipoRaw + ')' : ''}`,
+                tipo: String(tipoRaw || '').toLowerCase()
             };
         });
-    </script>
-<?php elseif ($legacy): ?>
-    <script>
-        (function () {
-            if (window.DedumTableSort) {
-                DedumTableSort.init('maq-table');
-            }
 
-            var proveedorOptions = <?php echo json_encode(array_merge(
+        ubicacionesCache = (resUbi.data.DATOS || []).map(u => ({
+            value: u.id,
+            label: u.nombre
+        }));
+
+        tipoMaquinariaCache = (resTipos.data.DATOS || []).map(t => ({
+            value: t.id,
+            label: t.nombre
+        }));
+
+        initMaqTable();
+    }).catch(error => {
+        console.error('Error cargando datos:', error);
+        initMaqTable();
+    });
+
+    const buildMaqForm = (data) => {
+        data = data || {};
+        const provOpts = [{
+            value: '',
+            label: '-- Sin proveedor --'
+        }].concat(
+            proveedoresCache.filter(p => {
+                const isMaq = p.tipo === 'maquinaria';
+                const isCurrent = String(p.value) === String(data.proveedor_id || '');
+                return isMaq || !data.id || isCurrent;
+            })
+        );
+        const ubOpts = [{
+            value: '',
+            label: '-- Sin ubicacion --'
+        }].concat(ubicacionesCache);
+        const tipoOpts = [{
+            value: '',
+            label: '-- Seleccione tipo --'
+        }].concat(tipoMaquinariaCache);
+        return DsCrud.field({
+                name: 'nombre',
+                label: 'Nombre',
+                value: data.nombre,
+                required: true
+            }) +
+            DsCrud.field({
+                name: 'sku',
+                label: 'SKU / Serial',
+                value: data.sku,
+                required: true
+            }) +
+            DsCrud.field({
+                name: 'tipo_maquinaria_id',
+                label: 'Tipo',
+                type: 'select',
+                value: data.tipo_maquinaria_id,
+                options: tipoOpts,
+                required: true
+            }) +
+            DsCrud.field({
+                name: 'estado_id',
+                label: 'Estado',
+                type: 'select',
+                value: data.estado_id,
+                options: maqEstadoOptions,
+                required: true
+            }) +
+            DsCrud.field({
+                name: 'ubicacion_id',
+                label: 'Ubicacion',
+                type: 'select',
+                value: data.ubicacion_id,
+                options: ubOpts
+            }) +
+            DsCrud.field({
+                name: 'proveedor_id',
+                label: 'Proveedor',
+                type: 'select',
+                value: data.proveedor_id,
+                options: provOpts
+            });
+    };
+
+    const openMaqCreate = () => {
+        const compraToggle =
+            '<div class="ds-form-group"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
+        DsCrud.openModal({
+            title: 'Nueva Maquinaria',
+            body: '<form id="frm-maq">' + buildMaqForm() + compraToggle + '</form>',
+            onSave: (m) => {
+                const f = m.querySelector('#frm-maq');
+                if (!f.checkValidity()) {
+                    f.reportValidity();
+                    return;
+                }
+                const fd = new FormData(f);
+                const payload = {};
+                fd.forEach((v, k) => {
+                    payload[k] = v;
+                });
+                const registrarCompra = payload.registrar_compra === 'on';
+                delete payload.registrar_compra;
+
+                DsCrud.api('api/inventario_maquinaria.php', 'POST', payload, (success, resp) => {
+                    if (!registrarCompra) {
+                        DsCrud.toast('Maquinaria creada', 'success');
+                        maqTable.ajax.reload();
+                        DsCrud.closeModal();
+                        return;
+                    }
+                    const compraPayload = {
+                        tipo_inventario: 'maquinaria',
+                        item_id: (resp.DATOS && resp.DATOS.id ? resp.DATOS.id : resp.ID),
+                        cantidad: 1
+                    };
+                    DsCrud.api('api/compras.php', 'POST', compraPayload, () => {
+                        DsCrud.toast('Maquinaria creada y compra registrada',
+                            'success');
+                        maqTable.ajax.reload();
+                        DsCrud.closeModal();
+                    }, (e) => {
+                        DsCrud.toast(
+                            'Maquinaria creada, pero no se pudo registrar la compra: ' +
+                            e, 'error');
+                        maqTable.ajax.reload();
+                        DsCrud.closeModal();
+                    });
+                }, (e) => {
+                    DsCrud.toast(e, 'error');
+                });
+            }
+        });
+    };
+
+    const openMaqEdit = (row) => {
+        DsCrud.api('api/inventario_maquinaria.php?id=' + row.id, 'GET', null, (res) => {
+            const d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
+            DsCrud.openModal({
+                title: 'Editar Maquinaria #' + d.id,
+                body: '<form id="frm-maq">' + buildMaqForm(d) + '</form>',
+                onSave: (m) => {
+                    const f = m.querySelector('#frm-maq');
+                    if (!f.checkValidity()) {
+                        f.reportValidity();
+                        return;
+                    }
+                    const fd = new FormData(f);
+                    const payload = { id: d.id };
+                    fd.forEach((v, k) => {
+                        payload[k] = v;
+                    });
+                    DsCrud.api('api/inventario_maquinaria.php', 'PATCH', payload,
+                        () => {
+                            DsCrud.toast('Maquinaria actualizada', 'success');
+                            maqTable.ajax.reload();
+                            DsCrud.closeModal();
+                        },
+                        (e) => {
+                            DsCrud.toast(e, 'error');
+                        });
+                }
+            });
+        });
+    };
+
+    const openMaqDelete = (row) => {
+        DsCrud.confirm('Eliminar maquinaria "' + row.nombre + '"?', () => {
+            DsCrud.api('api/inventario_maquinaria.php', 'DELETE', {
+                id: row.id
+            }, () => {
+                DsCrud.toast('Maquinaria eliminada', 'success');
+                maqTable.ajax.reload();
+            }, (e) => {
+                DsCrud.toast(e, 'error');
+            });
+        });
+    };
+
+    const buildCompraMaqForm = (options, data) => {
+        data = data || {};
+        return DsCrud.field({
+                name: 'item_id',
+                label: 'Maquinaria',
+                type: 'select',
+                value: data.item_id,
+                options: options,
+                required: true
+            }) +
+            DsCrud.field({
+                name: 'cantidad',
+                label: 'Cantidad',
+                type: 'number',
+                value: data.cantidad || 1,
+                required: true,
+                attrs: 'step="1" min="1"'
+            }) +
+            DsCrud.field({
+                name: 'motivo',
+                label: 'Motivo',
+                value: data.motivo || 'Compra proveedor'
+            }) +
+            DsCrud.field({
+                name: 'referencia',
+                label: 'Referencia',
+                value: data.referencia
+            }) +
+            DsCrud.field({
+                name: 'fecha',
+                label: 'Fecha',
+                type: 'datetime-local',
+                value: data.fecha
+            });
+    };
+
+    const openMaqCompra = () => {
+        axios.get('api/inventario_maquinaria.php?limit=500').then((res) => {
+            const items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
+            if (!items.length) {
+                DsCrud.toast('No hay maquinaria disponible', 'warning');
+                return;
+            }
+            const options = [{
+                value: '',
+                label: '-- Seleccione --'
+            }].concat(items.map((it) => {
+                let label = (it.sku ? it.sku + ' - ' : '') + (it.nombre || 'Maquinaria');
+                label += ' #' + it.id;
+                return {
+                    value: it.id,
+                    label: label
+                };
+            }));
+
+            DsCrud.openModal({
+                title: 'Registrar compra de maquinaria',
+                body: '<form id="frm-compra-maq">' + buildCompraMaqForm(options) +
+                    '</form>',
+                onSave: (m) => {
+                    const f = m.querySelector('#frm-compra-maq');
+                    if (!f.checkValidity()) {
+                        f.reportValidity();
+                        return;
+                    }
+                    const fd = new FormData(f);
+                    const payload = { tipo_inventario: 'maquinaria' };
+                    fd.forEach((v, k) => {
+                        payload[k] = v;
+                    });
+                    if (payload.fecha) {
+                        payload.fecha = payload.fecha.replace('T', ' ');
+                    }
+                    DsCrud.api('api/compras.php', 'POST', payload, () => {
+                        DsCrud.toast('Compra registrada', 'success');
+                        maqTable.ajax.reload();
+                        DsCrud.closeModal();
+                    }, (e) => {
+                        DsCrud.toast(e, 'error');
+                    });
+                }
+            });
+        }).catch(() => {
+            DsCrud.toast('Error cargando inventario', 'error');
+        });
+    };
+
+    const initMaqTable = () => {
+        maqTable = $('#maq-table').DataTable({
+            ajax: {
+                url: 'api/inventario_maquinaria.php',
+                data: (d) => {
+                    d.limit = 500;
+                    d.offset = 0;
+                    if (estadoFilter) d.estado_id = estadoFilter;
+                },
+                dataSrc: 'DATOS'
+            },
+            columns: [{
+                    data: 'id'
+                },
+                {
+                    data: 'sku',
+                    defaultContent: ''
+                },
+                {
+                    data: 'nombre'
+                },
+                {
+                    data: 'tipo_nombre',
+                    render: formatMaqTipo
+                },
+                {
+                    data: null,
+                    render: (data, type, row) => {
+                        return formatMaqEstado(row.estado_nombre, row.estado_color);
+                    }
+                },
+                {
+                    data: 'ubicacion_nombre',
+                    defaultContent: ''
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    render: (data, type, row) => {
+                        if (type !== 'display') return '';
+                        return DsCrud.actionButtons(row.id);
+                    }
+                }
+            ],
+            language: dtLang
+        });
+
+        $('#btn-add-maquinaria').on('click', openMaqCreate);
+        $('#btn-compra-maquinaria').on('click', openMaqCompra);
+        $('#maq-filtrar-modern').on('click', applyMaqFilter);
+        $('#maq-limpiar-modern').on('click', () => {
+            const estadoEl = $('#maq-estado-modern');
+            if (estadoEl.length) estadoEl.val('');
+            applyMaqFilter();
+        });
+        $('#maq-estado-modern').on('change', applyMaqFilter);
+        $('#maq-table').on('click', '.ds-action-btn[data-action="edit"]', (e) => {
+            const row = maqTable.row($(e.currentTarget).closest('tr')).data();
+            openMaqEdit(row);
+        });
+        $('#maq-table').on('click', '.ds-action-btn[data-action="delete"]', (e) => {
+            const row = maqTable.row($(e.currentTarget).closest('tr')).data();
+            openMaqDelete(row);
+        });
+    };
+});
+</script>
+<?php elseif ($legacy): ?>
+<script>
+(function() {
+    if (window.DedumTableSort) {
+        DedumTableSort.init('maq-table');
+    }
+
+    var proveedorOptions = <?php echo json_encode(array_merge(
                 [['value' => '', 'label' => '-- Sin proveedor --']],
                 array_map(function ($p) {
                                 return ['value' => $p['id'], 'label' => $p['nombre'] . ' (' . $p['tipo'] . ')'];
                             }, $proveedor_options)
             )); ?>;
 
-            var ubicacionOptions = <?php echo json_encode(array_merge(
+    var ubicacionOptions = <?php echo json_encode(array_merge(
                 [['value' => '', 'label' => '-- Sin ubicacion --']],
                 array_map(function ($u) {
                     return ['value' => $u['id'], 'label' => $u['nombre']];
                 }, $ubicacion_options)
             )); ?>;
 
-            var tipoMaquinariaOptions = <?php echo json_encode(array_map(function ($t) {
+    var tipoMaquinariaOptions = <?php echo json_encode(array_map(function ($t) {
                 return ['value' => $t['id'], 'label' => $t['nombre']];
             }, $tipo_maquinaria_options)); ?>;
 
-            var maqEstadoOptions = <?php echo json_encode(array_map(function ($e) {
+    var maqEstadoOptions = <?php echo json_encode(array_map(function ($e) {
                 return ['value' => $e['id'], 'label' => $e['nombre']];
             }, $maq_estado_options)); ?>;
 
-            var maqInventoryOptions = <?php echo json_encode(array_map(function ($row) {
+    var maqInventoryOptions = <?php echo json_encode(array_map(function ($row) {
                 $label = ($row['sku'] ?? '') !== '' ? $row['sku'] . ' - ' : '';
                 $label .= ($row['nombre'] ?? 'Maquinaria') . ' #' . $row['id'];
                 return ['value' => $row['id'], 'label' => $label];
             }, $maq_rows)); ?>;
 
-            function esc(s) {
-                if (s === null || s === undefined) return '';
-                var div = document.createElement('div');
-                div.appendChild(document.createTextNode(String(s)));
-                return div.innerHTML;
-            }
+    function esc(s) {
+        if (s === null || s === undefined) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(s)));
+        return div.innerHTML;
+    }
 
-            function selectHtml(name, value, options, req) {
-                var h = '<select name="' + name + '" id="field-' + name +
-                    '" style="width:100%;padding:6px;font-size:14px;"' + (req ? ' required' : '') + '>';
-                for (var i = 0; i < options.length; i++) {
-                    var sel = (String(options[i].value) == String(value)) ? ' selected' : '';
-                    h += '<option value="' + esc(options[i].value) + '"' + sel + '>' + esc(options[i].label) + '</option>';
-                }
-                h += '</select>';
-                return h;
-            }
+    function selectHtml(name, value, options, req) {
+        var h = '<select name="' + name + '" id="field-' + name +
+            '" style="width:100%;padding:6px;font-size:14px;"' + (req ? ' required' : '') + '>';
+        for (var i = 0; i < options.length; i++) {
+            var sel = (String(options[i].value) == String(value)) ? ' selected' : '';
+            h += '<option value="' + esc(options[i].value) + '"' + sel + '>' + esc(options[i].label) + '</option>';
+        }
+        h += '</select>';
+        return h;
+    }
 
-            function buildMaqFormHtml(d, showCompra) {
-                d = d || {};
-                var maqProveedores = [];
-                for (var i = 0; i < proveedorOptions.length; i++) {
-                    var label = String(proveedorOptions[i].label || '').toLowerCase();
-                    var isMaq = label.indexOf('(maquinaria)') > -1;
-                    var isCurrent = String(proveedorOptions[i].value) === String(d.proveedor_id || '');
-                    if (proveedorOptions[i].value === '' || isMaq || isCurrent) {
-                        maqProveedores.push(proveedorOptions[i]);
+    function buildMaqFormHtml(d, showCompra) {
+        d = d || {};
+        var maqProveedores = [];
+        for (var i = 0; i < proveedorOptions.length; i++) {
+            var label = String(proveedorOptions[i].label || '').toLowerCase();
+            var isMaq = label.indexOf('(maquinaria)') > -1;
+            var isCurrent = String(proveedorOptions[i].value) === String(d.proveedor_id || '');
+            if (proveedorOptions[i].value === '' || isMaq || isCurrent) {
+                maqProveedores.push(proveedorOptions[i]);
+            }
+        }
+        if (maqProveedores.length === 1) maqProveedores = proveedorOptions;
+
+        var html =
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' +
+            esc(d.nombre || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">SKU / Serial <span style="color:red">*</span></label><input type="text" name="sku" value="' +
+            esc(d.sku || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Tipo <span style="color:red">*</span></label>' +
+            selectHtml('tipo_maquinaria_id', d.tipo_maquinaria_id || '', tipoMaquinariaOptions, true) + '</div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Estado <span style="color:red">*</span></label>' +
+            selectHtml('estado_id', d.estado_id || 1, maqEstadoOptions, true) + '</div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Ubicacion</label>' +
+            selectHtml('ubicacion_id', d.ubicacion_id || '', ubicacionOptions, false) + '</div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Proveedor</label>' +
+            selectHtml('proveedor_id', d.proveedor_id || '', maqProveedores, false) + '</div>';
+        if (showCompra) {
+            html +=
+                '<div style="margin-bottom:12px;"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
+        }
+        return html;
+    }
+
+    function buildCompraMaqFormHtml(d) {
+        d = d || {};
+        var invOpts = [{
+            value: '',
+            label: '-- Seleccione --'
+        }].concat(maqInventoryOptions);
+        return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Maquinaria <span style="color:red">*</span></label>' +
+            selectHtml('item_id', d.item_id || '', invOpts, true) + '</div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Cantidad <span style="color:red">*</span></label><input type="text" name="cantidad" value="' +
+            esc(d.cantidad || '1') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Motivo</label><input type="text" name="motivo" value="' +
+            esc(d.motivo || 'Compra proveedor') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Referencia</label><input type="text" name="referencia" value="' +
+            esc(d.referencia || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
+            '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Fecha</label><input type="datetime-local" name="fecha" value="' +
+            esc(d.fecha || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>';
+    }
+
+    DsCrud.addEvent(DsCrud.getById('btn-add-maquinaria'), 'click', function() {
+        DsCrud.openModal({
+            title: 'Nueva Maquinaria',
+            body: '<form id="frm-maq">' + buildMaqFormHtml({}, true) + '</form>',
+            onSave: function(modal) {
+                if (!DsCrud.validateForm(modal)) return;
+                var data = DsCrud.getFormData(modal);
+                var registrarCompra = data.registrar_compra === true;
+                delete data.registrar_compra;
+
+                DsCrud.apiLegacy('api/inventario_maquinaria.php', 'POST', data, function(res) {
+                    if (!registrarCompra) {
+                        DsCrud.toast('Maquinaria creada', 'success');
+                        DsCrud.closeModal();
+                        location.reload();
+                        return;
                     }
-                }
-                if (maqProveedores.length === 1) maqProveedores = proveedorOptions;
-
-                var html = '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Nombre <span style="color:red">*</span></label><input type="text" name="nombre" value="' +
-                    esc(d.nombre || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">SKU / Serial <span style="color:red">*</span></label><input type="text" name="sku" value="' +
-                    esc(d.sku || '') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Tipo <span style="color:red">*</span></label>' +
-                    selectHtml('tipo_maquinaria_id', d.tipo_maquinaria_id || '', tipoMaquinariaOptions, true) + '</div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Estado <span style="color:red">*</span></label>' +
-                    selectHtml('estado_id', d.estado_id || 1, maqEstadoOptions, true) + '</div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Ubicacion</label>' +
-                    selectHtml('ubicacion_id', d.ubicacion_id || '', ubicacionOptions, false) + '</div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Proveedor</label>' +
-                    selectHtml('proveedor_id', d.proveedor_id || '', maqProveedores, false) + '</div>';
-                if (showCompra) {
-                    html += '<div style="margin-bottom:12px;"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
-                }
-                return html;
+                    var compraPayload = {
+                        tipo_inventario: 'maquinaria',
+                        item_id: (res.DATOS && res.DATOS.id ? res.DATOS.id : res
+                            .ID),
+                        cantidad: 1
+                    };
+                    DsCrud.apiLegacy('api/compras.php', 'POST', compraPayload,
+                    function() {
+                        DsCrud.toast('Maquinaria creada y compra registrada',
+                            'success');
+                        DsCrud.closeModal();
+                        location.reload();
+                    }, function(e) {
+                        DsCrud.toast(
+                            'Maquinaria creada, pero no se pudo registrar la compra: ' +
+                            e, 'error');
+                        DsCrud.closeModal();
+                        location.reload();
+                    });
+                }, function(e) {
+                    DsCrud.toast(e, 'error');
+                });
             }
+        });
+    });
 
-            function buildCompraMaqFormHtml(d) {
-                d = d || {};
-                var invOpts = [{ value: '', label: '-- Seleccione --' }].concat(maqInventoryOptions);
-                return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Maquinaria <span style="color:red">*</span></label>' +
-                    selectHtml('item_id', d.item_id || '', invOpts, true) + '</div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Cantidad <span style="color:red">*</span></label><input type="text" name="cantidad" value="' +
-                    esc(d.cantidad || '1') + '" style="width:100%;padding:6px;font-size:14px;" required></div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Motivo</label><input type="text" name="motivo" value="' +
-                    esc(d.motivo || 'Compra proveedor') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Referencia</label><input type="text" name="referencia" value="' +
-                    esc(d.referencia || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>' +
-                    '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:bold;">Fecha</label><input type="datetime-local" name="fecha" value="' +
-                    esc(d.fecha || '') + '" style="width:100%;padding:6px;font-size:14px;"></div>';
+    DsCrud.addEvent(DsCrud.getById('btn-compra-maquinaria'), 'click', function() {
+        if (!maqInventoryOptions.length) {
+            DsCrud.toast('No hay maquinaria disponible', 'error');
+            return;
+        }
+        DsCrud.openModal({
+            title: 'Registrar compra de maquinaria',
+            body: '<form id="frm-compra-maq">' + buildCompraMaqFormHtml() + '</form>',
+            onSave: function(modal) {
+                if (!DsCrud.validateForm(modal)) return;
+                var data = DsCrud.getFormData(modal);
+                data.tipo_inventario = 'maquinaria';
+                if (data.fecha) {
+                    data.fecha = data.fecha.replace('T', ' ');
+                }
+                DsCrud.apiLegacy('api/compras.php', 'POST', data, function() {
+                    DsCrud.toast('Compra registrada', 'success');
+                    DsCrud.closeModal();
+                    location.reload();
+                }, function(e) {
+                    DsCrud.toast(e, 'error');
+                });
             }
+        });
+    });
 
-            DsCrud.addEvent(DsCrud.getById('btn-add-maquinaria'), 'click', function () {
+    DsCrud.initLegacyTable('maq-table', {
+        onEdit: function(id) {
+            DsCrud.apiLegacy('api/inventario_maquinaria.php?id=' + id, 'GET', null, function(res) {
+                var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                 DsCrud.openModal({
-                    title: 'Nueva Maquinaria',
-                    body: '<form id="frm-maq">' + buildMaqFormHtml({}, true) + '</form>',
-                    onSave: function (modal) {
+                    title: 'Editar Maquinaria #' + id,
+                    body: '<form id="frm-maq">' + buildMaqFormHtml(d, false) +
+                        '</form>',
+                    onSave: function(modal) {
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
-                        var registrarCompra = data.registrar_compra === true;
-                        delete data.registrar_compra;
-
-                        DsCrud.apiLegacy('api/inventario_maquinaria.php', 'POST', data, function (res) {
-                            if (!registrarCompra) {
-                                DsCrud.toast('Maquinaria creada', 'success');
+                        data.id = id;
+                        DsCrud.apiLegacy('api/inventario_maquinaria.php', 'PATCH',
+                            data,
+                            function() {
+                                DsCrud.toast('Maquinaria actualizada',
+                                    'success');
                                 DsCrud.closeModal();
                                 location.reload();
-                                return;
-                            }
-                            var compraPayload = {
-                                tipo_inventario: 'maquinaria',
-                                item_id: (res.DATOS && res.DATOS.id ? res.DATOS.id : res.ID),
-                                cantidad: 1
-                            };
-                            DsCrud.apiLegacy('api/compras.php', 'POST', compraPayload, function () {
-                                DsCrud.toast('Maquinaria creada y compra registrada', 'success');
-                                DsCrud.closeModal();
-                                location.reload();
-                            }, function (e) {
-                                DsCrud.toast('Maquinaria creada, pero no se pudo registrar la compra: ' + e, 'error');
-                                DsCrud.closeModal();
-                                location.reload();
+                            },
+                            function(e) {
+                                DsCrud.toast(e, 'error');
                             });
-                        }, function (e) {
-                            DsCrud.toast(e, 'error');
-                        });
                     }
                 });
+            }, function(e) {
+                DsCrud.toast('Error: ' + e, 'error');
             });
-
-            DsCrud.addEvent(DsCrud.getById('btn-compra-maquinaria'), 'click', function () {
-                if (!maqInventoryOptions.length) {
-                    DsCrud.toast('No hay maquinaria disponible', 'error');
-                    return;
-                }
-                DsCrud.openModal({
-                    title: 'Registrar compra de maquinaria',
-                    body: '<form id="frm-compra-maq">' + buildCompraMaqFormHtml() + '</form>',
-                    onSave: function (modal) {
-                        if (!DsCrud.validateForm(modal)) return;
-                        var data = DsCrud.getFormData(modal);
-                        data.tipo_inventario = 'maquinaria';
-                        if (data.fecha) {
-                            data.fecha = data.fecha.replace('T', ' ');
-                        }
-                        DsCrud.apiLegacy('api/compras.php', 'POST', data, function () {
-                            DsCrud.toast('Compra registrada', 'success');
-                            DsCrud.closeModal();
-                            location.reload();
-                        }, function (e) {
-                            DsCrud.toast(e, 'error');
-                        });
-                    }
+        },
+        onDelete: function(id) {
+            DsCrud.confirm('Eliminar maquinaria #' + id + '?', function() {
+                DsCrud.apiLegacy('api/inventario_maquinaria.php', 'DELETE', {
+                    id: id
+                }, function() {
+                    DsCrud.toast('Maquinaria eliminada', 'success');
+                    location.reload();
+                }, function(e) {
+                    DsCrud.toast(e, 'error');
                 });
             });
-
-            DsCrud.initLegacyTable('maq-table', {
-                onEdit: function (id) {
-                    DsCrud.apiLegacy('api/inventario_maquinaria.php?id=' + id, 'GET', null, function (res) {
-                        var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
-                        DsCrud.openModal({
-                            title: 'Editar Maquinaria #' + id,
-                            body: '<form id="frm-maq">' + buildMaqFormHtml(d, false) + '</form>',
-                            onSave: function (modal) {
-                                if (!DsCrud.validateForm(modal)) return;
-                                var data = DsCrud.getFormData(modal);
-                                data.id = id;
-                                DsCrud.apiLegacy('api/inventario_maquinaria.php', 'PATCH', data,
-                                    function () {
-                                        DsCrud.toast('Maquinaria actualizada',
-                                            'success');
-                                        DsCrud.closeModal();
-                                        location.reload();
-                                    },
-                                    function (e) {
-                                        DsCrud.toast(e, 'error');
-                                    });
-                            }
-                        });
-                    }, function (e) {
-                        DsCrud.toast('Error: ' + e, 'error');
-                    });
-                },
-                onDelete: function (id) {
-                    DsCrud.confirm('Eliminar maquinaria #' + id + '?', function () {
-                        DsCrud.apiLegacy('api/inventario_maquinaria.php', 'DELETE', {
-                            id: id
-                        }, function () {
-                            DsCrud.toast('Maquinaria eliminada', 'success');
-                            location.reload();
-                        }, function (e) {
-                            DsCrud.toast(e, 'error');
-                        });
-                    });
-                }
-            });
-        })();
-    </script>
+        }
+    });
+})();
+</script>
 <?php endif; ?>
 </body>
 

@@ -278,7 +278,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                     badge = 'danger';
                     break;
             }
-            const display = a.charAt(0).toUpperCase() + a.slice(1);
+            const display = DsCrud.escapeHtml(a.charAt(0).toUpperCase() + a.slice(1));
             return `<span class="ds-badge ds-badge--${badge}">${display}</span>`;
         };
 
@@ -446,7 +446,7 @@ include VIEWS_PATH . '/layouts/nav.php';
             ubicacionesTable = $('#ubicaciones-table').DataTable({
                 ajax: {
                     url: 'api/ubicaciones.php',
-                    data: function (d) {
+                    data: (d) => {
                         d.limit = 500;
                         d.offset = 0;
                         if (areaFilter) d.area_id = areaFilter;

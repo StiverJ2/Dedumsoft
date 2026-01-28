@@ -227,58 +227,59 @@ window.DEDUMSOFT_ICON_MODE = 'emoji';
 <?php include VIEWS_PATH . '/layouts/footer.php'; ?>
 <?php if (!$legacy): ?>
 <script>
-function formatCategoria(cat) {
+const esc = (value) => DsCrud.escapeHtml(value === null || value === undefined ? '' : String(value));
+
+const formatCategoria = (cat) => {
     if (!cat) return '';
-    var key = cat.toLowerCase();
-    var label = cat.replace(/_/g, ' ').replace(/\b\w/g, function(c) {
-        return c.toUpperCase();
-    });
-    var cls = 'ds-badge--neutral';
+    const key = String(cat).toLowerCase();
+    const labelRaw = String(cat).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const label = esc(labelRaw);
+    let cls = 'ds-badge--neutral';
     if (key.indexOf('piedra') > -1 || key.indexOf('gema') > -1) cls = 'ds-badge--info';
     else if (key.indexOf('metal') > -1 || key.indexOf('oro') > -1) cls = 'ds-badge--warning';
     else if (key.indexOf('herramienta') > -1 || key.indexOf('equipo') > -1) cls = 'ds-badge--muted';
     else if (key.indexOf('quimico') > -1 || key.indexOf('limpieza') > -1) cls = 'ds-badge--danger';
     else if (key.indexOf('empaque') > -1 || key.indexOf('caja') > -1) cls = 'ds-badge--success';
-    return '<span class="ds-badge ' + cls + '">' + label + '</span>';
-}
+    return `<span class="ds-badge ${cls}">${label}</span>`;
+};
 
-$(function() {
-    var dtLang = {
+$(() => {
+    const dtLang = {
         url: 'assets/dataTables.es-ES.json'
     };
-    var insumosTable;
-    var proveedoresCache = [];
-    var categoriaFilter = '';
-    var stockBajoFilter = false;
+    let insumosTable;
+    let proveedoresCache = [];
+    let categoriaFilter = '';
+    let stockBajoFilter = false;
 
-    function applyInsumoFilters() {
-        var categoriaEl = $('#insumo-categoria-modern');
-        var stockEl = $('#insumo-stock-bajo-modern');
+    const applyInsumoFilters = () => {
+        const categoriaEl = $('#insumo-categoria-modern');
+        const stockEl = $('#insumo-stock-bajo-modern');
         categoriaFilter = categoriaEl.length ? categoriaEl.val() : '';
         stockBajoFilter = stockEl.length ? stockEl.is(':checked') : false;
         if (insumosTable) {
             insumosTable.ajax.reload();
         }
-    }
+    };
 
-    $.getJSON('api/proveedores.php?limit=500', function(res) {
-        proveedoresCache = (res.DATOS || []).map(function(p) {
-            var tipoRaw = p.tipo_nombre || p.tipo || '';
-            var tipoLower = String(tipoRaw || '').toLowerCase();
+    $.getJSON('api/proveedores.php?limit=500', (res) => {
+        proveedoresCache = (res.DATOS || []).map((p) => {
+            const tipoRaw = p.tipo_nombre || p.tipo || '';
+            const tipoLower = String(tipoRaw || '').toLowerCase();
             return {
                 value: p.id,
-                label: p.nombre + (tipoRaw ? ' (' + tipoRaw + ')' : ''),
+                label: `${p.nombre}${tipoRaw ? ' (' + tipoRaw + ')' : ''}`,
                 tipo: tipoLower
             };
         });
     });
 
-    function buildInsumoForm(data) {
+    const buildInsumoForm = (data) => {
         data = data || {};
-        var provOpts = [{ value: '', label: '-- Sin proveedor --' }].concat(
-            proveedoresCache.filter(function(p) {
-                var isInsumo = p.tipo === 'insumos';
-                var isCurrent = String(p.value) === String(data.proveedor_id || '');
+        const provOpts = [{ value: '', label: '-- Sin proveedor --' }].concat(
+            proveedoresCache.filter((p) => {
+                const isInsumo = p.tipo === 'insumos';
+                const isCurrent = String(p.value) === String(data.proveedor_id || '');
                 return isInsumo || !data.id || isCurrent;
             })
         );
@@ -315,28 +316,28 @@ $(function() {
                 value: data.proveedor_id,
                 options: provOpts
             });
-    }
+    };
 
-    function openInsumoCreate() {
-        var compraToggle = '<div class="ds-form-group"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
+    const openInsumoCreate = () => {
+        const compraToggle = '<div class="ds-form-group"><label><input type="checkbox" name="registrar_compra"> Registrar compra inicial</label></div>';
         DsCrud.openModal({
             title: 'Nuevo Insumo',
             body: '<form id="frm-insumo">' + buildInsumoForm() + compraToggle + '</form>',
-            onSave: function(m) {
-                var f = m.querySelector('#frm-insumo');
+            onSave: (m) => {
+                const f = m.querySelector('#frm-insumo');
                 if (!f.checkValidity()) {
                     f.reportValidity();
                     return;
                 }
-                var fd = new FormData(f),
-                    payload = {};
-                fd.forEach(function(v, k) {
+                const fd = new FormData(f);
+                const payload = {};
+                fd.forEach((v, k) => {
                     payload[k] = v;
                 });
-                var registrarCompra = payload.registrar_compra === 'on';
+                const registrarCompra = payload.registrar_compra === 'on';
                 delete payload.registrar_compra;
 
-                var compraCantidad = parseFloat(payload.cantidad || 0);
+                const compraCantidad = parseFloat(payload.cantidad || 0);
                 if (registrarCompra) {
                     if (!isFinite(compraCantidad) || compraCantidad <= 0) {
                         DsCrud.toast('Cantidad debe ser mayor a 0 para registrar compra', 'error');
@@ -345,76 +346,76 @@ $(function() {
                     payload.cantidad = 0;
                 }
 
-                DsCrud.api('api/inventario_insumos.php', 'POST', payload, function(success, resp) {
+                DsCrud.api('api/inventario_insumos.php', 'POST', payload, (success, resp) => {
                     if (!registrarCompra) {
                         DsCrud.toast('Insumo creado', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
                         return;
                     }
-                    var newId = resp.DATOS && resp.DATOS.id ? resp.DATOS.id : resp.ID;
-                    var compraPayload = {
+                    const newId = resp.DATOS && resp.DATOS.id ? resp.DATOS.id : resp.ID;
+                    const compraPayload = {
                         tipo_inventario: 'insumos',
                         item_id: newId,
                         cantidad: compraCantidad
                     };
-                    DsCrud.api('api/compras.php', 'POST', compraPayload, function() {
+                    DsCrud.api('api/compras.php', 'POST', compraPayload, () => {
                         DsCrud.toast('Insumo creado y compra registrada', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
-                    }, function(e) {
+                    }, (e) => {
                         DsCrud.toast('Insumo creado, pero no se pudo registrar la compra: ' + e, 'error');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
                     });
-                }, function(e) {
+                }, (e) => {
                     DsCrud.toast(e, 'error');
                 });
             }
         });
-    }
+    };
 
-    function openInsumoEdit(row) {
-        DsCrud.api('api/inventario_insumos.php?id=' + row.id, 'GET', null, function(res) {
-            var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
+    const openInsumoEdit = (row) => {
+        DsCrud.api('api/inventario_insumos.php?id=' + row.id, 'GET', null, (res) => {
+            const d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
             DsCrud.openModal({
                 title: 'Editar Insumo #' + d.id,
                 body: '<form id="frm-insumo">' + buildInsumoForm(d) + '</form>',
-                onSave: function(m) {
-                    var f = m.querySelector('#frm-insumo');
+                onSave: (m) => {
+                    const f = m.querySelector('#frm-insumo');
                     if (!f.checkValidity()) {
                         f.reportValidity();
                         return;
                     }
-                    var fd = new FormData(f),
-                        payload = { id: d.id };
-                    fd.forEach(function(v, k) {
+                    const fd = new FormData(f);
+                    const payload = { id: d.id };
+                    fd.forEach((v, k) => {
                         payload[k] = v;
                     });
-                    DsCrud.api('api/inventario_insumos.php', 'PATCH', payload, function() {
+                    DsCrud.api('api/inventario_insumos.php', 'PATCH', payload, () => {
                         DsCrud.toast('Insumo actualizado', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
-                    }, function(e) {
+                    }, (e) => {
                         DsCrud.toast(e, 'error');
                     });
                 }
             });
         });
-    }
+    };
 
-    function openInsumoDelete(row) {
-        DsCrud.confirm('Eliminar insumo "' + row.nombre + '"?', function() {
-            DsCrud.api('api/inventario_insumos.php', 'DELETE', { id: row.id }, function() {
+    const openInsumoDelete = (row) => {
+        DsCrud.confirm('Eliminar insumo "' + row.nombre + '"?', () => {
+            DsCrud.api('api/inventario_insumos.php', 'DELETE', { id: row.id }, () => {
                 DsCrud.toast('Insumo eliminado', 'success');
                 insumosTable.ajax.reload();
-            }, function(e) {
+            }, (e) => {
                 DsCrud.toast(e, 'error');
             });
         });
-    }
+    };
 
-    function buildCompraInsumoForm(options, data) {
+    const buildCompraInsumoForm = (options, data) => {
         data = data || {};
         return DsCrud.field({
                 name: 'item_id',
@@ -448,17 +449,17 @@ $(function() {
                 type: 'datetime-local',
                 value: data.fecha
             });
-    }
+    };
 
-    function openInsumoCompra() {
-        axios.get('api/inventario_insumos.php?limit=500').then(function(res) {
-            var items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
+    const openInsumoCompra = () => {
+        axios.get('api/inventario_insumos.php?limit=500').then((res) => {
+            const items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
             if (!items.length) {
                 DsCrud.toast('No hay insumos disponibles', 'warning');
                 return;
             }
-            var options = [{ value: '', label: '-- Seleccione --' }].concat(items.map(function(it) {
-                var label = it.nombre || ('Insumo #' + it.id);
+            const options = [{ value: '', label: '-- Seleccione --' }].concat(items.map((it) => {
+                let label = it.nombre || ('Insumo #' + it.id);
                 if (it.categoria) {
                     label += ' (' + it.categoria + ')';
                 }
@@ -469,38 +470,38 @@ $(function() {
             DsCrud.openModal({
                 title: 'Registrar compra de insumos',
                 body: '<form id="frm-compra-insumo">' + buildCompraInsumoForm(options) + '</form>',
-                onSave: function(m) {
-                    var f = m.querySelector('#frm-compra-insumo');
+                onSave: (m) => {
+                    const f = m.querySelector('#frm-compra-insumo');
                     if (!f.checkValidity()) {
                         f.reportValidity();
                         return;
                     }
-                    var fd = new FormData(f),
-                        payload = { tipo_inventario: 'insumos' };
-                    fd.forEach(function(v, k) {
+                    const fd = new FormData(f);
+                    const payload = { tipo_inventario: 'insumos' };
+                    fd.forEach((v, k) => {
                         payload[k] = v;
                     });
                     if (payload.fecha) {
                         payload.fecha = payload.fecha.replace('T', ' ');
                     }
-                    DsCrud.api('api/compras.php', 'POST', payload, function() {
+                    DsCrud.api('api/compras.php', 'POST', payload, () => {
                         DsCrud.toast('Compra registrada', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
-                    }, function(e) {
+                    }, (e) => {
                         DsCrud.toast(e, 'error');
                     });
                 }
             });
-        }).catch(function() {
+        }).catch(() => {
             DsCrud.toast('Error cargando inventario', 'error');
         });
-    }
+    };
 
     insumosTable = $('#insumos-table').DataTable({
         ajax: {
             url: 'api/inventario_insumos.php',
-            data: function(d) {
+            data: (d) => {
                 d.limit = 500;
                 d.offset = 0;
                 if (categoriaFilter) d.categoria = categoriaFilter;
@@ -518,7 +519,7 @@ $(function() {
                 data: null,
                 orderable: false,
                 searchable: false,
-                render: function(data, type, row) {
+                render: (data, type, row) => {
                     if (type !== 'display') return '';
                     return DsCrud.actionButtons(row.id);
                 }
@@ -530,20 +531,22 @@ $(function() {
     $('#btn-add-insumo').on('click', openInsumoCreate);
     $('#btn-compra-insumo').on('click', openInsumoCompra);
     $('#insumo-filtrar-modern').on('click', applyInsumoFilters);
-    $('#insumo-limpiar-modern').on('click', function() {
-        var categoriaEl = $('#insumo-categoria-modern');
-        var stockEl = $('#insumo-stock-bajo-modern');
+    $('#insumo-limpiar-modern').on('click', () => {
+        const categoriaEl = $('#insumo-categoria-modern');
+        const stockEl = $('#insumo-stock-bajo-modern');
         if (categoriaEl.length) categoriaEl.val('');
         if (stockEl.length) stockEl.prop('checked', false);
         applyInsumoFilters();
     });
     $('#insumo-categoria-modern').on('change', applyInsumoFilters);
     $('#insumo-stock-bajo-modern').on('change', applyInsumoFilters);
-    $('#insumos-table').on('click', '.ds-action-btn[data-action="edit"]', function() {
-        openInsumoEdit(insumosTable.row($(this).closest('tr')).data());
+    $('#insumos-table').on('click', '.ds-action-btn[data-action="edit"]', (e) => {
+        const row = insumosTable.row($(e.currentTarget).closest('tr')).data();
+        openInsumoEdit(row);
     });
-    $('#insumos-table').on('click', '.ds-action-btn[data-action="delete"]', function() {
-        openInsumoDelete(insumosTable.row($(this).closest('tr')).data());
+    $('#insumos-table').on('click', '.ds-action-btn[data-action="delete"]', (e) => {
+        const row = insumosTable.row($(e.currentTarget).closest('tr')).data();
+        openInsumoDelete(row);
     });
 });
 </script>

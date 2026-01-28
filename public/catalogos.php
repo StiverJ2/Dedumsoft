@@ -184,92 +184,84 @@ include VIEWS_PATH . '/layouts/nav.php';
 <?php include VIEWS_PATH . '/layouts/footer.php'; ?>
 <?php if (!$legacy): ?>
     <script>
-        (function () {
-            var catalogs = <?php echo json_encode($ui_catalogs); ?>;
+        (() => {
+            const catalogs = <?php echo json_encode($ui_catalogs); ?>;
 
-            var currentKey = '<?php echo $selected_catalog; ?>';
-            var table = null;
+            let currentKey = '<?php echo $selected_catalog; ?>';
+            let table = null;
 
-            function isTrue(v) {
-                return v === true || v === 1 || v === '1' || v === 't' || v === 'true';
-            }
+            const isTrue = (v) => v === true || v === 1 || v === '1' || v === 't' || v === 'true';
 
-            function formatNumber(value, decimals) {
-                var num = parseFloat(value);
+            const formatNumber = (value, decimals) => {
+                const num = parseFloat(value);
                 if (isNaN(num)) return '';
                 if (typeof decimals === 'number') {
                     return num.toFixed(decimals);
                 }
                 return num.toString();
-            }
+            };
 
-            function buildHeader(cols) {
-                var thead = document.querySelector('#catalogos-table thead');
+            const buildHeader = (cols) => {
+                const thead = document.querySelector('#catalogos-table thead');
                 if (!thead) return;
-                var html = '<tr>';
-                for (var i = 0; i < cols.length; i++) {
+                let html = '<tr>';
+                for (let i = 0; i < cols.length; i++) {
                     html += '<th>' + DsCrud.escapeHtml(cols[i].label) + '</th>';
                 }
                 html += '<th>Acciones</th></tr>';
                 thead.innerHTML = html;
-            }
+            };
 
-            function resetTable() {
+            const resetTable = () => {
                 if ($.fn.dataTable.isDataTable('#catalogos-table')) {
                     $('#catalogos-table').DataTable().clear().destroy();
                 }
                 $('#catalogos-table thead').empty();
                 $('#catalogos-table tbody').empty();
-            }
+            };
 
-            function buildColumns(cols) {
-                var dtCols = [];
-                for (var i = 0; i < cols.length; i++) {
-                    (function (col) {
-                        dtCols.push({
-                            data: col.key,
-                            render: function (data, type) {
-                                if (type !== 'display') return data;
-                                if (col.type === 'bool') {
-                                    return isTrue(data) ? '<span class="ds-badge ds-badge--success">Activo</span>' :
-                                        '<span class="ds-badge ds-badge--muted">Inactivo</span>';
-                                }
-                                if (col.type === 'color') {
-                                    var colorVal = data || '';
-                                    return '<span class="ds-color-dot" style="background:' + DsCrud.escapeHtml(colorVal) + '"></span>' +
-                                        DsCrud.escapeHtml(colorVal);
-                                }
-                                if (col.type === 'money') {
-                                    return formatNumber(data, 2);
-                                }
-                                if (col.type === 'number') {
-                                    return formatNumber(data);
-                                }
-                                return DsCrud.escapeHtml(data);
-                            }
-                        });
-                    })(cols[i]);
-                }
+            const buildColumns = (cols) => {
+                const dtCols = cols.map((col) => ({
+                    data: col.key,
+                    render: (data, type) => {
+                        if (type !== 'display') return data;
+                        if (col.type === 'bool') {
+                            return isTrue(data) ? '<span class="ds-badge ds-badge--success">Activo</span>' :
+                                '<span class="ds-badge ds-badge--muted">Inactivo</span>';
+                        }
+                        if (col.type === 'color') {
+                            const colorVal = data || '';
+                            return '<span class="ds-color-dot" style="background:' + DsCrud.escapeHtml(colorVal) + '"></span>' +
+                                DsCrud.escapeHtml(colorVal);
+                        }
+                        if (col.type === 'money') {
+                            return formatNumber(data, 2);
+                        }
+                        if (col.type === 'number') {
+                            return formatNumber(data);
+                        }
+                        return DsCrud.escapeHtml(data);
+                    }
+                }));
                 dtCols.push({
                     data: null,
                     orderable: false,
                     searchable: false,
-                    render: function (data, type, row) {
+                    render: (data, type, row) => {
                         if (type !== 'display') return '';
                         return DsCrud.actionButtons(row.id);
                     }
                 });
                 return dtCols;
-            }
+            };
 
-            function buildForm(fields, data) {
-                var html = '';
-                data = data || {};
-                for (var i = 0; i < fields.length; i++) {
-                    var field = fields[i];
-                    var value = data[field.name];
+            const buildForm = (fields, data = {}) => {
+                let html = '';
+                for (let i = 0; i < fields.length; i++) {
+                    const field = fields[i];
+                    let value = data[field.name];
                     if (value === null || value === undefined) value = '';
-                    var opts = {
+                    const opts = {
                         name: field.name,
                         label: field.label,
                         required: !!field.required,
@@ -287,13 +279,13 @@ include VIEWS_PATH . '/layouts/nav.php';
                     html += DsCrud.field(opts);
                 }
                 return html;
-            }
+            };
 
-            function buildPayload(fields, formData) {
-                var payload = {};
-                for (var i = 0; i < fields.length; i++) {
-                    var name = fields[i].name;
-                    var value = formData[name];
+            const buildPayload = (fields, formData) => {
+                const payload = {};
+                for (let i = 0; i < fields.length; i++) {
+                    const name = fields[i].name;
+                    let value = formData[name];
                     if (typeof value === 'string') {
                         value = value.replace(/^\s+|\s+$/g, '');
                     }
@@ -301,26 +293,26 @@ include VIEWS_PATH . '/layouts/nav.php';
                     payload[name] = value;
                 }
                 return payload;
-            }
+            };
 
-            function openCreate() {
-                var cfg = catalogs[currentKey];
+            const openCreate = () => {
+                const cfg = catalogs[currentKey];
                 if (!cfg) return;
                 DsCrud.openModal({
                     title: 'Nuevo - ' + cfg.label,
                     body: buildForm(cfg.fields),
                     saveText: 'Crear',
                     cancelText: 'Cancelar',
-                    onSave: function (modal, close, formData) {
-                        var payload = buildPayload(cfg.fields, formData);
-                        for (var i = 0; i < cfg.fields.length; i++) {
-                            var f = cfg.fields[i];
+                    onSave: (_modal, close, formData) => {
+                        const payload = buildPayload(cfg.fields, formData);
+                        for (let i = 0; i < cfg.fields.length; i++) {
+                            const f = cfg.fields[i];
                             if (f.required && (!payload[f.name] && payload[f.name] !== 0)) {
                                 DsCrud.toast('Campo requerido: ' + f.label, 'error');
                                 return;
                             }
                         }
-                        DsCrud.api('api/catalogos/maestros.php?catalog=' + currentKey, 'POST', payload, function (ok, resp) {
+                        DsCrud.api('api/catalogos/maestros.php?catalog=' + currentKey, 'POST', payload, (ok, resp) => {
                             if (ok) {
                                 DsCrud.toast(resp.MENSAJE || 'Registro creado');
                                 if (table) table.ajax.reload(null, false);
@@ -331,20 +323,20 @@ include VIEWS_PATH . '/layouts/nav.php';
                         });
                     }
                 });
-            }
+            };
 
-            function openEdit(row) {
+            const openEdit = (row) => {
                 if (!row) return;
-                var cfg = catalogs[currentKey];
+                const cfg = catalogs[currentKey];
                 DsCrud.openModal({
                     title: 'Editar - ' + cfg.label + ' #' + DsCrud.escapeHtml(row.id),
                     body: buildForm(cfg.fields, row),
                     saveText: 'Guardar',
                     cancelText: 'Cancelar',
-                    onSave: function (modal, close, formData) {
-                        var payload = buildPayload(cfg.fields, formData);
+                    onSave: (_modal, close, formData) => {
+                        const payload = buildPayload(cfg.fields, formData);
                         payload.id = row.id;
-                        DsCrud.api('api/catalogos/maestros.php?catalog=' + currentKey, 'PATCH', payload, function (ok, resp) {
+                        DsCrud.api('api/catalogos/maestros.php?catalog=' + currentKey, 'PATCH', payload, (ok, resp) => {
                             if (ok) {
                                 DsCrud.toast(resp.MENSAJE || 'Registro actualizado');
                                 if (table) table.ajax.reload(null, false);
@@ -355,12 +347,12 @@ include VIEWS_PATH . '/layouts/nav.php';
                         });
                     }
                 });
-            }
+            };
 
-            function handleDelete(row) {
+            const handleDelete = (row) => {
                 if (!row) return;
-                DsCrud.confirm('¿Eliminar registro #' + row.id + '?', function () {
-                    DsCrud.api('api/catalogos/maestros.php?catalog=' + currentKey, 'DELETE', { id: row.id }, function (ok, resp) {
+                DsCrud.confirm('¿Eliminar registro #' + row.id + '?', () => {
+                    DsCrud.api('api/catalogos/maestros.php?catalog=' + currentKey, 'DELETE', { id: row.id }, (ok, resp) => {
                         if (ok) {
                             DsCrud.toast(resp.MENSAJE || 'Registro eliminado');
                             if (table) table.ajax.reload(null, false);
@@ -369,13 +361,13 @@ include VIEWS_PATH . '/layouts/nav.php';
                         }
                     });
                 });
-            }
+            };
 
-            function initTable(key) {
-                var cfg = catalogs[key];
+            const initTable = (key) => {
+                const cfg = catalogs[key];
                 if (!cfg) return;
                 currentKey = key;
-                var titleEl = document.getElementById('catalog-title');
+                const titleEl = document.getElementById('catalog-title');
                 if (titleEl) {
                     titleEl.textContent = (cfg.emoji ? cfg.emoji + ' ' : '') + cfg.label;
                 }
@@ -386,12 +378,12 @@ include VIEWS_PATH . '/layouts/nav.php';
                 table = $('#catalogos-table').DataTable({
                     ajax: {
                         url: 'api/catalogos/maestros.php',
-                        data: function (d) {
+                        data: (d) => {
                             d.catalog = key;
                             d.limit = 500;
                             d.offset = 0;
                         },
-                        dataSrc: function (json) {
+                        dataSrc: (json) => {
                             if (!json || json.CODIGO !== 200 || !json.DATOS) {
                                 DsCrud.toast((json && json.MENSAJE) ? json.MENSAJE : 'Error al cargar catalogo', 'error');
                                 return [];
@@ -402,27 +394,27 @@ include VIEWS_PATH . '/layouts/nav.php';
                     columns: buildColumns(cfg.list_columns),
                     language: { url: 'assets/dataTables.es-ES.json' }
                 });
-            }
+            };
 
-            $('#catalog-list').on('click', 'button', function () {
-                var key = $(this).data('catalog');
+            $('#catalog-list').on('click', 'button', (e) => {
+                const key = $(e.currentTarget).data('catalog');
                 if (!catalogs[key]) return;
                 $('#catalog-list button').removeClass('active');
-                $(this).addClass('active');
+                $(e.currentTarget).addClass('active');
                 initTable(key);
             });
 
-            $('#catalog-create-btn').on('click', function () {
+            $('#catalog-create-btn').on('click', () => {
                 openCreate();
             });
 
-            $('#catalogos-table').on('click', '.ds-action-btn[data-action="edit"]', function () {
-                var row = table.row($(this).closest('tr')).data();
+            $('#catalogos-table').on('click', '.ds-action-btn[data-action="edit"]', (e) => {
+                const row = table.row($(e.currentTarget).closest('tr')).data();
                 openEdit(row);
             });
 
-            $('#catalogos-table').on('click', '.ds-action-btn[data-action="delete"]', function () {
-                var row = table.row($(this).closest('tr')).data();
+            $('#catalogos-table').on('click', '.ds-action-btn[data-action="delete"]', (e) => {
+                const row = table.row($(e.currentTarget).closest('tr')).data();
                 handleDelete(row);
             });
 

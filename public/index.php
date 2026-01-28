@@ -326,14 +326,14 @@ if ($legacy) {
         const ventasSeries = <?php echo json_encode($ventas_chart); ?>;
         const ordenesEstado = <?php echo json_encode($ordenes_estado); ?>;
 
-        function formatShortDate(seconds) {
+        const formatShortDate = (seconds) => {
             const d = new Date(seconds * 1000);
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
             return month + '-' + day;
-        }
+        };
 
-        function renderChart(containerId, opts, data, emptyMessage) {
+        const renderChart = (containerId, opts, data, emptyMessage) => {
             const container = document.querySelector(containerId);
             if (!container) {
                 return;
@@ -355,9 +355,9 @@ if ($legacy) {
             });
             container.innerHTML = '';
             new uPlot(finalOpts, data, container);
-        }
+        };
 
-        function renderVentasMes() {
+        const renderVentasMes = () => {
             const x = [];
             const y = [];
             (ventasSeries || []).forEach(row => {
@@ -411,9 +411,9 @@ if ($legacy) {
                 padding: [10, 10, 0, 0]
             };
             renderChart('#chart-ventas-mes', opts, [x, y]);
-        }
+        };
 
-        function renderOrdenesEstado() {
+        const renderOrdenesEstado = () => {
             const labels = [];
             const values = [];
             (ordenesEstado || []).forEach(row => {
@@ -477,7 +477,7 @@ if ($legacy) {
                 });
             }
             renderChart('#chart-ordenes-estado', opts, [labels.map((_, idx) => idx), values]);
-        }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             renderVentasMes();

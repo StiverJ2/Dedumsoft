@@ -296,7 +296,7 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
                     }
                 });
 
-                function checkPassword() {
+                const checkPassword = () => {
                     const password = document.getElementById('password').value;
                     const confirm = document.getElementById('password_confirm').value;
 
@@ -316,9 +316,9 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
 
                     const matches = password === confirm && password !== '';
                     document.getElementById('submit-btn').disabled = !(allValid && matches);
-                }
+                };
 
-                async function handleSubmit(e) {
+                const handleSubmit = async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('submit-btn');
                     const errorDiv = document.getElementById('error-msg');
@@ -354,7 +354,10 @@ if (!$success && (strlen($token) !== 64 || !ctype_xdigit($token))) {
                     }
 
                     return false;
-                }
+                };
+
+                window.checkPassword = checkPassword;
+                window.handleSubmit = handleSubmit;
             </script>
         <?php endif; ?>
     <?php endif; ?>

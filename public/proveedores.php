@@ -334,7 +334,7 @@ include VIEWS_PATH . '/layouts/nav.php';
             proveedoresTable = $('#proveedores-table').DataTable({
                 ajax: {
                     url: 'api/proveedores.php',
-                    data: function (d) {
+                    data: (d) => {
                         d.limit = 500;
                         d.offset = 0;
                         if (tipoFilter) d.tipo_id = tipoFilter;
@@ -362,7 +362,7 @@ include VIEWS_PATH . '/layouts/nav.php';
                     data: null,
                     orderable: false,
                     searchable: false,
-                    render: function (data, type, row) {
+                    render: (data, type, row) => {
                         if (type !== 'display') return '';
                         return DsCrud.actionButtons(row.id);
                     }
