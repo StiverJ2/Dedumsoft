@@ -1,7 +1,7 @@
 # 🛠️ Guía del Desarrollador - Dedumsoft
 
 > **Sistema de Gestión de Joyería**  
-> Versión: 1.1 | PHP 7.4+ | PostgreSQL 17+ | Última actualización: 2026-01-23
+> Versión: 1.1 | PHP 7.4+ | PostgreSQL 17+ | Última actualización: 2026-01-26
 
 ---
 
@@ -76,6 +76,7 @@ Dedumsoft/
 │   ├── db_schema.sql            # Esquema de tablas
 │   ├── seed.sql                 # Datos iniciales
 │   └── functions/               # Funciones PostgreSQL (fun_*)
+│   └── pglite-validator/        # ✅ Validador SQL (OBLIGATORIO)
 │
 ├── vendor/                      # 📦 Dependencias Composer
 ├── composer.json                # Definición de dependencias
@@ -200,7 +201,7 @@ El sistema incluye un flujo completo de recuperación de contraseña:
 'MAIL_FROM_NAME' => 'Dedumsoft Joyería',
 ```
 
-**Nota Gmail:** Usar [App Passwords](https://support.google.com/accounts/answer/185833) (16 caracteres), no la contraseña de la cuenta.
+**Nota Gmail:** Usar App Passwords (16 caracteres), no la contraseña de la cuenta.
 
 ### Uso en Vistas
 
@@ -293,7 +294,7 @@ INSERT INTO seguridad.seg_rol VALUES
 en `public/` (ver `views/layouts/nav.php`). Para operadores sin menú 1, el home
 puede ser `public/index_operario.php`.
 
-**Especialidades:** ahora se administran dentro de `public/catalogos.php` (Ajustes > Catalogos).
+**Especialidades:** ahora se administran dentro de `public/catalogos.php` (Ajustes > Catálogos).
 
 ### ⚠️ IMPORTANTE: Caché de Permisos
 
@@ -401,6 +402,21 @@ FROM joyeria.fun_inv_buscar_insumos('oro', 10, 0);
 | `fun_prov_*` | Proveedores y compras     |
 | `fun_seg_*`  | Seguridad y auditoría     |
 | `fun_rep_*`  | Reportes                  |
+
+**Reglas de SQL:**
+
+- ❌ No usar `SELECT *` ni `COUNT(*)` (usar columnas explícitas y `COUNT(1)`).
+- ✅ Toda función debe ser **PL/pgSQL** (no `LANGUAGE sql`).
+- ✅ Si retorna múltiples filas, debe ser `RETURNS TABLE`.
+- ✅ No usar migraciones: modificar **solo** los scripts base en `database/`.
+
+**Validación obligatoria con PGlite (antes de commitear cambios SQL):**
+
+```bash
+cd database/pglite-validator
+npm install
+npm run validate:all
+```
 
 **Reportes usados en el dashboard (fun_rep_*):**
 
@@ -593,6 +609,9 @@ La gestión de órdenes se realiza desde `public/produccion.php` y la API
 Este proyecto **mantiene compatibilidad con Internet Explorer 8**.  
 Esto afecta SIGNIFICATIVAMENTE cómo se escribe el código.
 
+**Alcance:** estas restricciones **solo** aplican al JavaScript que se ejecuta
+en la vista legacy (IE8). El JS moderno puede usar `const`, `let`, `fetch`, etc.
+
 ### ¿Por qué IE8?
 
 Algunos clientes usan equipos antiguos con Windows XP/Vista que no pueden actualizarse.
@@ -601,8 +620,8 @@ Algunos clientes usan equipos antiguos con Windows XP/Vista que no pueden actual
 
 | Archivo                   | Propósito                    |
 | ------------------------- | ---------------------------- |
-| `assets/ie8.css`          | Estilos específicos IE8      |
-| `assets/ie8.js`           | **Polyfill JSON2** (crítico) |
+| `assets/css/ie8.css`      | Estilos específicos IE8      |
+| `assets/js/ie8.js`        | **Polyfill JSON2** (crítico) |
 | `assets/js/crud-legacy.js`| CRUD + XHR compatible IE8    |
 | `public/legacy_chart.php` | Genera gráficos PNG con GD   |
 
@@ -706,11 +725,11 @@ IE8 no soporta Canvas ni SVG modernos. Usamos **generación de PNG server-side**
 ### Detección de IE8
 
 ```php
-// En partials/header.php
-<!--[if lte IE 8]>
-    <link rel="stylesheet" href="assets/ie8.css">
-    <script src="assets/ie8.js"></script>
-<![endif]-->
+// En PHP (detectar legacy y cargar assets)
+$legacy = dedumsoft_is_legacy_browser();
+if ($legacy) {
+    // Cargar assets legacy
+}
 ```
 
 ```javascript
@@ -731,16 +750,16 @@ if (isIE8) {
 
 ### Medidas Implementadas
 
-| Medida              | Archivo                       | Descripción             |
-| ------------------- | ----------------------------- | ----------------------- |
-| Rate Limiting       | `connection/rate_limit.php`   | 60 req/min por IP       |
-| CSRF                | `auth/session.php`            | Token en formularios    |
-| Password Hashing    | `login_service.php`           | bcrypt/argon2id         |
-| Prepared Statements | Todos                         | PDO con parámetros      |
-| JWT                 | `auth/jwt.php`                | HMAC-SHA256, 24h expiry |
-| CSP Headers         | `partials/header.php`         | Content-Security-Policy |
-| Cookie HttpOnly     | `auth/session.php`            | Previene XSS            |
-| Security Logging    | `connection/security_log.php` | Logs en Apache/PHP      |
+| Medida              | Archivo                          | Descripción             |
+| ------------------- | -------------------------------- | ----------------------- |
+| Rate Limiting       | `private/Auth/RateLimiter.php`   | 60 req/min por IP       |
+| CSRF                | `private/Auth/SessionManager.php`| Token en formularios    |
+| Password Hashing    | `private/Auth/LoginService.php`  | bcrypt                  |
+| Prepared Statements | Todos                            | PDO con parámetros      |
+| JWT                 | `private/Auth/JwtHandler.php`    | HMAC-SHA256, 24h expiry |
+| CSP Headers         | `views/layouts/header.php`       | Content-Security-Policy |
+| Cookie HttpOnly     | `private/Auth/SessionManager.php`| Previene XSS            |
+| Security Logging    | `private/Http/SecurityLogger.php`| Logs en Apache/PHP      |
 
 ### Logging de Seguridad
 
@@ -800,12 +819,8 @@ $stmt->execute([':id' => $id]);
 ### Rate Limiting
 
 ```php
-// En connection/rate_limit.php
-check_rate_limit();  // 60 req/min, bloquea si excede
-
-// Configuración
-define('RATE_LIMIT_REQUESTS', 60);
-define('RATE_LIMIT_WINDOW', 60); // segundos
+// En private/Auth/RateLimiter.php
+// 60 req/min, bloquea si excede
 ```
 
 ### CSRF Token
@@ -952,7 +967,7 @@ Solución: Usar la IP/host real accesible por el cliente (ej: http://192.168.64.
 ### 💡 Tips de Desarrollo
 
 1. **Siempre probar en IE8** (o emulador) antes de deploy
-2. **Usar `var` en JavaScript**, nunca `let`/`const`
+2. **Legacy:** usar `var` y funciones tradicionales. **Moderno:** usar `const`/`let` y funciones flecha.
 3. **Revisar logs de PostgreSQL** para errores de funciones
 4. **Probar APIs con Postman** antes de integrar
 5. **Documentar cambios** en español siguiendo el estilo existente
