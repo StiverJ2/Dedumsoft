@@ -28,17 +28,23 @@ $pageData = $ctrl->pageDataCatalogos($_GET, $legacy);
 // =============================================================================
 page_render_start(7);
 render_view('pages/catalogos', $pageData);
-page_render_end();
-?>
-<?php if ($legacy): ?>
-<script>
-    window._catalogKey = '<?php echo page_e($pageData['selected_catalog'] ?? ''); ?>';
-    window._catalogConfig = <?php echo json_encode($pageData['catalogs'][$pageData['selected_catalog']] ?? null); ?>;
-</script>
-<?php else: ?>
-<script>
-    window._catalogs = <?php echo json_encode($pageData['ui_catalogs'] ?? []); ?>;
-    window._currentCatalogKey = '<?php echo page_e($pageData['selected_catalog'] ?? ''); ?>';
-</script>
-<?php endif; ?>
-<script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+page_render_end(function () use ($legacy, $pageData) {
+    if ($legacy) {
+        ?>
+        <script>
+            window._catalogKey = '<?php echo page_e($pageData['selected_catalog'] ?? ''); ?>';
+            window._catalogConfig = <?php echo json_encode($pageData['catalogs'][$pageData['selected_catalog']] ?? null); ?>;
+        </script>
+        <?php
+    } else {
+        ?>
+        <script>
+            window._catalogs = <?php echo json_encode($pageData['ui_catalogs'] ?? []); ?>;
+            window._currentCatalogKey = '<?php echo page_e($pageData['selected_catalog'] ?? ''); ?>';
+        </script>
+        <?php
+    }
+    ?>
+    <script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+    <?php
+});

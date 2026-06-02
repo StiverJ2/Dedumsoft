@@ -16,8 +16,7 @@ require_once __DIR__ . '/../private/bootstrap.php';
 require_once PRIVATE_PATH . '/Auth/SessionManager.php';
 require_once PRIVATE_PATH . '/Database/Connection.php';
 require_once PRIVATE_PATH . '/Http/SecurityLogger.php';
-require_once PRIVATE_PATH . '/Mail/Mailer.php';
-require_once PRIVATE_PATH . '/Auth/RateLimiter.php';
+require_once PRIVATE_PATH . '/Auth/PasswordResetService.php';
 
 function dedumsoft_guess_base_url(): string
 {
@@ -28,90 +27,6 @@ function dedumsoft_guess_base_url(): string
         $path = '';
     }
     return rtrim($protocol . '://' . $host . $path, '/');
-}
-
-function dedumsoft_request_password_reset(PDO $conn, string $username, string $email): array
-{
-    $rate = check_rate_limit();
-    if (!$rate['allowed']) {
-        dedumsoft_log_rate_limited(0);
-        $retry_minutes = (int) ceil(($rate['retry_after'] ?? 0) / 60);
-        return [
-            'success' => false,
-            'error' => 'Demasiadas solicitudes. Intenta en ' . $retry_minutes . ' minutos.'
-        ];
-    }
-
-    $username = trim($username);
-    $email = trim($email);
-
-    if ($username === '') {
-        return ['success' => false, 'error' => 'Usuario invalido'];
-    }
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        return ['success' => false, 'error' => 'Email inválido'];
-    }
-
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
-    if ($ip) {
-        $ip = explode(',', $ip)[0];
-    }
-    $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
-
-    $stmt = $conn->prepare(
-        'SELECT codigo, mensaje, token, usuario_id, nombre 
-         FROM seguridad.fun_crear_reset_token(:username, :email, :ip::inet, :ua)'
-    );
-    $stmt->execute([
-        ':username' => $username,
-        ':email' => $email,
-        ':ip' => $ip,
-        ':ua' => $user_agent
-    ]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $detail = 'Username/email mismatch';
-    if ($result['token']) {
-        $detail = 'Token generated';
-    } elseif ((int) ($result['codigo'] ?? 0) === 429) {
-        $detail = 'User rate limited';
-    }
-    dedumsoft_security_log('PASSWORD_RESET_REQUEST', $username, $detail . ' | email=' . $email);
-
-    $response = [
-        'success' => true,
-        'message' => 'Si el usuario y el email existen en nuestro sistema, recibiras instrucciones para recuperar tu contrasena.'
-    ];
-
-    if ($result['token']) {
-        $siteUrl = base_url();
-        if ($siteUrl === '') {
-            $siteUrl = dedumsoft_guess_base_url();
-        }
-        $reset_link = rtrim($siteUrl, '/') . '/public/reset_password.php?token=' . $result['token'];
-
-        $emailResult = send_password_reset_email(
-            $email,
-            $result['nombre'] ?? 'Usuario',
-            $result['token'],
-            $reset_link
-        );
-
-        if ($emailResult['success']) {
-            dedumsoft_security_log('PASSWORD_RESET_EMAIL_SENT', $email, 'Email sent successfully');
-        } else {
-            dedumsoft_security_log('PASSWORD_RESET_EMAIL_FAILED', $email, $emailResult['error'] ?? 'Unknown error');
-            error_log('[DEDUMSOFT] Error enviando email de reset a ' . $email . ': ' . ($emailResult['error'] ?? 'Unknown'));
-        }
-
-        if (!(ENV['PROD'] ?? false)) {
-            $response['dev_email_sent'] = $emailResult['success'];
-            $response['dev_email_error'] = $emailResult['error'] ?? null;
-            $response['dev_link'] = $reset_link;
-        }
-    }
-
-    return $response;
 }
 
 $csrf = dedumsoft_csrf_token();
@@ -134,15 +49,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         dedumsoft_log_csrf_invalid($posted_username ?: null);
         $error_message = 'Error de seguridad. Recarga la pagina e intenta de nuevo.';
     } else {
-        $result = dedumsoft_request_password_reset($connLogic, $posted_username, $posted_email);
+        $siteUrl = base_url();
+        if ($siteUrl === '') {
+            $siteUrl = dedumsoft_guess_base_url();
+        }
+        $service = new PasswordResetService($connLogic);
+        $result = $service->request($posted_username, $posted_email, $siteUrl, !(ENV['PROD'] ?? false));
         if (($result['success'] ?? false) === true) {
-            if (!empty($result['dev_link'])) {
-                $_SESSION['dev_reset_link'] = $result['dev_link'];
+            if (!empty($result['data']['link'])) {
+                $_SESSION['dev_reset_link'] = $result['data']['link'];
             }
             header('Location: forgot_password.php?sent=1');
             exit;
         }
-        $error_message = $result['error'] ?? 'Error al procesar la solicitud';
+        $error_message = $result['message'] ?? 'Error al procesar la solicitud';
     }
 }
 

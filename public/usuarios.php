@@ -31,11 +31,15 @@ $pageData = $ctrl->pageData($_GET, $legacy, $current_user_id);
 // =============================================================================
 page_render_start(5);
 render_view('pages/usuarios', $pageData);
-page_render_end();
-?>
-<?php if (!$legacy): ?>
-<script>
-    window._currentUserId = <?php echo json_encode($pageData['current_user_id'] ?? 0); ?>;
-</script>
-<?php endif; ?>
-<script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+page_render_end(function () use ($legacy, $pageData) {
+    if (!$legacy) {
+        ?>
+        <script>
+            window._currentUserId = <?php echo json_encode($pageData['current_user_id'] ?? 0); ?>;
+        </script>
+        <?php
+    }
+    ?>
+    <script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+    <?php
+});

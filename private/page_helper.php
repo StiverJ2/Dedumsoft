@@ -65,7 +65,7 @@ function page_render_start(int $menu_id, ?string $uplot = null): void
 {
     // uPlot se carga definiendo $load_uplot antes del include de header
     if ($uplot !== null) {
-        $GLOBALS['load_uplot'] = true;
+        $load_uplot = true;
     }
 
     include VIEWS_PATH . '/layouts/header.php';

@@ -45,6 +45,7 @@ require_once __DIR__ . '/../private/bootstrap.php';
 
 require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 require_once PRIVATE_PATH . '/Database/Connection.php';
+require_once PRIVATE_PATH . '/Controllers/ReporteController.php';
 
 // Verificar autenticación (sin redirección, genera imagen vacía)
 $user = get_session_user();
@@ -52,15 +53,18 @@ if (!$user) {
     dedumsoft_output_empty_png();
 }
 
-// Verificar autorización para reportes
-if (!dedumsoft_user_can_menu(4, $user)) {
-    dedumsoft_output_empty_png();
-}
-
 // Parámetros del gráfico
 $chart = strtolower(trim($_GET['chart'] ?? ''));
 $width = dedumsoft_clamp((int) ($_GET['w'] ?? 580), 320, 800);
 $height = dedumsoft_clamp((int) ($_GET['h'] ?? 240), 180, 400);
+
+// Verificar autorización para reportes o graficos del dashboard.
+$dashboard_charts = ['ventas_mes', 'ordenes_estado'];
+$can_view_chart = dedumsoft_user_can_menu(4, $user)
+    || (in_array($chart, $dashboard_charts, true) && dedumsoft_user_can_menu(1, $user));
+if (!$can_view_chart) {
+    dedumsoft_output_empty_png();
+}
 
 // Parámetros de rango de fechas
 $default_desde = date('Y-m-01');
@@ -93,106 +97,52 @@ if (!function_exists('imagecreatetruecolor')) {
 // GENERACIÓN DE GRÁFICOS SEGÚN TIPO
 // =============================================================================
 try {
+    $ctrl = new ReporteController($connLogic);
+    $result = $ctrl->legacyChartData($chart, $desde, $hasta);
+    if (!$result['success']) {
+        dedumsoft_render_empty_chart('Sin datos', $width, $height);
+    }
+
+    $rows = $result['data'];
+    dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
+
     switch ($chart) {
         case 'produccion':
-            $rows = dedumsoft_query(
-                'SELECT estado, COUNT(1) AS total FROM fun_reporte_produccion(:desde, :hasta) GROUP BY estado ORDER BY estado',
-                [':desde' => $desde, ':hasta' => $hasta]
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'estado', 'total', 'Produccion', $width, $height);
             break;
         case 'inventario':
-            $rows = dedumsoft_query(
-                'SELECT tipo, COUNT(1) AS total FROM fun_reporte_inventario() GROUP BY tipo ORDER BY tipo',
-                []
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'tipo', 'total', 'Inventario', $width, $height);
             break;
         case 'eficiencia':
-            $rows = dedumsoft_query(
-                'SELECT artesano, piezas FROM fun_reporte_eficiencia_artesanos(:desde, :hasta) ORDER BY piezas DESC',
-                [':desde' => $desde, ':hasta' => $hasta]
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'artesano', 'piezas', 'Eficiencia', $width, $height);
             break;
         case 'materiales':
-            $rows = dedumsoft_query(
-                'SELECT tipo_material, SUM(costo_total) AS total FROM fun_reporte_uso_materiales(:desde, :hasta) GROUP BY tipo_material ORDER BY tipo_material',
-                [':desde' => $desde, ':hasta' => $hasta]
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'tipo_material', 'total', 'Materiales', $width, $height);
             break;
         case 'ventas':
-            $rows = dedumsoft_query(
-                'SELECT fecha_venta::date AS dia, SUM(precio_venta) AS total FROM fun_reporte_ventas(:desde, :hasta) GROUP BY dia ORDER BY dia',
-                [':desde' => $desde, ':hasta' => $hasta]
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_line_chart($rows, 'dia', 'total', 'Ventas', $width, $height);
             break;
         case 'compras':
-            $rows = dedumsoft_query(
-                'SELECT tipo_inventario, SUM(cantidad_total) AS total FROM fun_reporte_compras(:desde, :hasta) GROUP BY tipo_inventario ORDER BY tipo_inventario',
-                [':desde' => $desde, ':hasta' => $hasta]
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'tipo_inventario', 'total', 'Compras', $width, $height);
             break;
         case 'usuarios':
-            $rows = dedumsoft_query(
-                'SELECT rol, COUNT(1) AS total FROM seguridad.fun_reporte_usuarios() GROUP BY rol ORDER BY rol',
-                []
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'rol', 'total', 'Usuarios', $width, $height);
             break;
         case 'ventas_mes':
-            $rows = dedumsoft_query(
-                'SELECT fecha_venta::date AS dia, SUM(precio_venta_real) AS total FROM joyeria.creaciones_terminadas WHERE vendida = TRUE AND fecha_venta::date BETWEEN :desde AND :hasta GROUP BY dia ORDER BY dia',
-                [':desde' => $desde, ':hasta' => $hasta]
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_line_chart($rows, 'dia', 'total', 'Ventas del mes', $width, $height);
             break;
         case 'ordenes_estado':
-            $rows = dedumsoft_query(
-                'SELECT estado, total FROM fun_reporte_ordenes_estado()',
-                []
-            );
-            dedumsoft_apply_etag($chart, $width, $height, $desde, $hasta, $rows, $cache_bust, $disable_cache);
             dedumsoft_render_bar_chart($rows, 'estado', 'total', 'Ordenes', $width, $height);
             break;
     }
-} catch (PDOException $e) {
-    error_log('legacy_chart error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+} catch (Exception $e) {
+    error_log('legacy_chart error: ' . $e->getMessage());
     dedumsoft_render_empty_chart('Sin datos', $width, $height);
 }
 
 // =============================================================================
 // FUNCIONES AUXILIARES PARA GENERACIÓN DE GRÁFICOS
 // =============================================================================
-
-/**
- * Ejecuta una consulta SQL preparada y retorna los resultados.
- * 
- * @param string $sql Consulta SQL con marcadores de posición
- * @param array $params Parámetros para la consulta
- * @return array Filas resultantes o array vacío en caso de error
- */
-function dedumsoft_query(string $sql, array $params): array
-{
-    $conn = $GLOBALS['connLogic'] ?? null;
-    if (!$conn instanceof PDO) {
-        return [];
-    }
-    $stmt = $conn->prepare($sql);
-    $stmt->execute($params);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
 
 /**
  * Limita un valor numérico a un rango específico.

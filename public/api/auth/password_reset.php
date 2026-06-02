@@ -1,303 +1,100 @@
 <?php
 /**
  * ============================================================================
- * API: RECUPERACIÓN DE CONTRASEÑA
+ * API: RECUPERACION DE CONTRASENA
  * ============================================================================
- * 
- * Endpoints para el sistema de recuperación de contraseña.
- * 
- * Métodos:
- * - POST /request: Solicitar token de recuperación (envía email)
- * - POST /validate: Validar si un token es válido
- * - POST /reset: Cambiar contraseña con token válido
- * 
- * Seguridad:
- * - Rate limiting en solicitudes
- * - Tokens con expiración de 1 hora
- * - No revela si el usuario/email existe (previene enumeración)
- * - Invalida sesiones activas al cambiar contraseña
- * 
+ *
+ * Endpoint HTTP para solicitar, validar y ejecutar reset de contrasena.
+ * La logica de negocio vive en Auth\PasswordResetService.
+ *
  * @package Dedumsoft\API
- * @author  Equipo Dedumsoft
  */
 
-// Cargar bootstrap
 require_once __DIR__ . '/../../../private/bootstrap.php';
-
-// Cargar dependencias
 require_once PRIVATE_PATH . '/Database/Connection.php';
 require_once PRIVATE_PATH . '/Http/MethodValidator.php';
-require_once PRIVATE_PATH . '/Http/SecurityLogger.php';
-require_once PRIVATE_PATH . '/Mail/Mailer.php';
-require_once PRIVATE_PATH . '/Auth/RateLimiter.php';
+require_once PRIVATE_PATH . '/Auth/PasswordResetService.php';
 
 header('Content-Type: application/json; charset=UTF-8');
-
 
 if (!validateHttpMethod('POST')) {
     exit;
 }
 
-// Obtener acción del query string
 $action = $_GET['action'] ?? '';
-
-// Leer body JSON
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
+$service = new PasswordResetService($connLogic);
 
 try {
     switch ($action) {
         case 'request':
-            handleRequestReset($connLogic, $input);
+            $siteUrl = ENV['SITE_URL'] ?? dedumsoft_password_reset_base_url();
+            $result = $service->request(
+                trim($input['username'] ?? ''),
+                trim($input['email'] ?? ''),
+                $siteUrl,
+                !(ENV['PROD'] ?? false)
+            );
+            dedumsoft_password_reset_json($result);
             break;
 
         case 'validate':
-            handleValidateToken($connLogic, $input);
+            $result = $service->validateToken(trim($input['token'] ?? ''));
+            dedumsoft_password_reset_json($result);
             break;
 
         case 'reset':
-            handleResetPassword($connLogic, $input);
+            $result = $service->reset(
+                trim($input['token'] ?? ''),
+                $input['password'] ?? '',
+                $input['password_confirm'] ?? ''
+            );
+            dedumsoft_password_reset_json($result);
             break;
 
         default:
-            http_response_code(400);
-            echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Acción no válida.']);
+            dedumsoft_password_reset_json([
+                'success' => false,
+                'code' => 400,
+                'message' => 'Accion no valida.',
+            ]);
     }
 } catch (Exception $e) {
     error_log('password_reset error: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor']);
+    dedumsoft_password_reset_json([
+        'success' => false,
+        'code' => 500,
+        'message' => 'Error interno del servidor',
+    ]);
 }
 
 /**
- * Solicitar token de recuperación de contraseña.
- * Genera token y envía email con enlace de recuperación.
+ * Emite respuesta JSON estandar para reset de contrasena.
+ *
+ * @param array<string, mixed> $result
+ * @return void
  */
-function handleRequestReset(PDO $conn, array $input): void
+function dedumsoft_password_reset_json(array $result): void
 {
-    // Rate limiting: máximo 5 solicitudes por IP cada 15 minutos
-    $rate = check_rate_limit(5, 900);
-    if (!$rate['allowed']) {
-        dedumsoft_log_rate_limited($rate['count'] ?? 0);
-        http_response_code(429);
-        echo json_encode([
-            'CODIGO' => 429,
-            'MENSAJE' => 'Demasiadas solicitudes. Intenta en ' . ceil($rate['retry_after'] / 60) . ' minutos.'
-        ]);
-        return;
-    }
+    $code = (int) ($result['code'] ?? 500);
+    http_response_code($code);
 
-    $username = trim($input['username'] ?? '');
-    $email = trim($input['email'] ?? '');
-
-    // Validar username
-    if ($username === '') {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Usuario invalido.']);
-        return;
-    }
-
-    // Validar formato de email
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Email inválido.']);
-        return;
-    }
-
-    // Obtener IP y User-Agent
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
-    if ($ip) {
-        $ip = explode(',', $ip)[0];
-    }
-    $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
-
-    // Llamar función de BD
-    $stmt = $conn->prepare(
-        'SELECT codigo, mensaje, token, usuario_id, nombre 
-         FROM seguridad.fun_crear_reset_token(:username, :email, :ip::inet, :ua)'
-    );
-    $stmt->execute([
-        ':username' => $username,
-        ':email' => $email,
-        ':ip' => $ip,
-        ':ua' => $user_agent
-    ]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    // Log del intento
-    $detail = 'Username/email mismatch';
-    if ($result['token']) {
-        $detail = 'Token generated';
-    } elseif ((int) ($result['codigo'] ?? 0) === 429) {
-        $detail = 'User rate limited';
-    }
-    dedumsoft_security_log('PASSWORD_RESET_REQUEST', $username, $detail . ' | email=' . $email);
-
-    // Siempre responder igual al usuario (no revelar si usuario/email existe)
-    $response = [
-        'CODIGO' => 200,
-        'MENSAJE' => 'Si el usuario y el email existen en nuestro sistema, recibiras instrucciones para recuperar tu contrasena.'
+    $payload = [
+        'CODIGO' => $code,
+        'MENSAJE' => $result['message'] ?? 'Error interno del servidor',
     ];
-
-    // Si hay token, enviar email
-    if ($result['token']) {
-        // Construir URL de reset
-        $siteUrl = ENV['SITE_URL'] ?? getBaseUrl();
-        $reset_link = $siteUrl . '/public/reset_password.php?token=' . $result['token'];
-
-        // Enviar email con PHPMailer
-        $emailResult = send_password_reset_email(
-            $email,
-            $result['nombre'] ?? 'Usuario',
-            $result['token'],
-            $reset_link
-        );
-
-        // Log resultado del envío
-        if ($emailResult['success']) {
-            dedumsoft_security_log('PASSWORD_RESET_EMAIL_SENT', $email, 'Email sent successfully');
-        } else {
-            dedumsoft_security_log('PASSWORD_RESET_EMAIL_FAILED', $email, $emailResult['error'] ?? 'Unknown error');
-            error_log('[DEDUMSOFT] Error enviando email de reset a ' . $email . ': ' . ($emailResult['error'] ?? 'Unknown'));
-        }
-
-        // En desarrollo, incluir info de debug
-        if (!(ENV['PROD'] ?? false)) {
-            $response['DATOS'] = [
-                'email_sent' => $emailResult['success'],
-                'email_error' => $emailResult['error'] ?? null,
-                'link' => $reset_link
-            ];
-        }
+    if (array_key_exists('data', $result)) {
+        $payload['DATOS'] = $result['data'];
     }
 
-    echo json_encode($response);
+    echo json_encode($payload);
+    exit;
 }
 
-/**
- * Validar si un token es válido (sin usarlo).
- */
-function handleValidateToken(PDO $conn, array $input): void
-{
-    $token = trim($input['token'] ?? '');
-
-    if ($token === '' || strlen($token) !== 64) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Token inválido.']);
-        return;
-    }
-
-    $stmt = $conn->prepare(
-        'SELECT codigo, mensaje, usuario_id, username, nombre 
-         FROM seguridad.fun_validar_reset_token(:token)'
-    );
-    $stmt->execute([':token' => $token]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ((int) $result['codigo'] !== 200) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => $result['mensaje']]);
-        return;
-    }
-
-    echo json_encode([
-        'CODIGO' => 200,
-        'MENSAJE' => 'OK',
-        'DATOS' => [
-            'username' => $result['username'],
-            'nombre' => $result['nombre']
-        ]
-    ]);
-}
-
-/**
- * Cambiar contraseña usando token válido.
- */
-function handleResetPassword(PDO $conn, array $input): void
-{
-    $token = trim($input['token'] ?? '');
-    $password = $input['password'] ?? '';
-    $password_confirm = $input['password_confirm'] ?? '';
-
-    // Validaciones
-    if ($token === '' || strlen($token) !== 64) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Token inválido.']);
-        return;
-    }
-
-    if ($password === '' || strlen($password) < 8) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'La contraseña debe tener al menos 8 caracteres.']);
-        return;
-    }
-
-    if ($password !== $password_confirm) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Las contraseñas no coinciden.']);
-        return;
-    }
-
-    // Validar fortaleza de contraseña
-    $strength_error = validatePasswordStrength($password);
-    if ($strength_error) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => $strength_error]);
-        return;
-    }
-
-    // Hash de la nueva contraseña
-    $hash = password_hash($password, PASSWORD_ARGON2ID);
-
-    // Cambiar contraseña
-    $stmt = $conn->prepare(
-        'SELECT codigo, mensaje FROM seguridad.fun_reset_password(:token, :hash)'
-    );
-    $stmt->execute([':token' => $token, ':hash' => $hash]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ((int) $result['codigo'] !== 200) {
-        dedumsoft_security_log('PASSWORD_RESET_FAILED', null, $result['mensaje']);
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => $result['mensaje']]);
-        return;
-    }
-
-    dedumsoft_security_log('PASSWORD_RESET_SUCCESS', null, 'Password changed via reset token');
-
-    echo json_encode([
-        'CODIGO' => 200,
-        'MENSAJE' => $result['mensaje'] ?? 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión.'
-    ]);
-}
-
-/**
- * Validar fortaleza de contraseña.
- * Requiere: 8+ caracteres, mayúscula, minúscula, número.
- */
-function validatePasswordStrength(string $password): ?string
-{
-    if (strlen($password) < 8) {
-        return 'La contraseña debe tener al menos 8 caracteres';
-    }
-    if (!preg_match('/[A-Z]/', $password)) {
-        return 'La contraseña debe tener al menos una letra mayúscula';
-    }
-    if (!preg_match('/[a-z]/', $password)) {
-        return 'La contraseña debe tener al menos una letra minúscula';
-    }
-    if (!preg_match('/[0-9]/', $password)) {
-        return 'La contraseña debe tener al menos un número';
-    }
-    return null;
-}
-
-/**
- * Obtener URL base del sitio.
- */
-function getBaseUrl(): string
+function dedumsoft_password_reset_base_url(): string
 {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $path = dirname(dirname($_SERVER['SCRIPT_NAME']));
-    return $protocol . '://' . $host . $path;
+    $path = dirname(dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+    return rtrim($protocol . '://' . $host . $path, '/');
 }

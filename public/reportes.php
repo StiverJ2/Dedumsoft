@@ -28,6 +28,8 @@ $pageData = $ctrl->pageData($_GET, $legacy);
 // =============================================================================
 page_render_start(4);
 render_view('pages/reportes', $pageData);
-page_render_end();
-?>
-<script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+page_render_end(function () use ($legacy) {
+    ?>
+    <script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+    <?php
+});

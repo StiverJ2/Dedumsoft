@@ -28,11 +28,15 @@ $pageData = $ctrl->pageDataUbicaciones($_GET, $legacy);
 // =============================================================================
 page_render_start(7);
 render_view('pages/ubicaciones', $pageData);
-page_render_end();
-?>
-<?php if ($legacy): ?>
-<script>
-    window._areaOptions = <?php echo json_encode($pageData['area_options'] ?? []); ?>;
-</script>
-<?php endif; ?>
-<script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+page_render_end(function () use ($legacy, $pageData) {
+    if ($legacy) {
+        ?>
+        <script>
+            window._areaOptions = <?php echo json_encode($pageData['area_options'] ?? []); ?>;
+        </script>
+        <?php
+    }
+    ?>
+    <script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+    <?php
+});

@@ -35,13 +35,17 @@ $pageData['legacy'] = $legacy;
 // =============================================================================
 page_render_start(3);
 render_view('pages/produccion', $pageData);
-page_render_end();
-?>
-<?php if ($legacy): ?>
-<script>
-    window._artesanosOptions = <?php echo json_encode($pageData['artesanos_options'] ?? []); ?>;
-    window._productosOptions = <?php echo json_encode($pageData['productos_options'] ?? []); ?>;
-    window._prioridadesOptions = <?php echo json_encode($pageData['prioridades_options'] ?? []); ?>;
-</script>
-<?php endif; ?>
-<script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+page_render_end(function () use ($legacy, $pageData) {
+    if ($legacy) {
+        ?>
+        <script>
+            window._artesanosOptions = <?php echo json_encode($pageData['artesanos_options'] ?? []); ?>;
+            window._productosOptions = <?php echo json_encode($pageData['productos_options'] ?? []); ?>;
+            window._prioridadesOptions = <?php echo json_encode($pageData['prioridades_options'] ?? []); ?>;
+        </script>
+        <?php
+    }
+    ?>
+    <script src="assets/js/pages/<?php echo basename(__FILE__, '.php') . ($legacy ? '-legacy' : '') . '.js'; ?>"></script>
+    <?php
+});

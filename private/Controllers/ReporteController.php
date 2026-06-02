@@ -153,6 +153,105 @@ class ReporteController extends Controller
         }
     }
 
+    /**
+     * Datos agregados para graficos PNG del modo legacy.
+     *
+     * @param string $chart
+     * @param string $desde
+     * @param string $hasta
+     * @return array<string, mixed>
+     */
+    public function legacyChartData(string $chart, string $desde, string $hasta): array
+    {
+        try {
+            switch ($chart) {
+                case 'produccion':
+                    return $this->success($this->countBy($this->repo->produccion($desde, $hasta), 'estado', 'total'), 'OK', 200);
+                case 'inventario':
+                    return $this->success($this->countBy($this->repo->inventario(), 'tipo', 'total'), 'OK', 200);
+                case 'eficiencia':
+                    return $this->success($this->repo->eficienciaArtesanos($desde, $hasta), 'OK', 200);
+                case 'materiales':
+                    return $this->success($this->sumBy($this->repo->usoMateriales($desde, $hasta), 'tipo_material', 'costo_total', 'total'), 'OK', 200);
+                case 'ventas':
+                    return $this->success($this->sumBy($this->repo->ventas($desde, $hasta), 'fecha_venta', 'precio_venta', 'total', 'dia'), 'OK', 200);
+                case 'compras':
+                    return $this->success($this->sumBy($this->repo->compras($desde, $hasta), 'tipo_inventario', 'cantidad_total', 'total'), 'OK', 200);
+                case 'usuarios':
+                    return $this->success($this->countBy($this->repo->usuarios(), 'rol', 'total'), 'OK', 200);
+                case 'ventas_mes':
+                    return $this->success($this->repo->ventasChart($desde, $hasta), 'OK', 200);
+                case 'ordenes_estado':
+                    return $this->success($this->repo->ordenesPorEstado(), 'OK', 200);
+            }
+
+            return $this->error('Tipo de grafico no soportado.', 400);
+        } catch (PDOException $e) {
+            error_log('ReporteController::legacyChartData error: ' . $e->getMessage());
+            return $this->error('Error interno del servidor.', 500);
+        }
+    }
+
+    /**
+     * Cuenta filas agrupadas por una columna.
+     *
+     * @param array<int, array<string, mixed>> $rows
+     * @param string $groupKey
+     * @param string $totalKey
+     * @return array<int, array<string, mixed>>
+     */
+    private function countBy(array $rows, string $groupKey, string $totalKey): array
+    {
+        $totals = [];
+        foreach ($rows as $row) {
+            $key = trim((string) ($row[$groupKey] ?? ''));
+            if ($key === '') {
+                $key = 'Sin datos';
+            }
+            $totals[$key] = ($totals[$key] ?? 0) + 1;
+        }
+        ksort($totals);
+
+        $result = [];
+        foreach ($totals as $key => $total) {
+            $result[] = [$groupKey => $key, $totalKey => $total];
+        }
+        return $result;
+    }
+
+    /**
+     * Suma valores agrupados por una columna.
+     *
+     * @param array<int, array<string, mixed>> $rows
+     * @param string $groupKey
+     * @param string $valueKey
+     * @param string $totalKey
+     * @param string|null $outputGroupKey
+     * @return array<int, array<string, mixed>>
+     */
+    private function sumBy(array $rows, string $groupKey, string $valueKey, string $totalKey, ?string $outputGroupKey = null): array
+    {
+        $totals = [];
+        foreach ($rows as $row) {
+            $key = trim((string) ($row[$groupKey] ?? ''));
+            if ($key === '') {
+                $key = 'Sin datos';
+            }
+            if ($groupKey === 'fecha_venta') {
+                $key = substr($key, 0, 10);
+            }
+            $totals[$key] = ($totals[$key] ?? 0) + (float) ($row[$valueKey] ?? 0);
+        }
+        ksort($totals);
+
+        $result = [];
+        $groupOut = $outputGroupKey ?: $groupKey;
+        foreach ($totals as $key => $total) {
+            $result[] = [$groupOut => $key, $totalKey => $total];
+        }
+        return $result;
+    }
+
     // ========================================================================
     // LEGACY PAGE HELPERS (para public/reportes.php)
     // ========================================================================
