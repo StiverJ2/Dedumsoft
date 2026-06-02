@@ -37,6 +37,8 @@
 require_once __DIR__ . '/../private/bootstrap.php';
 require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 require_once PRIVATE_PATH . '/Database/Connection.php';
+require_once PRIVATE_PATH . '/Repositories/OrdenRepository.php';
+require_once PRIVATE_PATH . '/Repositories/ReporteRepository.php';
 
 // Verificar autenticación y autorización
 require_login('login.php');
@@ -53,13 +55,12 @@ $chart_cb_q = $cache_bust !== '' ? '?cb=' . urlencode($cache_bust) : '';
 // CARGA DE DATOS PARA EL DASHBOARD
 // =============================================================================
 
+$ordenRepo = new OrdenRepository($connLogic);
+$repRepo = new ReporteRepository($connLogic);
+
 // Cargar órdenes recientes (límite: 5)
 try {
-    $stmt = $connLogic->prepare(
-        'SELECT id, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones FROM fun_obtener_ordenes(:offset, :limit, :estado)'
-    );
-    $stmt->execute([':offset' => 0, ':limit' => 5, ':estado' => null]);
-    $ordenes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $ordenes = $ordenRepo->listar(0, 5, null);
 } catch (PDOException $e) {
     $ordenes = [];
 }
@@ -80,37 +81,21 @@ $month_end = date('Y-m-t');
 // Cargar métricas del dashboard
 try {
     // Inventario: suma de las tres tablas de inventario
-    $inventario_total = (int) $connLogic
-        ->query('SELECT (SELECT COUNT(1) FROM inventario_oro) + (SELECT COUNT(1) FROM inventario_insumos) + (SELECT COUNT(1) FROM inventario_maquinaria) AS total')
-        ->fetchColumn();
+    $inventario_total = $repRepo->contarInventarioTotal();
 
     // Stock bajo: usa la función de reporte
-    $inventario_stock_bajo = (int) $connLogic
-        ->query('SELECT COUNT(1) FROM fun_reporte_inventario()')
-        ->fetchColumn();
+    $inventario_stock_bajo = $repRepo->contarStockBajo();
 
     // Ventas del mes: suma de creaciones vendidas
-    $stmt = $connLogic->prepare(
-        'SELECT COALESCE(SUM(ct.precio_venta_real), 0) FROM creaciones_terminadas ct WHERE ct.vendida = TRUE AND ct.fecha_venta::date BETWEEN :desde AND :hasta'
-    );
-    $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
-    $ventas_mes_total = (float) $stmt->fetchColumn();
+    $ventas_mes_total = $repRepo->ventasMesTotal($month_start, $month_end);
 
     // Órdenes activas / completadas del mes (vía función de reporte)
-    $stmt = $connLogic->prepare(
-        'SELECT ordenes_activas, ordenes_completadas FROM fun_reporte_ordenes_dashboard(:desde, :hasta)'
-    );
-    $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
-    $ordenes_dashboard = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $ordenes_dashboard = $repRepo->ordenesDashboard($month_start, $month_end);
     $ordenes_activas = (int) ($ordenes_dashboard['ordenes_activas'] ?? 0);
     $ordenes_completadas_mes = (int) ($ordenes_dashboard['ordenes_completadas'] ?? 0);
 
     // Datos para gráfico de ventas (serie temporal)
-    $stmt = $connLogic->prepare(
-        'SELECT fecha_venta::date AS dia, COALESCE(SUM(precio_venta_real), 0) AS total FROM creaciones_terminadas WHERE vendida = TRUE AND fecha_venta::date BETWEEN :desde AND :hasta GROUP BY dia ORDER BY dia'
-    );
-    $stmt->execute([':desde' => $month_start, ':hasta' => $month_end]);
-    $ventas_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $ventas_rows = $repRepo->ventasChart($month_start, $month_end);
     foreach ($ventas_rows as $row) {
         $ventas_chart[] = [
             strtotime((string) $row['dia']),
@@ -119,9 +104,7 @@ try {
     }
 
     // Datos para gráfico de órdenes por estado
-    $ordenes_estado = $connLogic
-        ->query('SELECT estado, total FROM fun_reporte_ordenes_estado()')
-        ->fetchAll(PDO::FETCH_ASSOC);
+    $ordenes_estado = $repRepo->ordenesPorEstado();
 } catch (PDOException $e) {
     // En caso de error, mantener valores en cero
     $inventario_total = 0;

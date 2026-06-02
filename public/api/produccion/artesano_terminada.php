@@ -3,125 +3,57 @@
  * ============================================================================
  * API REST: REGISTRO DE PIEZA TERMINADA (ARTESANO)
  * ============================================================================
- * 
- * Endpoint para registrar la finalización de una pieza de joyería.
- * Captura peso final, tiempo real de producción y calidad.
- * 
- * Métodos soportados:
- * - POST: Registrar pieza terminada con sus métricas
- * 
- * Autenticación: Requerida (JWT en sesión)
- * Autorización: Menú 3 (Producción)
- * 
- * Datos capturados:
- * - Peso final de la pieza (comparación con materiales consumidos)
- * - Tiempo real de producción (para análisis de eficiencia)
- * - Nivel de calidad (evaluación del producto)
- * - Observaciones del artesano
- * 
- * Resultados calculados:
- * - Costo de materiales consumidos
- * - Eficiencia del artesano
- * - Merma de material
- * 
+ *
+ * Endpoint para registrar la finalizacion de una pieza de joyeria.
+ *
  * @package Dedumsoft\API\Artesano
  * @author  Equipo Dedumsoft
  */
 
-// Cargar bootstrap
-require_once __DIR__ . '/../../../private/bootstrap.php';
+require_once __DIR__ . '/../../../private/api_helper.php';
+require_once PRIVATE_PATH . '/Repositories/ArtesanoRepository.php';
 
-require_once PRIVATE_PATH . '/Database/Connection.php';
-require_once PRIVATE_PATH . '/Http/MethodValidator.php';
-require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
+$repo = new ArtesanoRepository($connLogic);
 
-header('Content-Type: application/json');
-
-if (!validateHttpMethod('POST')) {
-    exit;
-}
-
-// Verificar autenticación y autorización
-if (!require_api_auth()) {
-    exit;
-}
-require_menu_access(3); // Menú: Producción
+api_init(3, ['POST']);
 
 // =============================================================================
 // POST: Registrar pieza terminada
 // =============================================================================
-// Body JSON:
-//   - orden_id (int, requerido): ID de la orden de producción
-//   - peso_final (float, requerido): Peso final de la pieza en gramos (> 0)
-//   - tiempo_real (float, opcional): Tiempo real de producción en horas
-//   - calidad_id (int, opcional): ID del nivel de calidad
-//   - observaciones (string, opcional): Notas del artesano
-//
-// Respuesta exitosa: 
-//   { CODIGO: 201, MENSAJE: '...', DATOS: { id: <creacion_id>, costo_materiales: <float> } }
-
-// Leer y validar JSON del body
-$input = json_decode(file_get_contents('php://input'), true);
-
-if (!$input) {
-    http_response_code(400);
-    echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Datos JSON inválidos.']);
-    exit;
+$input = api_json_body();
+if ($input === null) {
+    api_error(400, 'Datos JSON invalidos.');
 }
 
-// Extraer y validar campos
-$orden_id = isset($input['orden_id']) ? (int) $input['orden_id'] : 0;
-$peso_final = isset($input['peso_final']) ? (float) $input['peso_final'] : 0;
-$tiempo_real = isset($input['tiempo_real']) && $input['tiempo_real'] !== '' ? (float) $input['tiempo_real'] : null;
-$calidad_id = isset($input['calidad_id']) && $input['calidad_id'] !== '' ? (int) $input['calidad_id'] : null;
+api_require_fields($input, ['orden_id', 'peso_final']);
+
+$orden_id      = (int) $input['orden_id'];
+$peso_final    = (float) $input['peso_final'];
+$tiempo_real   = isset($input['tiempo_real']) && $input['tiempo_real'] !== '' ? (float) $input['tiempo_real'] : null;
+$calidad_id    = isset($input['calidad_id']) && $input['calidad_id'] !== '' ? (int) $input['calidad_id'] : null;
 $observaciones = $input['observaciones'] ?? null;
-
-// Validaciones de campos requeridos
-if ($orden_id <= 0) {
-    http_response_code(400);
-    echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'orden_id es requerido.']);
-    exit;
-}
+$observaciones = ($observaciones === '') ? null : $observaciones;
 
 if ($peso_final <= 0) {
-    http_response_code(400);
-    echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'peso_final debe ser mayor a 0.']);
-    exit;
+    api_error(400, 'peso_final debe ser mayor a 0.');
 }
 
 try {
-    // Llamar función de registro de pieza terminada
-    // La función calcula costos, actualiza estado y genera métricas
-    $stmt = $connLogic->prepare(
-        'SELECT success, mensaje, creacion_id, costo_materiales FROM fun_registrar_pieza_terminada(:orden_id, :peso_final, :tiempo_real, :calidad_id, :observaciones)'
-    );
-    $stmt->bindValue(':orden_id', $orden_id, PDO::PARAM_INT);
-    $stmt->bindValue(':peso_final', $peso_final, PDO::PARAM_STR);
-    $stmt->bindValue(':tiempo_real', $tiempo_real, $tiempo_real === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-    $stmt->bindValue(':calidad_id', $calidad_id, $calidad_id === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-    $stmt->bindValue(':observaciones', $observaciones, $observaciones === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-    $stmt->execute();
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $result = $repo->marcarTerminada($orden_id, $peso_final, $tiempo_real, $calidad_id, $observaciones);
 
-    // Verificar si la operación fue exitosa
     if (!$result['success']) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => $result['mensaje']]);
-        exit;
+        api_error(400, $result['mensaje']);
     }
-} catch (PDOException $e) {
-    error_log('artesano_terminada POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-    http_response_code(500);
-    echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
-    exit;
-}
 
-// Retornar resultado exitoso con datos de la pieza creada
-echo json_encode([
-    'CODIGO' => 201,
-    'MENSAJE' => $result['mensaje'],
-    'DATOS' => [
-        'id' => (int) $result['creacion_id'],
-        'costo_materiales' => $result['costo_materiales']
-    ]
-]);
+    api_ok(
+        [
+            'id'               => (int) $result['creacion_id'],
+            'costo_materiales' => $result['costo_materiales'],
+        ],
+        201,
+        $result['mensaje']
+    );
+} catch (PDOException $e) {
+    api_log_error('artesano_terminada', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+    api_error(500, 'Error interno del servidor.');
+}

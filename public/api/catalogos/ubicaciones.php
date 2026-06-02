@@ -1,223 +1,119 @@
 <?php
 /**
  * ============================================================================
- * API REST: UBICACIONES DE ALMACÉN
+ * API REST: UBICACIONES DE ALMACEN
  * ============================================================================
- * 
- * Endpoint CRUD para gestión de ubicaciones físicas del inventario.
- * Las ubicaciones pertenecen a áreas y se usan para localizar items.
- * 
- * Métodos soportados:
- * - GET: Listar ubicaciones (paginado, filtrable por área)
- * - POST: Crear nueva ubicación
- * - PATCH: Actualizar ubicación existente
- * - DELETE: Eliminar ubicación (soft-delete)
- * 
- * Autenticación: Requerida (JWT en sesión)
- * Autorización: Menú 2 (Inventario)
- * 
- * Campos principales:
- * - nombre: Nombre de la ubicación (ej: "Estante A1", "Bóveda Principal")
- * - descripcion: Descripción detallada
- * - area_id: Área a la que pertenece (default: 1)
- * 
+ *
+ * Endpoint CRUD para gestion de ubicaciones fisicas del inventario.
+ *
+ * Autenticacion: Requerida (JWT en sesion)
+ * Autorizacion: Menu 7 (Configuracion)
+ *
  * @package Dedumsoft\API
- * @author  Equipo Dedumsoft
  */
 
-// Cargar bootstrap
-require_once __DIR__ . '/../../../private/bootstrap.php';
+require_once __DIR__ . '/../../../private/api_helper.php';
+require_once PRIVATE_PATH . '/Repositories/UbicacionRepository.php';
 
-require_once PRIVATE_PATH . '/Database/Connection.php';
-require_once PRIVATE_PATH . '/Http/MethodValidator.php';
-require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
-
-header('Content-Type: application/json');
-
-if (!validateHttpMethod(['GET', 'POST', 'PATCH', 'DELETE'])) {
-    exit;
-}
-
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-// Verificar autenticación y autorización
-if (!require_api_auth()) {
-    exit;
-}
-require_menu_access(2); // Menú: Inventario
+$repo = new UbicacionRepository($connLogic);
+$method = api_init(7, ['GET', 'POST', 'PATCH', 'DELETE']);
 
 // =============================================================================
 // GET: Listar ubicaciones
 // =============================================================================
-// Parámetros:
-//   - offset (int): Inicio de paginación (default: 0)
-//   - limit (int): Cantidad de registros (default: 100)
-//   - area_id (int): Filtrar por área (opcional)
-//   - activo (bool): Filtrar por estado activo (default: true)
-//
-// Respuesta: { CODIGO: 200, MENSAJE: 'OK', DATOS: [...] }
 if ($method === 'GET') {
-    // Parsear parámetros de paginación y filtros
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
     $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
     $area_id = isset($_GET['area_id']) && $_GET['area_id'] !== '' ? (int) $_GET['area_id'] : null;
-    $activo = isset($_GET['activo']) ? ($_GET['activo'] === '1' || $_GET['activo'] === 'true') : true;
+    $activo_raw = $_GET['activo'] ?? null;
+    $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
 
     try {
-        // Llamar función PostgreSQL con JOIN a tabla de áreas
-        $stmt = $connLogic->prepare(
-            'SELECT id, nombre, descripcion, area_id, area_nombre, activo, created_at FROM fun_obtener_ubicaciones(:offset, :limit, :area_id::int, :activo)'
-        );
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':area_id', $area_id, $area_id === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindValue(':activo', $activo, PDO::PARAM_BOOL);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $repo->listar($offset, $limit, $area_id, $activo);
     } catch (PDOException $e) {
-        error_log('ubicaciones GET error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
-        exit;
+        api_log_error('ubicaciones', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        api_error(500, 'Error interno del servidor.');
     }
 
-    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
-    exit;
+    api_ok($rows);
 }
 
 // =============================================================================
-// POST: Crear nueva ubicación
+// POST: Crear ubicacion
 // =============================================================================
-// Body JSON:
-//   - nombre (string, requerido): Nombre de la ubicación
-//   - descripcion (string, opcional): Descripción detallada
-//   - area_id (int, opcional): ID del área (default: 1)
-//
-// Respuesta: { CODIGO: 201, MENSAJE: 'Ubicación creada.', DATOS: { id: <new_id> } }
 if ($method === 'POST') {
-    // Leer y validar JSON del body
-    $input = json_decode(file_get_contents('php://input'), true);
-
-    $nombre = $input['nombre'] ?? null;
-    $descripcion = $input['descripcion'] ?? null;
-    $area_id = isset($input['area_id']) ? (int) $input['area_id'] : 1;
-
-    // Validar campo requerido
-    if (!$nombre) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Nombre es requerido.']);
-        exit;
+    $input = api_json_body();
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
     }
+    api_require_fields($input, ['nombre']);
 
     try {
-        // Llamar función de creación
-        $stmt = $connLogic->prepare('SELECT fun_crear_ubicacion(:nombre, :descripcion, :area_id)');
-        $stmt->execute([':nombre' => $nombre, ':descripcion' => $descripcion, ':area_id' => $area_id]);
-        $result = $stmt->fetchColumn();
+        $id = $repo->crear($input['nombre'], $input['descripcion'] ?? null, isset($input['area_id']) ? (int) $input['area_id'] : null);
     } catch (PDOException $e) {
-        error_log('ubicaciones POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
-        exit;
+        api_log_error('ubicaciones', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        api_error(500, 'Error al crear ubicacion.');
     }
 
-    echo json_encode([
-        'CODIGO' => 201,
-        'MENSAJE' => 'Ubicación creada.',
-        'DATOS' => ['id' => (int) $result]
-    ]);
-    exit;
+    if ($id <= 0) {
+        api_error(422, 'No se pudo crear la ubicacion.');
+    }
+
+    api_ok(['id' => $id], 201, 'Ubicacion creada.');
 }
 
 // =============================================================================
-// PATCH: Actualizar ubicación existente
+// PATCH: Actualizar ubicacion
 // =============================================================================
-// Body JSON:
-//   - id (int, requerido): ID de la ubicación a actualizar
-//   - nombre (string, opcional): Nuevo nombre
-//   - descripcion (string, opcional): Nueva descripción
-//   - area_id (int, opcional): Nueva área
-//   - activo (bool, opcional): Estado de activación
-//
-// Nota: Solo se actualizan los campos proporcionados
-// Respuesta: { CODIGO: 200, MENSAJE: 'Ubicación actualizada.' }
 if ($method === 'PATCH') {
-    // Leer y validar JSON del body
-    $input = json_decode(file_get_contents('php://input'), true);
-
-    $id = $input['id'] ?? null;
-    if (!$id) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'ID es requerido.']);
-        exit;
+    $input = api_json_body();
+    if ($input === null || !isset($input['id'])) {
+        api_error(400, 'ID requerido.');
     }
-
-    // Extraer campos opcionales
-    $nombre = $input['nombre'] ?? null;
-    $descripcion = $input['descripcion'] ?? null;
-    $area_id = isset($input['area_id']) ? (int) $input['area_id'] : null;
-    $activo = isset($input['activo']) ? (bool) $input['activo'] : null;
 
     try {
-        // Llamar función de actualización
-        $stmt = $connLogic->prepare('SELECT fun_actualizar_ubicacion(:id, :nombre, :descripcion, :area_id, :activo)');
-        $stmt->execute([
-            ':id' => $id,
-            ':nombre' => $nombre,
-            ':descripcion' => $descripcion,
-            ':area_id' => $area_id,
-            ':activo' => $activo
-        ]);
+        $ok = $repo->actualizar(
+            (int) $input['id'],
+            $input['nombre'] ?? null,
+            $input['descripcion'] ?? null,
+            isset($input['area_id']) ? (int) $input['area_id'] : null,
+            isset($input['activo']) ? (bool) $input['activo'] : null
+        );
     } catch (PDOException $e) {
-        error_log('ubicaciones PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
-        exit;
+        api_log_error('ubicaciones', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;
+        api_error($code, $code === 404 ? 'Ubicacion no encontrada.' : 'Error al actualizar.');
     }
 
-    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Ubicación actualizada.']);
-    exit;
+    if (!$ok) {
+        api_error(422, 'No se pudo actualizar la ubicacion.');
+    }
+
+    api_ok(null, 200, 'Ubicacion actualizada.');
 }
 
 // =============================================================================
-// DELETE: Eliminar ubicación (soft-delete)
+// DELETE: Eliminar ubicacion
 // =============================================================================
-// El registro no se elimina físicamente, solo se marca como inactivo
-// Las referencias existentes en inventario se mantienen
-//
-// Entrada (JSON body o query string):
-//   - id (int, requerido): ID de la ubicación a eliminar
-//
-// Respuesta: { CODIGO: 200, MENSAJE: 'Ubicación eliminada.' }
 if ($method === 'DELETE') {
-    // Obtener ID de body JSON o query string
-    $input = json_decode(file_get_contents('php://input'), true);
+    $input = api_json_body();
     $id = $input['id'] ?? ($_GET['id'] ?? null);
 
     if (!$id) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'ID requerido.']);
-        exit;
+        api_error(400, 'ID requerido.');
     }
 
     try {
-        // Llamar función de eliminación lógica
-        $stmt = $connLogic->prepare('SELECT fun_eliminar_ubicacion(:id)');
-        $stmt->bindValue(':id', (int) $id, PDO::PARAM_INT);
-        $stmt->execute();
-
-        echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Ubicación eliminada.']);
+        $ok = $repo->eliminar((int) $id);
     } catch (PDOException $e) {
-        error_log('ubicaciones DELETE error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-
-        // Detectar si el error es porque no se encontró la ubicación
+        api_log_error('ubicaciones', 'DELETE', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;
-        http_response_code($code);
-        echo json_encode(['CODIGO' => $code, 'MENSAJE' => $code === 404 ? 'Ubicación no encontrada.' : 'Error al eliminar.']);
+        api_error($code, $code === 404 ? 'Ubicacion no encontrada.' : 'Error al eliminar.');
     }
-    exit;
-}
 
-// Método no soportado (fallback)
-http_response_code(405);
-echo json_encode(['CODIGO' => 405, 'MENSAJE' => 'Método no permitido.']);
+    if (!$ok) {
+        api_error(422, 'No se pudo eliminar la ubicacion.');
+    }
+
+    api_ok(null, 200, 'Ubicacion eliminada.');
+}

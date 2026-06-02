@@ -31,6 +31,7 @@ require_once __DIR__ . '/../../../private/bootstrap.php';
 require_once PRIVATE_PATH . '/Database/Connection.php';
 require_once PRIVATE_PATH . '/Http/MethodValidator.php';
 require_once PRIVATE_PATH . '/Auth/SessionManager.php';
+require_once PRIVATE_PATH . '/Repositories/UsuarioRepository.php';
 
 // Solo aceptar POST para prevenir CSRF via URL
 if (!validateHttpMethod('POST')) {
@@ -51,9 +52,8 @@ $token = $_SESSION['jwt'] ?? null;
 // Invalidar token en base de datos
 if ($token) {
     try {
-        // Marcar el token como inválido para prevenir reutilización
-        $stmt = $connLogic->prepare('UPDATE seguridad.seg_login SET estado_token = FALSE WHERE token = :token');
-        $stmt->execute([':token' => $token]);
+        $repo = new UsuarioRepository($connLogic);
+        $repo->invalidarToken($token);
     } catch (PDOException $e) {
         // Loggear error pero continuar con el logout
         error_log('logout error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());

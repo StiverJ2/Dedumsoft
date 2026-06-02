@@ -1,43 +1,21 @@
 <?php
 /**
  * ============================================================================
- * API REST: ÓRDENES DE PRODUCCIÓN
+ * API REST: ORDENES DE PRODUCCION
  * ============================================================================
- * 
- * Endpoint para gestión de órdenes de trabajo/producción.
- * 
- * Métodos soportados:
- * - GET: Listar órdenes con paginación y filtro por estado
- * - POST: Crear orden de producción
- * - PATCH: Actualizar orden (asignar artesano)
- * 
- * Autenticación: Requerida (JWT en sesión)
- * Autorización: Menú 3 (Producción)
- * 
+ *
+ * Endpoint para gestion de ordenes de trabajo/produccion.
+ *
  * @package Dedumsoft\API
  * @author  Equipo Dedumsoft
  */
 
-// Cargar bootstrap
-require_once __DIR__ . '/../../../private/bootstrap.php';
+require_once __DIR__ . '/../../../private/api_helper.php';
+require_once PRIVATE_PATH . '/Repositories/OrdenRepository.php';
 
-require_once PRIVATE_PATH . '/Database/Connection.php';
-require_once PRIVATE_PATH . '/Http/MethodValidator.php';
-require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
+$repo = new OrdenRepository($connLogic);
 
-header('Content-Type: application/json');
-
-if (!validateHttpMethod(['GET', 'POST', 'PATCH'])) {
-    exit;
-}
-
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-// Verificar autenticación y autorización
-if (!require_api_auth()) {
-    exit;
-}
-require_menu_access(3); // Menú: Producción
+$method = api_init(3, ['GET', 'POST', 'PATCH']);
 
 // Determinar rol del usuario
 $session_user = get_session_user();
@@ -45,167 +23,83 @@ $rolid = (int) ($session_user['rolid'] ?? 0);
 $is_operador = ($rolid === 2);
 
 // =============================================================================
-// GET: Listar órdenes de producción
+// GET: Listar ordenes de produccion
 // =============================================================================
-// Parámetros:
-//   - offset (int): Inicio de paginación (default: 0)
-//   - limit (int): Cantidad de registros (default: 50)
-//   - estado (string): Filtrar por estado (opcional)
-//
-// Respuesta: { CODIGO: 200, MENSAJE: 'OK', DATOS: [...] }
 if ($method === 'GET') {
-    // Parsear parámetros de paginación
     $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
-    $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
+    $limit  = isset($_GET['limit'])  ? (int) $_GET['limit']  : 50;
     $estado = $_GET['estado'] ?? null;
     $estado = ($estado === '') ? null : $estado;
 
     try {
-        // Llamar función PostgreSQL que retorna las órdenes
-        $sql = 'SELECT id, producto_id, producto_nombre, cantidad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, artesano_id, artesano_nombre, estado, prioridad, observaciones, observaciones_terminada FROM fun_obtener_ordenes(:offset, :limit, :estado)';
+        $rows = $repo->listar($offset, $limit, $estado);
+
+        // Los operadores no ven ordenes terminadas
         if ($is_operador) {
-            $sql .= " WHERE LOWER(estado) <> 'terminada'";
+            $rows = array_values(array_filter($rows, function ($row) {
+                return strtolower($row['estado'] ?? '') !== 'terminada';
+            }));
         }
-        $stmt = $connLogic->prepare($sql);
-        $stmt->execute([':offset' => $offset, ':limit' => $limit, ':estado' => $estado]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        error_log('ordenes GET error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
-        exit;
+        api_log_error('ordenes', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        api_error(500, 'Error interno del servidor.');
     }
 
-    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
-    exit;
+    api_ok($rows);
 }
 
 // =============================================================================
-// POST: Crear orden de producción
+// POST: Crear orden de produccion
 // =============================================================================
-// Body JSON:
-//   - producto_id (int, requerido)
-//   - cantidad (int, requerido)
-//   - artesano_id (int, opcional)
-//   - prioridad_id (int, opcional)
-//   - observaciones (text, opcional)
-//
-// Respuesta: { CODIGO: 200, MENSAJE: 'Orden creada.', DATOS: { id: 123 } }
 if ($method === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
+    $input = api_json_body();
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
+    }
+    api_require_fields($input, ['producto_id', 'cantidad']);
 
-    if (!$input) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Datos JSON inválidos.']);
-        exit;
+    $producto_id   = (int) $input['producto_id'];
+    $cantidad      = (int) $input['cantidad'];
+    $artesano_id   = isset($input['artesano_id']) && $input['artesano_id'] > 0 ? (int) $input['artesano_id'] : null;
+    $prioridad_id  = isset($input['prioridad_id']) && $input['prioridad_id'] > 0 ? (int) $input['prioridad_id'] : 2;
+    $observaciones = isset($input['observaciones']) && $input['observaciones'] !== '' ? trim((string) $input['observaciones']) : null;
+
+    try {
+        $new_id = $repo->crear($producto_id, $cantidad, $artesano_id, $prioridad_id, $observaciones);
+        api_ok(['id' => $new_id], 201, 'Orden creada.');
+    } catch (PDOException $e) {
+        api_log_error('ordenes', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        api_error(500, 'Error al crear la orden.');
+    }
+}
+
+// =============================================================================
+// PATCH: Asignar artesano a una orden
+// =============================================================================
+if ($method === 'PATCH') {
+    $input = api_json_body();
+    if ($input === null || !isset($input['id'])) {
+        api_error(400, 'ID requerido.');
     }
 
-    $producto_id = isset($input['producto_id']) ? (int) $input['producto_id'] : 0;
-    $cantidad = isset($input['cantidad']) ? (int) $input['cantidad'] : 0;
-    $artesano_id = isset($input['artesano_id']) ? (int) $input['artesano_id'] : 0;
-    $prioridad_id = isset($input['prioridad_id']) ? (int) $input['prioridad_id'] : 0;
-    $observaciones = isset($input['observaciones']) ? trim((string) $input['observaciones']) : null;
-
-    if ($producto_id <= 0 || $cantidad <= 0) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'producto_id y cantidad son requeridos.']);
-        exit;
-    }
+    $id          = (int) $input['id'];
+    $artesano_id = isset($input['artesano_id']) && $input['artesano_id'] > 0 ? (int) $input['artesano_id'] : 0;
 
     if ($artesano_id <= 0) {
-        $artesano_id = null;
-    }
-    if ($prioridad_id <= 0) {
-        $prioridad_id = 2;
-    }
-    if ($observaciones === '') {
-        $observaciones = null;
+        api_error(400, 'artesano_id es requerido.');
     }
 
     try {
-        $stmt = $connLogic->prepare(
-            'SELECT fun_crear_orden(:producto_id, :cantidad, :artesano_id, :prioridad_id, :observaciones)'
-        );
-        $stmt->bindValue(':producto_id', $producto_id, PDO::PARAM_INT);
-        $stmt->bindValue(':cantidad', $cantidad, PDO::PARAM_INT);
-        if ($artesano_id === null) {
-            $stmt->bindValue(':artesano_id', null, PDO::PARAM_NULL);
-        } else {
-            $stmt->bindValue(':artesano_id', $artesano_id, PDO::PARAM_INT);
+        $ok = $repo->asignarArtesano($id, $artesano_id);
+
+        if (!$ok) {
+            api_error(422, 'No se pudo asignar el artesano.');
         }
-        $stmt->bindValue(':prioridad_id', $prioridad_id, PDO::PARAM_INT);
-        if ($observaciones === null) {
-            $stmt->bindValue(':observaciones', null, PDO::PARAM_NULL);
-        } else {
-            $stmt->bindValue(':observaciones', $observaciones, PDO::PARAM_STR);
-        }
-        $stmt->execute();
-        $new_id = $stmt->fetchColumn();
+
+        api_ok(null, 200, 'Orden actualizada.');
     } catch (PDOException $e) {
-        error_log('ordenes POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error al crear la orden.']);
-        exit;
+        api_log_error('ordenes', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
+        api_error($code, $code === 404 ? 'Orden no encontrada.' : 'Error al asignar artesano.');
     }
-
-    echo json_encode([
-        'CODIGO' => 200,
-        'MENSAJE' => 'Orden creada.',
-        'DATOS' => ['id' => (int) $new_id]
-    ]);
-    exit;
-}
-
-// =============================================================================
-// PATCH: Actualizar orden (asignar artesano)
-// =============================================================================
-// Body JSON:
-//   - id (int): ID de la orden
-//   - artesano_id (int): ID del artesano a asignar
-//
-// Respuesta: { CODIGO: 200, MENSAJE: 'Orden actualizada.' }
-if ($method === 'PATCH') {
-    // Leer body JSON
-    $input = json_decode(file_get_contents('php://input'), true);
-
-    if (!$input) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Datos JSON inválidos.']);
-        exit;
-    }
-
-    // Validar campos requeridos
-    $id = isset($input['id']) ? (int) $input['id'] : 0;
-    $artesano_id = isset($input['artesano_id']) ? (int) $input['artesano_id'] : 0;
-
-    if ($id <= 0 || $artesano_id <= 0) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'id y artesano_id son requeridos.']);
-        exit;
-    }
-
-    try {
-        // Llamar función de actualización (solo actualiza artesano_id)
-        $stmt = $connLogic->prepare(
-            'SELECT fun_actualizar_orden(:id, NULL, NULL, :artesano_id, NULL, NULL, NULL)'
-        );
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmt->bindValue(':artesano_id', $artesano_id, PDO::PARAM_INT);
-        $stmt->execute();
-        $result = $stmt->fetchColumn();
-
-        if (!$result) {
-            http_response_code(404);
-            echo json_encode(['CODIGO' => 404, 'MENSAJE' => 'Orden no encontrada.']);
-            exit;
-        }
-    } catch (PDOException $e) {
-        error_log('ordenes PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error al asignar artesano.']);
-        exit;
-    }
-
-    echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'Orden actualizada.']);
-    exit;
 }

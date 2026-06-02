@@ -37,6 +37,8 @@ require_once __DIR__ . '/../private/bootstrap.php';
 
 require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 require_once PRIVATE_PATH . '/Database/Connection.php';
+require_once PRIVATE_PATH . '/Repositories/CatalogoRepository.php';
+require_once PRIVATE_PATH . '/Repositories/ArtesanoRepository.php';
 
 // Verificar autenticación y autorización
 require_login('/login.php');
@@ -58,15 +60,16 @@ if (!$artesano_id || $rolid === 1) {
     dedumsoft_forbidden();
 }
 
+$catRepo = new CatalogoRepository($connLogic);
+$artRepo = new ArtesanoRepository($connLogic);
+
 // Obtener nombre del artesano para mostrar en encabezado
 $artesano_nombre = '';
 if ($artesano_id) {
     try {
-        $stmt = $connLogic->prepare('SELECT nombre, apellido FROM artesanos WHERE id = :id AND activo = TRUE LIMIT 1');
-        $stmt->execute([':id' => $artesano_id]);
-        $artesano = $stmt->fetch(PDO::FETCH_ASSOC);
+        $artesano = $artRepo->obtenerPorId($artesano_id);
         if ($artesano) {
-            $artesano_nombre = $artesano['nombre'] . ' ' . $artesano['apellido'];
+            $artesano_nombre = trim($artesano['nombre'] . ' ' . $artesano['apellido']);
         }
     } catch (PDOException $e) {
         error_log('artesano lookup error: ' . $e->getMessage());
@@ -78,24 +81,15 @@ $estados_options = [];
 
 // Cargar estados de orden para dropdown
 try {
-    $stmt = $connLogic->query('SELECT id, nombre FROM estados_orden WHERE activo = TRUE ORDER BY id');
-    $estados_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
+    $estados_options = $catRepo->obtenerOpciones('estados_orden');
+} catch (Exception $e) {
     error_log('estados_orden error: ' . $e->getMessage());
 }
 
 // Cargar órdenes del artesano para modo legacy
 if ($legacy && $artesano_id) {
     try {
-        $stmt = $connLogic->prepare(
-            'SELECT id, producto_nombre, cantidad, estado, prioridad, fecha_inicio, fecha_fin_estimada, observaciones
-             FROM fun_obtener_ordenes_artesano(:artesano_id, :offset, :limit)'
-        );
-        $stmt->bindValue(':artesano_id', $artesano_id, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', 0, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', 50, PDO::PARAM_INT);
-        $stmt->execute();
-        $ordenes_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $ordenes_rows = $artRepo->obtenerOrdenes($artesano_id, 0, 50);
     } catch (PDOException $e) {
         error_log('artesano ordenes legacy error: ' . $e->getMessage());
     }
@@ -522,7 +516,7 @@ $(() => {
     }
 
     var estadosOptions = <?php echo json_encode(array_map(function ($e) {
-                return ['value' => $e['id'], 'label' => ucfirst(str_replace('_', ' ', $e['nombre']))];
+                return ['value' => $e['value'], 'label' => ucfirst(str_replace('_', ' ', $e['label']))];
             }, $estados_options)); ?>;
 
     function esc(s) {

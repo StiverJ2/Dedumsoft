@@ -3,91 +3,48 @@
  * ============================================================================
  * API REST: USUARIOS (ACTIVAR/DESACTIVAR)
  * ============================================================================
- * 
- * Endpoint para activar o desactivar usuarios del sistema.
- * Usa soft-delete en seguridad.seg_usuario (deleted_at).
- * 
- * Métodos soportados:
- * - POST: Crear nuevo usuario
- * - PATCH: Actualizar estado activo/inactivo
- * 
- * Autenticación: Requerida (JWT en sesión)
- * Autorización: Menú 5 (Usuarios)
- * 
- * Entrada JSON (POST):
- * - username (string, requerido)
- * - nombre (string, requerido)
- * - email (string, opcional)
- * - rolid (int, requerido)
- * - password (string, requerido)
- * - apellido (string, requerido si rol=OPERADOR)
- * - especialidad_id (int, opcional, se guarda en artesano_especialidad)
- * - telefono (string, opcional)
  *
- * Entrada JSON (PATCH):
- * - id (int, requerido): ID del usuario
- * - activo (bool, requerido): true=activar, false=desactivar
- * 
+ * Endpoint para gestionar usuarios del sistema.
+ * Usa soft-delete en seguridad.seg_usuario (deleted_at).
+ *
+ * Autenticacion: Requerida (JWT en sesion)
+ * Autorizacion: Menu 5 (Usuarios)
+ *
  * @package Dedumsoft\API
- * @author  Equipo Dedumsoft
  */
 
-require_once __DIR__ . '/../../private/bootstrap.php';
+require_once __DIR__ . '/../../private/api_helper.php';
+require_once PRIVATE_PATH . '/Repositories/UsuarioRepository.php';
 
-require_once PRIVATE_PATH . '/Database/Connection.php';
-require_once PRIVATE_PATH . '/Http/MethodValidator.php';
-require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
-
-header('Content-Type: application/json');
-
-if (!validateHttpMethod(['POST', 'PATCH'])) {
-    exit;
-}
-
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-
-if (!require_api_auth()) {
-    exit;
-}
-require_menu_access(5); // Menú: Usuarios
+$repo = new UsuarioRepository($connLogic);
+$method = api_init(5, ['POST', 'PATCH']);
 
 // =============================================================================
 // POST: Crear usuario
 // =============================================================================
 if ($method === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
-    if (!$input) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Datos JSON inválidos.']);
-        exit;
+    $input = api_json_body();
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
     }
+    api_require_fields($input, ['username', 'nombre', 'rolid', 'password']);
 
-    $username = trim((string) ($input['username'] ?? ''));
-    $nombre = trim((string) ($input['nombre'] ?? ''));
-    $email = trim((string) ($input['email'] ?? ''));
-    $rolid = isset($input['rolid']) ? (int) $input['rolid'] : 0;
-    $password = (string) ($input['password'] ?? '');
-    $apellido = trim((string) ($input['apellido'] ?? ''));
+    $username = trim((string) $input['username']);
+    $nombre = trim((string) $input['nombre']);
+    $email = isset($input['email']) ? trim((string) $input['email']) : '';
+    $rolid = (int) $input['rolid'];
+    $password = (string) $input['password'];
+    $apellido = isset($input['apellido']) ? trim((string) $input['apellido']) : '';
     $especialidad_id = isset($input['especialidad_id']) ? (int) $input['especialidad_id'] : 0;
-    $telefono = trim((string) ($input['telefono'] ?? ''));
-
-    if ($username === '' || $nombre === '' || $rolid <= 0 || $password === '') {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Username, nombre, rol y contraseña son requeridos.']);
-        exit;
-    }
+    $telefono = isset($input['telefono']) ? trim((string) $input['telefono']) : '';
 
     if (strlen($password) < 8) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'La contraseña debe tener al menos 8 caracteres.']);
-        exit;
+        api_error(400, 'La contraseña debe tener al menos 8 caracteres.');
     }
 
     $email = $email === '' ? null : $email;
     if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Email inválido.']);
-        exit;
+        api_error(400, 'Email invalido.');
     }
 
     $apellido = $apellido === '' ? null : $apellido;
@@ -95,34 +52,18 @@ if ($method === 'POST') {
     $telefono = $telefono === '' ? null : $telefono;
 
     if ($rolid === 2 && $apellido === null) {
-        http_response_code(400);
-        echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'Apellido requerido para rol Operador.']);
-        exit;
+        api_error(400, 'Apellido requerido para rol Operador.');
     }
 
     $hash = password_hash($password, PASSWORD_BCRYPT);
     if ($hash === false) {
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'No se pudo generar la contraseña.']);
-        exit;
+        api_error(500, 'No se pudo generar la contraseña.');
     }
 
     try {
-        $stmt = $connLogic->prepare(
-            'SELECT seguridad.fun_crear_usuario(:username, :nombre, :clave, :rolid, :email, :apellido, :especialidad_id, :telefono) AS id_usuario'
-        );
-        $stmt->bindValue(':username', $username, PDO::PARAM_STR);
-        $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
-        $stmt->bindValue(':clave', $hash, PDO::PARAM_STR);
-        $stmt->bindValue(':rolid', $rolid, PDO::PARAM_INT);
-        $stmt->bindValue(':email', $email, $email === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-        $stmt->bindValue(':apellido', $apellido, $apellido === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-        $stmt->bindValue(':especialidad_id', $especialidad_id, $especialidad_id === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindValue(':telefono', $telefono, $telefono === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-        $stmt->execute();
-        $id = (int) ($stmt->fetchColumn() ?: 0);
+        $id = $repo->crear($username, $nombre, $hash, $rolid, $email, $apellido, $especialidad_id, $telefono);
     } catch (PDOException $e) {
-        error_log('usuarios POST error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        api_log_error('usuarios', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
         $message = $e->getMessage();
         $code = 500;
         $clientMessage = 'Error interno del servidor.';
@@ -131,76 +72,55 @@ if ($method === 'POST') {
             $clientMessage = 'Usuario o email ya registrado.';
         } elseif (strpos($message, 'Rol invalido') !== false) {
             $code = 400;
-            $clientMessage = 'Rol inválido.';
+            $clientMessage = 'Rol invalido.';
         } elseif (strpos($message, 'Apellido requerido') !== false) {
             $code = 400;
             $clientMessage = 'Apellido requerido para rol Operador.';
         } elseif (strpos($message, 'Especialidad invalida') !== false) {
             $code = 400;
-            $clientMessage = 'Especialidad inválida.';
+            $clientMessage = 'Especialidad invalida.';
         }
-        http_response_code($code);
-        echo json_encode(['CODIGO' => $code, 'MENSAJE' => $clientMessage]);
-        exit;
+        api_error($code, $clientMessage);
     }
 
     if ($id <= 0) {
-        http_response_code(500);
-        echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error al crear usuario.']);
-        exit;
+        api_error(500, 'Error al crear usuario.');
     }
 
-    http_response_code(201);
-    echo json_encode([
-        'CODIGO' => 201,
-        'MENSAJE' => 'Usuario creado.',
-        'DATOS' => ['id' => (int) $id]
-    ]);
-    exit;
+    api_ok(['id' => $id], 201, 'Usuario creado.');
 }
 
 // =============================================================================
 // PATCH: Activar/desactivar usuario
 // =============================================================================
-$input = json_decode(file_get_contents('php://input'), true);
-$id = isset($input['id']) ? (int) $input['id'] : 0;
-$activo_raw = $input['activo'] ?? null;
+if ($method === 'PATCH') {
+    $input = api_json_body();
+    if ($input === null || !isset($input['id'])) {
+        api_error(400, 'ID requerido.');
+    }
 
-$activo = null;
-if ($activo_raw !== null) {
-    $activo = filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    $id = (int) $input['id'];
+    $activo = isset($input['activo']) ? filter_var($input['activo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
+    if ($activo === null) {
+        api_error(400, 'Estado activo es requerido.');
+    }
+
+    $session_user = get_session_user();
+    if (!empty($session_user) && (int) ($session_user['id_usuario'] ?? 0) === $id && $activo === false) {
+        api_error(400, 'No puedes desactivar tu propio usuario.');
+    }
+
+    try {
+        $ok = $repo->actualizarEstado($id, $activo);
+    } catch (PDOException $e) {
+        api_log_error('usuarios', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
+        api_error($code, $code === 404 ? 'Usuario no encontrado.' : 'Error al actualizar.');
+    }
+
+    if (!$ok) {
+        api_error(422, 'No se pudo actualizar el usuario.');
+    }
+
+    api_ok(null, 200, $activo ? 'Usuario activado.' : 'Usuario desactivado.');
 }
-
-if ($id <= 0 || $activo === null) {
-    http_response_code(400);
-    echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'ID y estado son requeridos.']);
-    exit;
-}
-
-$session_user = get_session_user();
-if (!empty($session_user) && (int) ($session_user['id_usuario'] ?? 0) === $id && $activo === false) {
-    http_response_code(400);
-    echo json_encode(['CODIGO' => 400, 'MENSAJE' => 'No puedes desactivar tu propio usuario.']);
-    exit;
-}
-
-try {
-    $stmt = $connLogic->prepare('SELECT seguridad.fun_actualizar_usuario_estado(:id, :activo)');
-    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-    $stmt->bindValue(':activo', $activo, PDO::PARAM_BOOL);
-    $stmt->execute();
-} catch (PDOException $e) {
-    error_log('usuarios PATCH error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-    $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
-    http_response_code($code);
-    echo json_encode([
-        'CODIGO' => $code,
-        'MENSAJE' => $code === 404 ? 'Usuario no encontrado.' : 'Error interno del servidor.'
-    ]);
-    exit;
-}
-
-echo json_encode([
-    'CODIGO' => 200,
-    'MENSAJE' => $activo ? 'Usuario activado.' : 'Usuario desactivado.'
-]);

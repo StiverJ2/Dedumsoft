@@ -3,76 +3,36 @@
  * ============================================================================
  * API REST: TIPOS DE MAQUINARIA
  * ============================================================================
- * 
+ *
  * Endpoint para obtener los tipos de maquinaria disponibles.
- * Usado como catálogo auxiliar para formularios de inventario.
- * 
- * Métodos soportados:
- * - GET: Listar tipos de maquinaria
- * 
- * Autenticación: Requerida (JWT en sesión)
- * Autorización: Menú 2 (Inventario)
- * 
- * Parámetros:
- * - activo (bool): Filtrar por estado activo (default: true)
- * 
- * Datos retornados:
- * - id: ID del tipo
- * - codigo: Código único del tipo
- * - nombre: Nombre descriptivo
- * - descripcion: Descripción del tipo de maquinaria
- * - activo: Estado de activación
- * 
+ *
+ * Autenticacion: Requerida (JWT en sesion)
+ * Autorizacion: Menu 2 (Inventario)
+ *
  * @package Dedumsoft\API
- * @author  Equipo Dedumsoft
  */
 
-// Cargar bootstrap
-require_once __DIR__ . '/../../../private/bootstrap.php';
+require_once __DIR__ . '/../../../private/api_helper.php';
+require_once PRIVATE_PATH . '/Repositories/CatalogoRepository.php';
 
-require_once PRIVATE_PATH . '/Database/Connection.php';
-require_once PRIVATE_PATH . '/Http/MethodValidator.php';
-require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
-
-header('Content-Type: application/json');
-
-if (!validateHttpMethod('GET')) {
-    exit;
-}
-
-// Verificar autenticación y autorización
-if (!require_api_auth()) {
-    exit;
-}
-require_menu_access(2); // Menú: Inventario
+$repo = new CatalogoRepository($connLogic);
+$method = api_init(2, ['GET']);
 
 // =============================================================================
 // GET: Listar tipos de maquinaria
 // =============================================================================
-// Parámetros:
-//   - activo (bool): Filtrar por estado (default: true)
-//
-// Respuesta: { CODIGO: 200, DATOS: [...] }
+if ($method === 'GET') {
+    $activo = filter_var($_GET['activo'] ?? 'true', FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    if ($activo === null) {
+        $activo = true;
+    }
 
-// Parsear parámetro de estado activo
-$activo = filter_var($_GET['activo'] ?? 'true', FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-if ($activo === null) {
-    $activo = true;
+    try {
+        $rows = $repo->obtenerTiposMaquinaria($activo);
+    } catch (PDOException $e) {
+        api_log_error('tipos_maquinaria', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
+        api_error(500, 'Error interno del servidor.');
+    }
+
+    api_ok($rows);
 }
-
-try {
-    // Llamar función de obtención de tipos de maquinaria
-    $stmt = $connLogic->prepare(
-        'SELECT id, codigo, nombre, descripcion, activo FROM fun_obtener_tipos_maquinaria(:activo)'
-    );
-    $stmt->bindValue(':activo', $activo, PDO::PARAM_BOOL);
-    $stmt->execute();
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log('tipos_maquinaria GET error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-    http_response_code(500);
-    echo json_encode(['CODIGO' => 500, 'MENSAJE' => 'Error interno del servidor.']);
-    exit;
-}
-
-echo json_encode(['CODIGO' => 200, 'MENSAJE' => 'OK', 'DATOS' => $rows]);
