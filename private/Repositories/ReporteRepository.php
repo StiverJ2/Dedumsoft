@@ -23,7 +23,7 @@ class ReporteRepository extends Repository
     public function produccion(string $desde, string $hasta): array
     {
         return $this->execSet(
-            'SELECT id, producto, cantidad, artesano, estado FROM fun_reporte_produccion(:desde, :hasta)',
+            'SELECT id, producto, cantidad, artesano, estado, fecha_inicio, fecha_fin_real FROM fun_reporte_produccion(:desde, :hasta)',
             [':desde' => $desde, ':hasta' => $hasta]
         );
     }
@@ -80,7 +80,7 @@ class ReporteRepository extends Repository
     public function ventas(string $desde, string $hasta): array
     {
         return $this->execSet(
-            'SELECT id, producto_id, fecha_venta, precio_venta, utilidad FROM fun_reporte_ventas(:desde, :hasta)',
+            'SELECT id, producto_id, fecha_venta, precio_venta, costo_total, utilidad FROM fun_reporte_ventas(:desde, :hasta)',
             [':desde' => $desde, ':hasta' => $hasta]
         );
     }
@@ -95,7 +95,7 @@ class ReporteRepository extends Repository
     public function compras(string $desde, string $hasta): array
     {
         return $this->execSet(
-            'SELECT tipo_inventario, cantidad_total, movimientos FROM fun_reporte_compras(:desde, :hasta)',
+            'SELECT tipo_inventario, COALESCE(cantidad_total, 0) AS cantidad_total, COALESCE(movimientos, 0) AS movimientos FROM fun_reporte_compras(:desde, :hasta)',
             [':desde' => $desde, ':hasta' => $hasta]
         );
     }
@@ -108,7 +108,7 @@ class ReporteRepository extends Repository
     public function usuarios(): array
     {
         return $this->execSet(
-            'SELECT id_usuario, username, nombre, rol, activo FROM seguridad.fun_reporte_usuarios()'
+            'SELECT id_usuario, username, nombre, rol, activo, created_at FROM seguridad.fun_reporte_usuarios()'
         );
     }
 

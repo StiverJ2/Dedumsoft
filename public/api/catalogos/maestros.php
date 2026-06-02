@@ -4,18 +4,17 @@
  * API REST: CATALOGOS MAESTROS
  * ============================================================================
  *
- * CRUD generico para catalogos del sistema.
- *
- * Autenticacion: Requerida
- * Autorizacion: Menu 7 (Configuracion)
+ * Delega toda la lógica de negocio a CatalogoController.
+ * Este archivo solo maneja HTTP: autenticación, método y respuesta JSON.
  *
  * @package Dedumsoft\API
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/CatalogoRepository.php';
+require_once PRIVATE_PATH . '/Controllers/CatalogoController.php';
 
-$repo = new CatalogoRepository($connLogic);
+$ctrl = new CatalogoController($connLogic);
+
 $method = api_init(7, ['GET', 'POST', 'PATCH', 'DELETE']);
 
 $catalog = $_GET['catalog'] ?? '';
@@ -24,7 +23,7 @@ if ($catalog === '') {
 }
 
 // =============================================================================
-// GET: Listar/buscar
+// GET: Listar / Obtener por ID
 // =============================================================================
 if ($method === 'GET') {
     $id = isset($_GET['id']) && $_GET['id'] !== '' ? (int) $_GET['id'] : null;
@@ -33,16 +32,12 @@ if ($method === 'GET') {
     if ($limit <= 0) $limit = 200;
     if ($limit > 500) $limit = 500;
 
-    try {
-        $rows = $repo->obtenerMaestros($catalog, $id, $offset, $limit, $_GET['activo'] ?? null);
-    } catch (InvalidArgumentException $e) {
-        api_error(400, $e->getMessage());
-    } catch (PDOException $e) {
-        api_log_error('catalogos_maestros', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
-    }
+    $result = $ctrl->listarMaestros($catalog, $id, $offset, $limit, $_GET['activo'] ?? null);
 
-    api_ok($rows);
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
+    }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
@@ -54,16 +49,12 @@ if ($method === 'POST') {
         api_error(400, 'Datos JSON invalidos.');
     }
 
-    try {
-        $id = $repo->crearMaestro($catalog, $input);
-    } catch (InvalidArgumentException $e) {
-        api_error(400, $e->getMessage());
-    } catch (PDOException $e) {
-        api_log_error('catalogos_maestros', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
-    }
+    $result = $ctrl->crearMaestro($catalog, $input);
 
-    api_ok(['id' => $id], 201, 'Registro creado.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
+    }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
@@ -74,26 +65,13 @@ if ($method === 'PATCH') {
     if ($input === null) {
         api_error(400, 'Datos JSON invalidos.');
     }
-    if (!isset($input['id']) || (int) $input['id'] <= 0) {
-        api_error(400, 'ID requerido.');
+
+    $result = $ctrl->actualizarMaestro($catalog, $input);
+
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    $id = (int) $input['id'];
-
-    try {
-        $ok = $repo->actualizarMaestro($catalog, $id, $input);
-    } catch (InvalidArgumentException $e) {
-        api_error(400, $e->getMessage());
-    } catch (PDOException $e) {
-        api_log_error('catalogos_maestros', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
-    }
-
-    if (!$ok) {
-        api_error(422, 'No se pudo actualizar el registro.');
-    }
-
-    api_ok(null, 200, 'Registro actualizado.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
@@ -108,20 +86,10 @@ if ($method === 'DELETE') {
         api_error(400, 'ID requerido.');
     }
 
-    $id = (int) $input['id'];
+    $result = $ctrl->eliminarMaestro($catalog, (int) $input['id']);
 
-    try {
-        $ok = $repo->eliminarMaestro($catalog, $id);
-    } catch (InvalidArgumentException $e) {
-        api_error(400, $e->getMessage());
-    } catch (PDOException $e) {
-        api_log_error('catalogos_maestros', 'DELETE', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    if (!$ok) {
-        api_error(422, 'No se pudo eliminar el registro.');
-    }
-
-    api_ok(null, 200, 'Registro eliminado.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }

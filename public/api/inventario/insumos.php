@@ -4,16 +4,17 @@
  * API REST: INVENTARIO DE INSUMOS
  * ============================================================================
  *
- * Endpoint CRUD para gestion del inventario de insumos.
+ * Delega toda la logica de negocio a InventarioController.
+ * Este archivo solo maneja HTTP: autenticacion, metodo y respuesta JSON.
  *
  * @package Dedumsoft\API
  * @author  Equipo Dedumsoft
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/InventarioInsumosRepository.php';
+require_once PRIVATE_PATH . '/Controllers/InventarioController.php';
 
-$repo = new InventarioInsumosRepository($connLogic);
+$ctrl = new InventarioController($connLogic);
 
 $method = api_init_dual(2, 2, ['GET', 'POST', 'PATCH', 'DELETE']);
 if ($method === 'GET') {
@@ -23,113 +24,70 @@ if ($method === 'GET') {
 }
 
 // =============================================================================
-// GET: Listar inventario de insumos
+// GET: Listar / Obtener por ID
 // =============================================================================
 if ($method === 'GET') {
     if (isset($_GET['id']) && $_GET['id'] !== '') {
-        try {
-            $row = $repo->obtenerPorId((int) $_GET['id']);
-        } catch (PDOException $e) {
-            api_log_error('inventario_insumos', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-            api_error(500, 'Error interno del servidor.');
+        $result = $ctrl->obtenerInsumos((int) $_GET['id']);
+    } else {
+        $offset    = isset($_GET['offset'])  ? (int) $_GET['offset']  : 0;
+        $limit     = isset($_GET['limit'])   ? (int) $_GET['limit']   : 50;
+        $categoria = $_GET['categoria'] ?? null;
+        $categoria = ($categoria === '') ? null : $categoria;
+
+        $stock_bajo = filter_var($_GET['stock_bajo'] ?? null, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($stock_bajo === null) {
+            $stock_bajo = false;
         }
-        api_ok($row ? [$row] : []);
+
+        $activo_raw = $_GET['activo'] ?? null;
+        $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        $result = $ctrl->listarInsumos($offset, $limit, $categoria, $stock_bajo, $activo);
     }
 
-    $offset    = isset($_GET['offset'])  ? (int) $_GET['offset']  : 0;
-    $limit     = isset($_GET['limit'])   ? (int) $_GET['limit']   : 50;
-    $categoria = $_GET['categoria'] ?? null;
-    $categoria = ($categoria === '') ? null : $categoria;
-
-    $stock_bajo = filter_var($_GET['stock_bajo'] ?? null, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-    if ($stock_bajo === null) {
-        $stock_bajo = false;
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    $activo_raw = $_GET['activo'] ?? null;
-    $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-
-    try {
-        $rows = $repo->listar($offset, $limit, $categoria, $stock_bajo, $activo);
-    } catch (PDOException $e) {
-        api_log_error('inventario_insumos', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
-    }
-
-    api_ok($rows);
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// POST: Crear insumo
+// POST: Crear
 // =============================================================================
 if ($method === 'POST') {
     $input = api_json_body();
     if ($input === null) {
         api_error(400, 'Datos JSON invalidos.');
     }
-    api_require_fields($input, ['nombre', 'categoria', 'unidad_medida', 'precio_unitario']);
 
-    try {
-        $ok = $repo->crear(
-            $input['nombre'],
-            $input['categoria'],
-            $input['unidad_medida'],
-            $input['precio_unitario'],
-            $input['descripcion'] ?? null,
-            $input['cantidad'] ?? null,
-            $input['stock_minimo'] ?? null,
-            isset($input['proveedor_id']) ? (int) $input['proveedor_id'] : null,
-            isset($input['ubicacion_id']) ? (int) $input['ubicacion_id'] : null
-        );
+    $result = $ctrl->crearInsumos($input);
 
-        if (!$ok) {
-            api_error(422, 'No se pudo crear el insumo.');
-        }
-
-        api_ok(null, 201, 'Insumo creado.');
-    } catch (PDOException $e) {
-        api_log_error('inventario_insumos', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error al crear insumo.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// PATCH: Actualizar insumo
+// PATCH: Actualizar
 // =============================================================================
 if ($method === 'PATCH') {
     $input = api_json_body();
-    if ($input === null || !isset($input['id'])) {
-        api_error(400, 'ID requerido.');
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
     }
 
-    try {
-        $ok = $repo->actualizar(
-            (int) $input['id'],
-            $input['nombre'] ?? null,
-            $input['categoria'] ?? null,
-            $input['descripcion'] ?? null,
-            $input['cantidad'] ?? null,
-            $input['unidad_medida'] ?? null,
-            $input['precio_unitario'] ?? null,
-            $input['stock_minimo'] ?? null,
-            isset($input['proveedor_id']) ? (int) $input['proveedor_id'] : null,
-            isset($input['ubicacion_id']) ? (int) $input['ubicacion_id'] : null
-        );
+    $result = $ctrl->actualizarInsumos($input);
 
-        if (!$ok) {
-            api_error(422, 'No se pudo actualizar el insumo.');
-        }
-
-        api_ok(null, 200, 'Insumo actualizado.');
-    } catch (PDOException $e) {
-        api_log_error('inventario_insumos', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Insumo no encontrado.' : 'Error al actualizar.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// DELETE: Eliminar insumo
+// DELETE: Eliminar
 // =============================================================================
 if ($method === 'DELETE') {
     $input = api_json_body();
@@ -139,17 +97,10 @@ if ($method === 'DELETE') {
         api_error(400, 'ID requerido.');
     }
 
-    try {
-        $ok = $repo->eliminar((int) $id);
+    $result = $ctrl->eliminarInsumos((int) $id);
 
-        if (!$ok) {
-            api_error(422, 'No se pudo eliminar el insumo.');
-        }
-
-        api_ok(null, 200, 'Insumo eliminado.');
-    } catch (PDOException $e) {
-        api_log_error('inventario_insumos', 'DELETE', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Insumo no encontrado.' : 'Error al eliminar.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
+    api_ok($result['data'], $result['code'], $result['message']);
 }

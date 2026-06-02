@@ -32,20 +32,14 @@
  * @author  Equipo Dedumsoft
  */
 
-// Cargar bootstrap
-require_once __DIR__ . '/../private/bootstrap.php';
+require_once __DIR__ . '/../private/page_helper.php';
+require_once PRIVATE_PATH . '/Controllers/OrdenController.php';
 
-require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
-require_once PRIVATE_PATH . '/Database/Connection.php';
-require_once PRIVATE_PATH . '/Repositories/CatalogoRepository.php';
-require_once PRIVATE_PATH . '/Repositories/ArtesanoRepository.php';
-
-// Verificar autenticación y autorización
-require_login('/login.php');
-require_menu_access(3); // Menú: Producción
-
-// Detectar modo de interfaz
-$legacy = dedumsoft_is_legacy_browser();
+// =============================================================================
+// CONTROLLER → OBTENER DATOS
+// =============================================================================
+page_init(3); // Menú: Producción
+$legacy = page_is_legacy();
 $user = get_session_user();
 
 // =============================================================================
@@ -60,160 +54,30 @@ if (!$artesano_id || $rolid === 1) {
     dedumsoft_forbidden();
 }
 
-$catRepo = new CatalogoRepository($connLogic);
-$artRepo = new ArtesanoRepository($connLogic);
+$ctrl = new OrdenController($connLogic);
+$pageData = $ctrl->pageDataArtesanoOrdenes($artesano_id, $legacy);
 
-// Obtener nombre del artesano para mostrar en encabezado
-$artesano_nombre = '';
-if ($artesano_id) {
-    try {
-        $artesano = $artRepo->obtenerPorId($artesano_id);
-        if ($artesano) {
-            $artesano_nombre = trim($artesano['nombre'] . ' ' . $artesano['apellido']);
-        }
-    } catch (PDOException $e) {
-        error_log('artesano lookup error: ' . $e->getMessage());
+$artesano_nombre = $pageData['artesano_nombre'];
+$estados_options = $pageData['estados_options'];
+$ordenes_rows    = $pageData['ordenes_rows'];
+
+// =============================================================================
+// RENDER
+// =============================================================================
+page_render_start(3);
+render_view('pages/artesano_ordenes', [
+    'artesano_id' => $artesano_id,
+    'artesano_nombre' => $artesano_nombre,
+    'ordenes_rows' => $ordenes_rows,
+    'legacy' => $legacy,
+]);
+page_render_end(function () use ($legacy, $artesano_id, $estados_options) {
+    if (!$artesano_id) {
+        return;
     }
-}
+    ?>
 
-$ordenes_rows = [];
-$estados_options = [];
-
-// Cargar estados de orden para dropdown
-try {
-    $estados_options = $catRepo->obtenerOpciones('estados_orden');
-} catch (Exception $e) {
-    error_log('estados_orden error: ' . $e->getMessage());
-}
-
-// Cargar órdenes del artesano para modo legacy
-if ($legacy && $artesano_id) {
-    try {
-        $ordenes_rows = $artRepo->obtenerOrdenes($artesano_id, 0, 50);
-    } catch (PDOException $e) {
-        error_log('artesano ordenes legacy error: ' . $e->getMessage());
-    }
-}
-
-include VIEWS_PATH . '/layouts/header.php';
-include VIEWS_PATH . '/layouts/nav.php';
-
-/**
- * Genera un badge HTML con color según la prioridad.
- * 
- * @param string $prioridad Nombre de la prioridad
- * @return string HTML del badge
- */
-function format_prioridad_badge($prioridad)
-{
-    $prioridad = strtolower(trim((string) $prioridad));
-    $cls = 'ds-badge--neutral';
-    if ($prioridad === 'alta' || $prioridad === 'urgente')
-        $cls = 'ds-badge--danger';
-    elseif ($prioridad === 'media' || $prioridad === 'normal')
-        $cls = 'ds-badge--warning';
-    elseif ($prioridad === 'baja')
-        $cls = 'ds-badge--muted';
-    return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars(ucfirst($prioridad ?: 'Normal')) . '</span>';
-}
-
-/**
- * Genera un badge HTML con color según el estado de la orden.
- * 
- * @param string $estado Nombre del estado
- * @return string HTML del badge
- */
-function format_estado_badge($estado)
-{
-    $estado_lower = strtolower(trim((string) $estado));
-    $cls = 'ds-badge--neutral';
-    if ($estado_lower === 'pendiente')
-        $cls = 'ds-badge--warning';
-    elseif ($estado_lower === 'en_proceso')
-        $cls = 'ds-badge--info';
-    elseif ($estado_lower === 'terminada')
-        $cls = 'ds-badge--success';
-    elseif ($estado_lower === 'cancelada')
-        $cls = 'ds-badge--danger';
-    elseif ($estado_lower === 'pausada')
-        $cls = 'ds-badge--muted';
-    return '<span class="ds-badge ' . $cls . '">' . htmlspecialchars(strtoupper(str_replace('_', ' ', $estado ?: 'Sin estado'))) . '</span>';
-}
-?>
-<div class="content">
-    <div class="content-header">
-        <h1>Mis Ordenes</h1>
-        <p>Ordenes asignadas a <?php echo htmlspecialchars($artesano_nombre ?: 'mi'); ?></p>
-    </div>
-
-    <?php if (!$artesano_id): ?>
-    <div class="ds-alert ds-alert--warning">
-        <strong>Atencion:</strong> No se encontro un perfil de artesano asociado a tu cuenta.
-        Contacta al administrador para vincular tu usuario.
-    </div>
-    <?php else: ?>
-
-    <div class="card">
-        <div class="ds-toolbar">
-            <strong>Ordenes de produccion</strong>
-        </div>
-        <div class="table-responsive">
-            <table id="ordenes-artesano-table" class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Id</th>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Prioridad</th>
-                        <th>Estado</th>
-                        <th>Fecha inicio</th>
-                        <th>Fecha estimada</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($legacy): ?>
-                    <?php foreach ($ordenes_rows as $row): ?>
-                    <tr data-id="<?php echo (int) $row['id']; ?>">
-                        <td><?php echo (int) $row['id']; ?></td>
-                        <td><?php echo htmlspecialchars((string) $row['producto_nombre']); ?></td>
-                        <td><?php echo (int) $row['cantidad']; ?></td>
-                        <td><?php echo format_prioridad_badge($row['prioridad']); ?></td>
-                        <td><?php echo format_estado_badge($row['estado']); ?></td>
-                        <td><?php echo $row['fecha_inicio'] ? date('Y-m-d', strtotime($row['fecha_inicio'])) : '-'; ?>
-                        </td>
-                        <td><?php echo $row['fecha_fin_estimada'] ? date('Y-m-d', strtotime($row['fecha_fin_estimada'])) : '-'; ?>
-                        </td>
-                        <td class="ds-actions-col">
-                            <button type="button" class="ds-action-btn" data-action="estado" title="Cambiar estado">
-                                <img src="assets/icons/fatcow/16/arrow_refresh.png" alt="Estado" class="ds-icon-img">
-                            </button>
-                            <button type="button" class="ds-action-btn" data-action="consumo" title="Registrar consumo">
-                                <img src="assets/icons/fatcow/16/box_out.png" alt="Consumo" class="ds-icon-img">
-                            </button>
-                            <button type="button" class="ds-action-btn" data-action="terminar"
-                                title="Registrar pieza terminada">
-                                <img src="assets/icons/fatcow/16/tick.png" alt="Terminar" class="ds-icon-img">
-                            </button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                    <?php if (empty($ordenes_rows)): ?>
-                    <tr>
-                        <td colspan="8" class="text-center">No tienes ordenes asignadas</td>
-                    </tr>
-                    <?php endif; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <?php endif; ?>
-</div>
-
-<?php include VIEWS_PATH . '/layouts/footer.php'; ?>
-
-<?php if (!$legacy && $artesano_id): ?>
+<?php if (!$legacy): ?>
 <script>
 $(() => {
     const dtLang = {
@@ -721,6 +585,5 @@ $(() => {
 })();
 </script>
 <?php endif; ?>
-</body>
-
-</html>
+    <?php
+});

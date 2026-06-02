@@ -4,15 +4,16 @@
  * API REST: OPCIONES DINAMICAS PARA FORMULARIOS
  * ============================================================================
  *
- * Endpoint centralizado para obtener listas de opciones para dropdowns.
+ * Delega toda la lógica de negocio a CatalogoController.
+ * Este archivo solo maneja HTTP: autenticación, método y respuesta JSON.
  *
  * @package Dedumsoft\API
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/CatalogoRepository.php';
+require_once PRIVATE_PATH . '/Controllers/CatalogoController.php';
 
-$repo = new CatalogoRepository($connLogic);
+$ctrl = new CatalogoController($connLogic);
 
 // Opciones usa GET pero valida permisos de forma granular
 if (!validateHttpMethod('GET')) {
@@ -65,20 +66,14 @@ if (!$requested_types) {
     dedumsoft_forbidden();
 }
 
-try {
-    $opciones = [];
-    foreach ($requested_types as $requested) {
-        $opciones[$requested] = $repo->obtenerOpciones($requested);
-    }
+$result = $ctrl->listarOpciones($requested_types);
 
-    if ($tipo && isset($opciones[$tipo])) {
-        api_ok($opciones[$tipo]);
-    } else {
-        api_ok($opciones);
-    }
-} catch (InvalidArgumentException $e) {
-    api_error(400, $e->getMessage());
-} catch (PDOException $e) {
-    api_log_error('opciones', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-    api_error(500, 'Error interno del servidor.');
+if (!$result['success']) {
+    api_error($result['code'], $result['message']);
+}
+
+if ($tipo && isset($result['data'][$tipo])) {
+    api_ok($result['data'][$tipo]);
+} else {
+    api_ok($result['data']);
 }

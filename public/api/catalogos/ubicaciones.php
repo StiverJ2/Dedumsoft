@@ -4,96 +4,77 @@
  * API REST: UBICACIONES DE ALMACEN
  * ============================================================================
  *
- * Endpoint CRUD para gestion de ubicaciones fisicas del inventario.
- *
- * Autenticacion: Requerida (JWT en sesion)
- * Autorizacion: Menu 7 (Configuracion)
+ * Delega toda la lógica de negocio a CatalogoController.
+ * Este archivo solo maneja HTTP: autenticación, método y respuesta JSON.
  *
  * @package Dedumsoft\API
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/UbicacionRepository.php';
+require_once PRIVATE_PATH . '/Controllers/CatalogoController.php';
 
-$repo = new UbicacionRepository($connLogic);
+$ctrl = new CatalogoController($connLogic);
+
 $method = api_init(7, ['GET', 'POST', 'PATCH', 'DELETE']);
 
 // =============================================================================
-// GET: Listar ubicaciones
+// GET: Listar / Obtener por ID
 // =============================================================================
 if ($method === 'GET') {
-    $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
-    $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
-    $area_id = isset($_GET['area_id']) && $_GET['area_id'] !== '' ? (int) $_GET['area_id'] : null;
-    $activo_raw = $_GET['activo'] ?? null;
-    $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    if (isset($_GET['id']) && $_GET['id'] !== '') {
+        $result = $ctrl->obtenerUbicacion((int) $_GET['id']);
+    } else {
+        $offset  = isset($_GET['offset'])  ? (int) $_GET['offset']  : 0;
+        $limit   = isset($_GET['limit'])   ? (int) $_GET['limit']   : 100;
+        $area_id = isset($_GET['area_id']) && $_GET['area_id'] !== '' ? (int) $_GET['area_id'] : null;
+        $activo_raw = $_GET['activo'] ?? null;
+        $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
 
-    try {
-        $rows = $repo->listar($offset, $limit, $area_id, $activo);
-    } catch (PDOException $e) {
-        api_log_error('ubicaciones', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
+        $result = $ctrl->listarUbicaciones($offset, $limit, $area_id, $activo);
     }
 
-    api_ok($rows);
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
+    }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// POST: Crear ubicacion
+// POST: Crear
 // =============================================================================
 if ($method === 'POST') {
     $input = api_json_body();
     if ($input === null) {
         api_error(400, 'Datos JSON invalidos.');
     }
-    api_require_fields($input, ['nombre']);
 
-    try {
-        $id = $repo->crear($input['nombre'], $input['descripcion'] ?? null, isset($input['area_id']) ? (int) $input['area_id'] : null);
-    } catch (PDOException $e) {
-        api_log_error('ubicaciones', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error al crear ubicacion.');
+    $result = $ctrl->crearUbicacion($input);
+
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    if ($id <= 0) {
-        api_error(422, 'No se pudo crear la ubicacion.');
-    }
-
-    api_ok(['id' => $id], 201, 'Ubicacion creada.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// PATCH: Actualizar ubicacion
+// PATCH: Actualizar
 // =============================================================================
 if ($method === 'PATCH') {
     $input = api_json_body();
-    if ($input === null || !isset($input['id'])) {
-        api_error(400, 'ID requerido.');
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
     }
 
-    try {
-        $ok = $repo->actualizar(
-            (int) $input['id'],
-            $input['nombre'] ?? null,
-            $input['descripcion'] ?? null,
-            isset($input['area_id']) ? (int) $input['area_id'] : null,
-            isset($input['activo']) ? (bool) $input['activo'] : null
-        );
-    } catch (PDOException $e) {
-        api_log_error('ubicaciones', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Ubicacion no encontrada.' : 'Error al actualizar.');
-    }
+    $result = $ctrl->actualizarUbicacion($input);
 
-    if (!$ok) {
-        api_error(422, 'No se pudo actualizar la ubicacion.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    api_ok(null, 200, 'Ubicacion actualizada.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// DELETE: Eliminar ubicacion
+// DELETE: Eliminar
 // =============================================================================
 if ($method === 'DELETE') {
     $input = api_json_body();
@@ -103,17 +84,10 @@ if ($method === 'DELETE') {
         api_error(400, 'ID requerido.');
     }
 
-    try {
-        $ok = $repo->eliminar((int) $id);
-    } catch (PDOException $e) {
-        api_log_error('ubicaciones', 'DELETE', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Ubicacion no encontrada.' : 'Error al eliminar.');
-    }
+    $result = $ctrl->eliminarUbicacion((int) $id);
 
-    if (!$ok) {
-        api_error(422, 'No se pudo eliminar la ubicacion.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    api_ok(null, 200, 'Ubicacion eliminada.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }

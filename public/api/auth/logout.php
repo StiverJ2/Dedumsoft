@@ -10,28 +10,17 @@
  * Seguridad:
  * - Solo acepta método POST (previene CSRF vía GET)
  * - Valida token CSRF del formulario
- * - Invalida token JWT en BD antes de destruir sesión
- * 
- * Flujo:
- * 1. Validar método POST
- * 2. Validar token CSRF
- * 3. Obtener JWT de sesión
- * 4. Marcar token como inválido en BD (estado_token = FALSE)
- * 5. Destruir sesión PHP
- * 6. Redirigir a login
+ * - Delega invalidación de token y destrucción de sesión a UsuarioController
  * 
  * @package Dedumsoft\Auth
  * @author  Equipo Dedumsoft
  */
 
-// Cargar bootstrap
 require_once __DIR__ . '/../../../private/bootstrap.php';
-
-// Cargar dependencias
 require_once PRIVATE_PATH . '/Database/Connection.php';
 require_once PRIVATE_PATH . '/Http/MethodValidator.php';
 require_once PRIVATE_PATH . '/Auth/SessionManager.php';
-require_once PRIVATE_PATH . '/Repositories/UsuarioRepository.php';
+require_once PRIVATE_PATH . '/Controllers/UsuarioController.php';
 
 // Solo aceptar POST para prevenir CSRF via URL
 if (!validateHttpMethod('POST')) {
@@ -49,18 +38,13 @@ if (!dedumsoft_validate_csrf($_POST['csrf_token'] ?? null)) {
 // Obtener JWT actual de la sesión
 $token = $_SESSION['jwt'] ?? null;
 
-// Invalidar token en base de datos
-if ($token) {
-    try {
-        $repo = new UsuarioRepository($connLogic);
-        $repo->invalidarToken($token);
-    } catch (PDOException $e) {
-        // Loggear error pero continuar con el logout
-        error_log('logout error: ' . $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-    }
+// Delegar invalidación de token y destrucción de sesión al controller
+$ctrl = new UsuarioController($connLogic);
+$result = $ctrl->logout($token);
+
+if (!$result['success']) {
+    error_log('Logout failed: ' . $result['message']);
 }
 
-// Destruir sesión PHP y redirigir al login
-session_destroy();
 header('Location: ' . base_url() . '/login.php');
 exit;

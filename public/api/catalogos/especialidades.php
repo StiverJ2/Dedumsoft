@@ -4,130 +4,89 @@
  * API REST: ESPECIALIDADES DE ARTESANOS
  * ============================================================================
  *
- * Endpoint CRUD para catalogo de especialidades.
- *
- * Autenticacion: Requerida (JWT en sesion)
- * Autorizacion: Menu 7 (Configuracion)
+ * Delega toda la lógica de negocio a CatalogoController.
+ * Este archivo solo maneja HTTP: autenticación, método y respuesta JSON.
  *
  * @package Dedumsoft\API
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/CatalogoRepository.php';
+require_once PRIVATE_PATH . '/Controllers/CatalogoController.php';
 
-$repo = new CatalogoRepository($connLogic);
+$ctrl = new CatalogoController($connLogic);
+
 $method = api_init(7, ['GET', 'POST', 'PATCH', 'DELETE']);
 
 // =============================================================================
-// GET: Listar especialidades
+// GET: Listar / Obtener por ID
 // =============================================================================
 if ($method === 'GET') {
-    $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-    $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
-    $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
-    if ($limit <= 0) $limit = 100;
-    if ($limit > 500) $limit = 500;
+    if (isset($_GET['id']) && $_GET['id'] !== '') {
+        $result = $ctrl->obtenerEspecialidad((int) $_GET['id']);
+    } else {
+        $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
+        $limit  = isset($_GET['limit'])  ? (int) $_GET['limit']  : 100;
+        if ($limit <= 0) $limit = 100;
+        if ($limit > 500) $limit = 500;
 
-    $activo_param = isset($_GET['activo']) ? trim((string) $_GET['activo']) : null;
-    $use_activo_filter = true;
-    $activo = true;
-    if ($activo_param !== null && $activo_param !== '') {
-        $activo_param = strtolower($activo_param);
-        if ($activo_param === 'all') {
-            $use_activo_filter = false;
-            $activo = null;
-        } else {
-            $activo = ($activo_param === '1' || $activo_param === 'true' || $activo_param === 't');
-        }
-    }
-
-    try {
-        if ($id > 0) {
-            $row = $repo->obtenerEspecialidadPorId($id);
-            if (!$row) {
-                api_error(404, 'Especialidad no encontrada.');
+        $activo_param = isset($_GET['activo']) ? trim((string) $_GET['activo']) : null;
+        $use_activo_filter = true;
+        $activo = true;
+        if ($activo_param !== null && $activo_param !== '') {
+            $activo_param = strtolower($activo_param);
+            if ($activo_param === 'all') {
+                $use_activo_filter = false;
+                $activo = null;
+            } else {
+                $activo = ($activo_param === '1' || $activo_param === 'true' || $activo_param === 't');
             }
-            $rows = [$row];
-        } else {
-            $rows = $repo->listarEspecialidades($offset, $limit, $use_activo_filter ? $activo : null);
         }
-    } catch (PDOException $e) {
-        api_log_error('especialidades', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
+
+        $result = $ctrl->listarEspecialidades($offset, $limit, $use_activo_filter ? $activo : null);
     }
 
-    api_ok($rows);
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
+    }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// POST: Crear especialidad
+// POST: Crear
 // =============================================================================
 if ($method === 'POST') {
     $input = api_json_body();
     if ($input === null) {
         api_error(400, 'Datos JSON invalidos.');
     }
-    api_require_fields($input, ['nombre']);
 
-    $nombre = trim((string) $input['nombre']);
-    $descripcion = isset($input['descripcion']) ? trim((string) $input['descripcion']) : '';
-    $descripcion = $descripcion === '' ? null : $descripcion;
+    $result = $ctrl->crearEspecialidad($input);
 
-    try {
-        $id = $repo->crearEspecialidad($nombre, $descripcion);
-    } catch (PDOException $e) {
-        api_log_error('especialidades', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        if ($e->getCode() == 23505) {
-            api_error(409, 'La especialidad ya existe.');
-        }
-        api_error(500, 'Error interno del servidor.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    if ($id <= 0) {
-        api_error(500, 'Error al crear especialidad.');
-    }
-
-    api_ok(['id' => $id], 201, 'Especialidad creada.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// PATCH: Actualizar especialidad
+// PATCH: Actualizar
 // =============================================================================
 if ($method === 'PATCH') {
     $input = api_json_body();
-    if ($input === null || !isset($input['id'])) {
-        api_error(400, 'ID requerido.');
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
     }
 
-    $id = (int) $input['id'];
-    $nombre = isset($input['nombre']) ? trim((string) $input['nombre']) : null;
-    $descripcion = isset($input['descripcion']) ? trim((string) $input['descripcion']) : null;
-    $activo = array_key_exists('activo', $input) ? filter_var($input['activo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
+    $result = $ctrl->actualizarEspecialidad($input);
 
-    $nombre = ($nombre !== null && $nombre !== '') ? $nombre : null;
-    $descripcion = ($descripcion !== null && $descripcion !== '') ? $descripcion : null;
-
-    if ($nombre === null && $descripcion === null && $activo === null) {
-        api_error(400, 'No hay campos para actualizar.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    try {
-        $ok = $repo->actualizarEspecialidad($id, $nombre, $descripcion, $activo);
-    } catch (PDOException $e) {
-        api_log_error('especialidades', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Especialidad no encontrada.' : 'Error interno del servidor.');
-    }
-
-    if (!$ok) {
-        api_error(422, 'No se pudo actualizar la especialidad.');
-    }
-
-    api_ok(null, 200, 'Especialidad actualizada.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// DELETE: Eliminar especialidad
+// DELETE: Eliminar
 // =============================================================================
 if ($method === 'DELETE') {
     $input = api_json_body();
@@ -135,19 +94,10 @@ if ($method === 'DELETE') {
         api_error(400, 'ID requerido.');
     }
 
-    $id = (int) $input['id'];
+    $result = $ctrl->eliminarEspecialidad((int) $input['id']);
 
-    try {
-        $ok = $repo->eliminarEspecialidad($id);
-    } catch (PDOException $e) {
-        api_log_error('especialidades', 'DELETE', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrada') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Especialidad no encontrada.' : 'Error interno del servidor.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    if (!$ok) {
-        api_error(422, 'No se pudo eliminar la especialidad.');
-    }
-
-    api_ok(null, 200, 'Especialidad eliminada.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }

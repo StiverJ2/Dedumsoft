@@ -4,14 +4,15 @@
  * PÁGINA PÚBLICA: CONFIGURACIÓN DEL SISTEMA
  * ============================================================================
  *
- * Página de configuración y preferencias del usuario.
- * Permite cambiar entre modo normal y modo legacy (IE8).
+ * Delega toda la lógica de negocio a CatalogoController y la vista a
+ * views/pages/configuracion.php.
  *
  * @package Dedumsoft\Public
  * @author  Equipo Dedumsoft
  */
 
 require_once __DIR__ . '/../private/page_helper.php';
+require_once PRIVATE_PATH . '/Controllers/CatalogoController.php';
 
 // =============================================================================
 // INICIALIZACIÓN
@@ -19,25 +20,19 @@ require_once __DIR__ . '/../private/page_helper.php';
 page_init(7); // Menú: Configuración
 $legacy = page_is_legacy();
 
-// =============================================================================
-// DATA LAYER
-// =============================================================================
+$ctrl = new CatalogoController($connLogic);
 
-$mode_override = dedumsoft_ui_mode_override();
-$ua_legacy = dedumsoft_is_legacy_ua();
-$current_mode = $mode_override !== '' ? $mode_override : ($ua_legacy ? 'legacy' : 'normal');
-$status_msg = '';
-
+// =============================================================================
+// HTTP-LEVEL POST HANDLING (cookie + redirect se mantienen en la página)
+// =============================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!dedumsoft_validate_csrf($_POST['csrf_token'] ?? null)) {
         header('Location: ' . base_url() . '/configuracion.php?error=csrf');
         exit;
     }
 
-    $mode = strtolower(trim($_POST['ui_mode'] ?? ''));
-    if ($mode !== 'legacy' && $mode !== 'normal') {
-        $mode = $current_mode;
-    }
+    $result = $ctrl->guardarConfiguracion($_POST['ui_mode'] ?? '');
+    $mode = $result['data']['mode'];
 
     $secure = dedumsoft_cookie_secure();
     setcookie('dedumsoft_ui_mode', $mode, [
@@ -52,43 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-if (($_GET['updated'] ?? '') === '1') {
-    $status_msg = 'Preferencia guardada.';
-} elseif (($_GET['error'] ?? '') === 'csrf') {
-    $status_msg = 'Error de seguridad. Intenta de nuevo.';
-}
+// =============================================================================
+// CONTROLLER → OBTENER DATOS
+// =============================================================================
+$pageData = $ctrl->pageDataConfiguracion($_GET, $legacy);
 
 // =============================================================================
-// RENDER LAYER
+// RENDER
 // =============================================================================
-
 page_render_start(7);
-?>
-<div class="content">
-    <div class="content-header">
-        <h1>Configuracion</h1>
-        <p>Ajustes generales del sistema</p>
-    </div>
-    <div class="card">
-        <strong>Modo de compatibilidad</strong>
-        <p>Selecciona la vista preferida para este equipo.</p>
-        <?php if ($status_msg !== ''): ?>
-            <p class="ds-status"><?php echo page_e($status_msg); ?></p>
-        <?php endif; ?>
-        <form method="post" action="configuracion.php">
-            <input type="hidden" name="csrf_token" value="<?php echo page_e(dedumsoft_csrf_token()); ?>">
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="ui_mode" id="ui-normal" value="normal" <?php echo $current_mode === 'normal' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="ui-normal">Normal (recomendado)</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="ui_mode" id="ui-legacy" value="legacy" <?php echo $current_mode === 'legacy' ? 'checked' : ''; ?>>
-                <label class="form-check-label" for="ui-legacy">Legacy (IE8)</label>
-            </div>
-            <button type="submit" class="btn btn-sm mt-2">Guardar</button>
-        </form>
-    </div>
-</div>
-<?php
+render_view('pages/configuracion', $pageData);
 page_render_end();
 ?>

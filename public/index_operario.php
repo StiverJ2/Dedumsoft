@@ -3,28 +3,9 @@
  * ============================================================================
  * PÁGINA PÚBLICA: INICIO PARA OPERARIOS
  * ============================================================================
- * 
- * Página de inicio simplificada para usuarios sin acceso al dashboard.
- * Muestra accesos directos a las secciones permitidas según el rol.
- * 
- * Características:
- * - Tarjetas de acceso rápido a módulos autorizados
- * - Redirección automática a index.php si tiene permiso de dashboard
- * - Acceso especial "Mis Órdenes" para artesanos
- * - Soporte dual: íconos emoji (moderno) o PNG Fatcow (legacy)
- * 
- * Autenticación: Requerida
- * Autorización: Al menos un permiso de menú (excepto dashboard)
- * 
- * Módulos posibles:
- * - Mis Órdenes (artesanos)
- * - Producción (Menú 3)
- * - Inventario (Menú 2)
- * - Proveedores (Menú 6)
- * - Reportes (Menú 4)
- * - Usuarios (Menú 5)
- * - Configuración (Menú 7)
- * 
+ *
+ * Delega la vista a views/pages/index_operario.php.
+ *
  * @package Dedumsoft\Public
  * @author  Equipo Dedumsoft
  */
@@ -131,32 +112,17 @@ if ($can_config) {
     ];
 }
 
-include VIEWS_PATH . '/layouts/header.php';
-include VIEWS_PATH . '/layouts/nav.php';
+require_once __DIR__ . '/../private/page_helper.php';
+require_menu_access(3);
 
 $tones = ['gold', 'silver', 'bronze', 'pearl'];
+$pageData = [
+    'cards' => $cards,
+    'legacy' => $legacy,
+    'tones' => $tones,
+];
+
+page_render_start(3);
+render_view('pages/index_operario', $pageData);
+page_render_end();
 ?>
-<div class="content">
-    <div class="content-header">
-        <h1>Panel Operario</h1>
-        <p>Accesos rapidos segun tus permisos</p>
-    </div>
-
-    <div class="dashboard-grid">
-        <?php foreach ($cards as $idx => $card): ?>
-            <a class="dashboard-card <?php echo $tones[$idx % count($tones)]; ?>"
-                href="<?php echo htmlspecialchars($card['href']); ?>" style="color: inherit; text-decoration: none;">
-                <div class="card-icon"><?php echo $card['icon']; ?></div>
-                <h3><?php echo htmlspecialchars($card['title']); ?></h3>
-                <p class="stat"><?php echo htmlspecialchars($card['cta']); ?></p>
-                <div class="card-footer">
-                    <span><?php echo htmlspecialchars($card['desc']); ?></span>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </div>
-</div>
-<?php include VIEWS_PATH . '/layouts/footer.php'; ?>
-</body>
-
-</html>

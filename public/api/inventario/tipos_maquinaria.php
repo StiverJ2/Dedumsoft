@@ -4,18 +4,16 @@
  * API REST: TIPOS DE MAQUINARIA
  * ============================================================================
  *
- * Endpoint para obtener los tipos de maquinaria disponibles.
- *
- * Autenticacion: Requerida (JWT en sesion)
- * Autorizacion: Menu 2 (Inventario)
+ * Delega toda la lógica de negocio a CatalogoController.
+ * Este archivo solo maneja HTTP: autenticación, método y respuesta JSON.
  *
  * @package Dedumsoft\API
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/CatalogoRepository.php';
+require_once PRIVATE_PATH . '/Controllers/CatalogoController.php';
 
-$repo = new CatalogoRepository($connLogic);
+$ctrl = new CatalogoController($connLogic);
 $method = api_init(2, ['GET']);
 
 // =============================================================================
@@ -27,12 +25,10 @@ if ($method === 'GET') {
         $activo = true;
     }
 
-    try {
-        $rows = $repo->obtenerTiposMaquinaria($activo);
-    } catch (PDOException $e) {
-        api_log_error('tipos_maquinaria', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
-    }
+    $result = $ctrl->listarTiposMaquinaria($activo);
 
-    api_ok($rows);
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
+    }
+    api_ok($result['data'], $result['code'], $result['message']);
 }

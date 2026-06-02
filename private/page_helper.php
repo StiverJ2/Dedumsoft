@@ -29,6 +29,7 @@ if (!defined('DEDUMSOFT_APP')) {
 require_once PRIVATE_PATH . '/Auth/AuthMiddleware.php';
 require_once PRIVATE_PATH . '/Database/Connection.php';
 require_once PRIVATE_PATH . '/Database/Guard.php';
+require_once PRIVATE_PATH . '/view_helper.php';
 
 /**
  * Inicializa una página HTML protegida.
@@ -72,13 +73,19 @@ function page_render_start(int $menu_id, ?string $uplot = null): void
 }
 
 /**
- * Renderiza el cierre de la página (footer + cierre de body/html).
+ * Renderiza el cierre de la página (footer + scripts de página + cierre de body/html).
  *
+ * @param callable|null $after_footer Callback opcional para scripts dependientes del footer
  * @return void
  */
-function page_render_end(): void
+function page_render_end(?callable $after_footer = null): void
 {
     include VIEWS_PATH . '/layouts/footer.php';
+
+    if ($after_footer !== null) {
+        $after_footer();
+    }
+
     echo "\n</body>\n</html>\n";
 }
 

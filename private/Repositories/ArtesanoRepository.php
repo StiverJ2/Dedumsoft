@@ -11,7 +11,7 @@
  * - Solo prepara parametros y ejecuta la funcion correspondiente.
  *
  * Funciones PL/pgSQL utilizadas:
- *   fun_obtener_artesano_ordenes(artesano_id, offset, limit) → SETOF
+ *   fun_obtener_ordenes_artesano(artesano_id, offset, limit) → SETOF
  *   fun_artesano_registrar_consumo(orden_id, tipo_material, material_id, cantidad, usuario_id) → RECORD(success, mensaje, consumo_id)
  *   fun_artesano_marcar_terminada(orden_id, peso_final, tiempo_real, calidad_id, observaciones) → RECORD(success, mensaje, creacion_id, costo_materiales)
  *
@@ -34,7 +34,7 @@ class ArtesanoRepository extends Repository
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, producto_id, producto_nombre, cantidad, estado_id, estado, prioridad_id, prioridad, fecha_creacion, fecha_inicio, fecha_fin_estimada, fecha_fin_real, observaciones
-             FROM fun_obtener_artesano_ordenes(:artesano_id, :offset, :limit)'
+             FROM fun_obtener_ordenes_artesano(:artesano_id, :offset, :limit)'
         );
         $stmt->bindValue(':artesano_id', $artesano_id, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);

@@ -4,16 +4,17 @@
  * API REST: INVENTARIO DE ORO
  * ============================================================================
  *
- * Endpoint CRUD para gestion del inventario de oro.
+ * Delega toda la logica de negocio a InventarioController.
+ * Este archivo solo maneja HTTP: autenticacion, metodo y respuesta JSON.
  *
  * @package Dedumsoft\API
  * @author  Equipo Dedumsoft
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/InventarioOroRepository.php';
+require_once PRIVATE_PATH . '/Controllers/InventarioController.php';
 
-$repo = new InventarioOroRepository($connLogic);
+$ctrl = new InventarioController($connLogic);
 
 $method = api_init_dual(2, 2, ['GET', 'POST', 'PATCH', 'DELETE']);
 if ($method === 'GET') {
@@ -23,103 +24,64 @@ if ($method === 'GET') {
 }
 
 // =============================================================================
-// GET: Listar inventario de oro
+// GET: Listar / Obtener por ID
 // =============================================================================
 if ($method === 'GET') {
     if (isset($_GET['id']) && $_GET['id'] !== '') {
-        try {
-            $row = $repo->obtenerPorId((int) $_GET['id']);
-        } catch (PDOException $e) {
-            api_log_error('inventario_oro', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-            api_error(500, 'Error interno del servidor.');
-        }
-        api_ok($row ? [$row] : []);
+        $result = $ctrl->obtenerOro((int) $_GET['id']);
+    } else {
+        $offset  = isset($_GET['offset'])  ? (int) $_GET['offset']  : 0;
+        $limit   = isset($_GET['limit'])   ? (int) $_GET['limit']   : 50;
+        $tipo_id = isset($_GET['tipo_id']) && $_GET['tipo_id'] !== '' ? (int) $_GET['tipo_id'] : null;
+
+        $activo_raw = $_GET['activo'] ?? null;
+        $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        $result = $ctrl->listarOro($offset, $limit, $tipo_id, $activo);
     }
 
-    $offset  = isset($_GET['offset'])  ? (int) $_GET['offset']  : 0;
-    $limit   = isset($_GET['limit'])   ? (int) $_GET['limit']   : 50;
-    $tipo_id = isset($_GET['tipo_id']) && $_GET['tipo_id'] !== '' ? (int) $_GET['tipo_id'] : null;
-
-    $activo_raw = $_GET['activo'] ?? null;
-    $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-
-    try {
-        $rows = $repo->listar($offset, $limit, $tipo_id, $activo);
-    } catch (PDOException $e) {
-        api_log_error('inventario_oro', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    api_ok($rows);
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// POST: Crear registro de oro
+// POST: Crear
 // =============================================================================
 if ($method === 'POST') {
     $input = api_json_body();
     if ($input === null) {
         api_error(400, 'Datos JSON invalidos.');
     }
-    api_require_fields($input, ['tipo_oro_id', 'peso_gramos', 'precio_gramo']);
 
-    try {
-        $ok = $repo->crear(
-            (int) $input['tipo_oro_id'],
-            $input['peso_gramos'],
-            $input['precio_gramo'],
-            isset($input['proveedor_id']) ? (int) $input['proveedor_id'] : null,
-            $input['fecha_ingreso'] ?? null,
-            $input['ubicacion'] ?? null,
-            $input['pureza'] ?? null
-        );
+    $result = $ctrl->crearOro($input);
 
-        if (!$ok) {
-            api_error(422, 'No se pudo crear el registro.');
-        }
-
-        api_ok(null, 201, 'Registro creado.');
-    } catch (PDOException $e) {
-        api_log_error('inventario_oro', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error al crear registro.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// PATCH: Actualizar registro de oro
+// PATCH: Actualizar
 // =============================================================================
 if ($method === 'PATCH') {
     $input = api_json_body();
-    if ($input === null || !isset($input['id'])) {
-        api_error(400, 'ID requerido.');
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
     }
 
-    try {
-        $ok = $repo->actualizar(
-            (int) $input['id'],
-            isset($input['tipo_oro_id']) ? (int) $input['tipo_oro_id'] : null,
-            $input['peso_gramos'] ?? null,
-            $input['precio_gramo'] ?? null,
-            isset($input['proveedor_id']) ? (int) $input['proveedor_id'] : null,
-            $input['fecha_ingreso'] ?? null,
-            $input['ubicacion'] ?? null,
-            $input['pureza'] ?? null
-        );
+    $result = $ctrl->actualizarOro($input);
 
-        if (!$ok) {
-            api_error(422, 'No se pudo actualizar el registro.');
-        }
-
-        api_ok(null, 200, 'Registro actualizado.');
-    } catch (PDOException $e) {
-        api_log_error('inventario_oro', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Registro no encontrado.' : 'Error al actualizar.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// DELETE: Eliminar registro de oro
+// DELETE: Eliminar
 // =============================================================================
 if ($method === 'DELETE') {
     $input = api_json_body();
@@ -129,17 +91,10 @@ if ($method === 'DELETE') {
         api_error(400, 'ID requerido.');
     }
 
-    try {
-        $ok = $repo->eliminar((int) $id);
+    $result = $ctrl->eliminarOro((int) $id);
 
-        if (!$ok) {
-            api_error(422, 'No se pudo eliminar el registro.');
-        }
-
-        api_ok(null, 200, 'Registro eliminado.');
-    } catch (PDOException $e) {
-        api_log_error('inventario_oro', 'DELETE', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Registro no encontrado.' : 'Error al eliminar.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
+    api_ok($result['data'], $result['code'], $result['message']);
 }

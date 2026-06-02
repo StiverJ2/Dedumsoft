@@ -4,18 +4,17 @@
  * API REST: ORDENES DEL ARTESANO
  * ============================================================================
  *
- * Endpoint para que los artesanos consulten sus ordenes asignadas.
+ * Delega toda la logica de negocio a OrdenController.
+ * Este archivo solo maneja HTTP: autenticacion, metodo y respuesta JSON.
  *
  * @package Dedumsoft\API\Artesano
  * @author  Equipo Dedumsoft
  */
 
 require_once __DIR__ . '/../../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/ArtesanoRepository.php';
-require_once PRIVATE_PATH . '/Repositories/OrdenRepository.php';
+require_once PRIVATE_PATH . '/Controllers/OrdenController.php';
 
-$artesanoRepo = new ArtesanoRepository($connLogic);
-$ordenRepo    = new OrdenRepository($connLogic);
+$ctrl = new OrdenController($connLogic);
 
 $method = api_init(3, ['GET', 'PATCH']);
 
@@ -27,18 +26,12 @@ if ($method === 'GET') {
     $offset      = isset($_GET['offset'])      ? (int) $_GET['offset']      : 0;
     $limit       = isset($_GET['limit'])       ? (int) $_GET['limit']       : 50;
 
-    if ($artesano_id <= 0) {
-        api_error(400, 'artesano_id requerido.');
-    }
+    $result = $ctrl->listarArtesanoOrdenes($artesano_id, $offset, $limit);
 
-    try {
-        $rows = $artesanoRepo->obtenerOrdenes($artesano_id, $offset, $limit);
-    } catch (PDOException $e) {
-        api_log_error('artesano_ordenes', 'GET', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    api_ok($rows);
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
@@ -49,21 +42,11 @@ if ($method === 'PATCH') {
     if ($input === null) {
         api_error(400, 'Datos JSON invalidos.');
     }
-    api_require_fields($input, ['id', 'estado_id']);
 
-    $id        = (int) $input['id'];
-    $estado_id = (int) $input['estado_id'];
+    $result = $ctrl->cambiarEstadoOrden($input);
 
-    try {
-        $result = $ordenRepo->cambiarEstado($id, $estado_id);
-
-        if (!$result['success']) {
-            api_error(400, $result['mensaje']);
-        }
-
-        api_ok(null, 200, $result['mensaje']);
-    } catch (PDOException $e) {
-        api_log_error('artesano_ordenes', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        api_error(500, 'Error interno del servidor.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
+    api_ok($result['data'], $result['code'], $result['message']);
 }

@@ -1,126 +1,73 @@
 <?php
 /**
  * ============================================================================
- * API REST: USUARIOS (ACTIVAR/DESACTIVAR)
+ * API REST: USUARIOS
  * ============================================================================
  *
- * Endpoint para gestionar usuarios del sistema.
- * Usa soft-delete en seguridad.seg_usuario (deleted_at).
- *
- * Autenticacion: Requerida (JWT en sesion)
- * Autorizacion: Menu 5 (Usuarios)
+ * Delega toda la logica de negocio a UsuarioController.
+ * Este archivo solo maneja HTTP: autenticacion, metodo y respuesta JSON.
  *
  * @package Dedumsoft\API
+ * @author  Equipo Dedumsoft
  */
 
 require_once __DIR__ . '/../../private/api_helper.php';
-require_once PRIVATE_PATH . '/Repositories/UsuarioRepository.php';
+require_once PRIVATE_PATH . '/Controllers/UsuarioController.php';
 
-$repo = new UsuarioRepository($connLogic);
-$method = api_init(5, ['POST', 'PATCH']);
+$ctrl = new UsuarioController($connLogic);
+$method = api_init(5, ['GET', 'POST', 'PATCH']);
 
 // =============================================================================
-// POST: Crear usuario
+// GET: Listar / Obtener por ID
+// =============================================================================
+if ($method === 'GET') {
+    if (isset($_GET['id']) && $_GET['id'] !== '') {
+        $result = $ctrl->obtener((int) $_GET['id']);
+    } else {
+        $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
+        $limit  = isset($_GET['limit'])  ? (int) $_GET['limit']  : 50;
+        $activo_raw = $_GET['activo'] ?? null;
+        $activo = ($activo_raw === null) ? true : filter_var($activo_raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        $result = $ctrl->listar($offset, $limit, $activo);
+    }
+
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
+    }
+    api_ok($result['data'], $result['code'], $result['message']);
+}
+
+// =============================================================================
+// POST: Crear
 // =============================================================================
 if ($method === 'POST') {
     $input = api_json_body();
     if ($input === null) {
         api_error(400, 'Datos JSON invalidos.');
     }
-    api_require_fields($input, ['username', 'nombre', 'rolid', 'password']);
 
-    $username = trim((string) $input['username']);
-    $nombre = trim((string) $input['nombre']);
-    $email = isset($input['email']) ? trim((string) $input['email']) : '';
-    $rolid = (int) $input['rolid'];
-    $password = (string) $input['password'];
-    $apellido = isset($input['apellido']) ? trim((string) $input['apellido']) : '';
-    $especialidad_id = isset($input['especialidad_id']) ? (int) $input['especialidad_id'] : 0;
-    $telefono = isset($input['telefono']) ? trim((string) $input['telefono']) : '';
+    $result = $ctrl->crear($input);
 
-    if (strlen($password) < 8) {
-        api_error(400, 'La contraseña debe tener al menos 8 caracteres.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    $email = $email === '' ? null : $email;
-    if ($email !== null && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        api_error(400, 'Email invalido.');
-    }
-
-    $apellido = $apellido === '' ? null : $apellido;
-    $especialidad_id = $especialidad_id > 0 ? $especialidad_id : null;
-    $telefono = $telefono === '' ? null : $telefono;
-
-    if ($rolid === 2 && $apellido === null) {
-        api_error(400, 'Apellido requerido para rol Operador.');
-    }
-
-    $hash = password_hash($password, PASSWORD_BCRYPT);
-    if ($hash === false) {
-        api_error(500, 'No se pudo generar la contraseña.');
-    }
-
-    try {
-        $id = $repo->crear($username, $nombre, $hash, $rolid, $email, $apellido, $especialidad_id, $telefono);
-    } catch (PDOException $e) {
-        api_log_error('usuarios', 'POST', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $message = $e->getMessage();
-        $code = 500;
-        $clientMessage = 'Error interno del servidor.';
-        if (strpos($message, 'Usuario ya existe') !== false || strpos($message, 'Email ya registrado') !== false) {
-            $code = 409;
-            $clientMessage = 'Usuario o email ya registrado.';
-        } elseif (strpos($message, 'Rol invalido') !== false) {
-            $code = 400;
-            $clientMessage = 'Rol invalido.';
-        } elseif (strpos($message, 'Apellido requerido') !== false) {
-            $code = 400;
-            $clientMessage = 'Apellido requerido para rol Operador.';
-        } elseif (strpos($message, 'Especialidad invalida') !== false) {
-            $code = 400;
-            $clientMessage = 'Especialidad invalida.';
-        }
-        api_error($code, $clientMessage);
-    }
-
-    if ($id <= 0) {
-        api_error(500, 'Error al crear usuario.');
-    }
-
-    api_ok(['id' => $id], 201, 'Usuario creado.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }
 
 // =============================================================================
-// PATCH: Activar/desactivar usuario
+// PATCH: Actualizar estado
 // =============================================================================
 if ($method === 'PATCH') {
     $input = api_json_body();
-    if ($input === null || !isset($input['id'])) {
-        api_error(400, 'ID requerido.');
+    if ($input === null) {
+        api_error(400, 'Datos JSON invalidos.');
     }
 
-    $id = (int) $input['id'];
-    $activo = isset($input['activo']) ? filter_var($input['activo'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
-    if ($activo === null) {
-        api_error(400, 'Estado activo es requerido.');
-    }
+    $result = $ctrl->actualizarEstado($input);
 
-    $session_user = get_session_user();
-    if (!empty($session_user) && (int) ($session_user['id_usuario'] ?? 0) === $id && $activo === false) {
-        api_error(400, 'No puedes desactivar tu propio usuario.');
+    if (!$result['success']) {
+        api_error($result['code'], $result['message']);
     }
-
-    try {
-        $ok = $repo->actualizarEstado($id, $activo);
-    } catch (PDOException $e) {
-        api_log_error('usuarios', 'PATCH', $e->getMessage() . ' SQLSTATE=' . $e->getCode());
-        $code = strpos($e->getMessage(), 'no encontrado') !== false ? 404 : 500;
-        api_error($code, $code === 404 ? 'Usuario no encontrado.' : 'Error al actualizar.');
-    }
-
-    if (!$ok) {
-        api_error(422, 'No se pudo actualizar el usuario.');
-    }
-
-    api_ok(null, 200, $activo ? 'Usuario activado.' : 'Usuario desactivado.');
+    api_ok($result['data'], $result['code'], $result['message']);
 }
