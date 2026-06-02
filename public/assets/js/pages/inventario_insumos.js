@@ -41,7 +41,7 @@ $(() => {
         }
     };
 
-    $.getJSON('api/proveedores.php?limit=500', (res) => {
+    $.getJSON('api/catalogos/proveedores.php?limit=500', (res) => {
         proveedoresCache = (res.DATOS || []).map((p) => {
             const tipoRaw = p.tipo_nombre || p.tipo || '';
             const tipoLower = String(tipoRaw || '').toLowerCase();
@@ -125,7 +125,7 @@ $(() => {
                     payload.cantidad = 0;
                 }
 
-                DsCrud.api('api/inventario_insumos.php', 'POST', payload, (success, resp) => {
+                DsCrud.api('api/inventario/insumos.php', 'POST', payload, (success, resp) => {
                     if (!registrarCompra) {
                         DsCrud.toast('Insumo creado', 'success');
                         insumosTable.ajax.reload();
@@ -138,7 +138,7 @@ $(() => {
                         item_id: newId,
                         cantidad: compraCantidad
                     };
-                    DsCrud.api('api/compras.php', 'POST', compraPayload, () => {
+                    DsCrud.api('api/produccion/compras.php', 'POST', compraPayload, () => {
                         DsCrud.toast('Insumo creado y compra registrada', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
@@ -155,7 +155,7 @@ $(() => {
     };
 
     const openInsumoEdit = (row) => {
-        DsCrud.api('api/inventario_insumos.php?id=' + row.id, 'GET', null, (res) => {
+        DsCrud.api('api/inventario/insumos.php?id=' + row.id, 'GET', null, (res) => {
             const d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
             DsCrud.openModal({
                 title: 'Editar Insumo #' + d.id,
@@ -171,7 +171,7 @@ $(() => {
                     fd.forEach((v, k) => {
                         payload[k] = v;
                     });
-                    DsCrud.api('api/inventario_insumos.php', 'PATCH', payload, () => {
+                    DsCrud.api('api/inventario/insumos.php', 'PATCH', payload, () => {
                         DsCrud.toast('Insumo actualizado', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
@@ -185,7 +185,7 @@ $(() => {
 
     const openInsumoDelete = (row) => {
         DsCrud.confirm('Eliminar insumo "' + row.nombre + '"?', () => {
-            DsCrud.api('api/inventario_insumos.php', 'DELETE', { id: row.id }, () => {
+            DsCrud.api('api/inventario/insumos.php', 'DELETE', { id: row.id }, () => {
                 DsCrud.toast('Insumo eliminado', 'success');
                 insumosTable.ajax.reload();
             }, (e) => {
@@ -231,7 +231,7 @@ $(() => {
     };
 
     const openInsumoCompra = () => {
-        axios.get('api/inventario_insumos.php?limit=500').then((res) => {
+        axios.get('api/inventario/insumos.php?limit=500').then((res) => {
             const items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
             if (!items.length) {
                 DsCrud.toast('No hay insumos disponibles', 'warning');
@@ -263,7 +263,7 @@ $(() => {
                     if (payload.fecha) {
                         payload.fecha = payload.fecha.replace('T', ' ');
                     }
-                    DsCrud.api('api/compras.php', 'POST', payload, () => {
+                    DsCrud.api('api/produccion/compras.php', 'POST', payload, () => {
                         DsCrud.toast('Compra registrada', 'success');
                         insumosTable.ajax.reload();
                         DsCrud.closeModal();
@@ -279,7 +279,7 @@ $(() => {
 
     insumosTable = $('#insumos-table').DataTable({
         ajax: {
-            url: 'api/inventario_insumos.php',
+            url: 'api/inventario/insumos.php',
             data: (d) => {
                 d.limit = 500;
                 d.offset = 0;

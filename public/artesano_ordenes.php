@@ -23,10 +23,10 @@
  * - Administradores (rolid=1) no pueden acceder
  * 
  * APIs utilizadas:
- * - GET /api/artesano_ordenes.php - Listar órdenes del artesano
- * - PATCH /api/artesano_ordenes.php - Cambiar estado de orden
- * - POST /api/artesano_consumo.php - Registrar consumo de material
- * - POST /api/artesano_terminada.php - Registrar pieza terminada
+ * - GET /api/produccion/artesano_ordenes.php - Listar órdenes del artesano
+ * - PATCH /api/produccion/artesano_ordenes.php - Cambiar estado de orden
+ * - POST /api/produccion/artesano_consumo.php - Registrar consumo de material
+ * - POST /api/produccion/artesano_terminada.php - Registrar pieza terminada
  * 
  * @package Dedumsoft\Public
  * @author  Equipo Dedumsoft
@@ -228,10 +228,10 @@ $(() => {
 
     // Cargar datos de referencia
     Promise.all([
-        axios.get('api/opciones.php?tipo=estados_orden'),
-        axios.get('api/opciones.php?tipo=niveles_calidad'),
-        axios.get('api/inventario_oro.php?limit=500'),
-        axios.get('api/inventario_insumos.php?limit=500')
+        axios.get('api/catalogos/opciones.php?tipo=estados_orden'),
+        axios.get('api/catalogos/opciones.php?tipo=niveles_calidad'),
+        axios.get('api/inventario/oro.php?limit=500'),
+        axios.get('api/inventario/insumos.php?limit=500')
     ]).then((results) => {
         estadosCache = results[0].data.DATOS || [];
         calidadCache = results[1].data.DATOS || [];
@@ -272,7 +272,7 @@ $(() => {
 
     ordenesTable = $('#ordenes-artesano-table').DataTable({
         ajax: {
-            url: 'api/artesano_ordenes.php?artesano_id=' + artesanoId,
+            url: 'api/produccion/artesano_ordenes.php?artesano_id=' + artesanoId,
             dataSrc: 'DATOS'
         },
         columns: [{
@@ -348,7 +348,7 @@ $(() => {
                     id: row.id,
                     estado_id: fd.get('estado_id')
                 };
-                DsCrud.api('api/artesano_ordenes.php', 'PATCH', payload, () => {
+                DsCrud.api('api/produccion/artesano_ordenes.php', 'PATCH', payload, () => {
                     DsCrud.toast('Estado actualizado', 'success');
                     ordenesTable.ajax.reload();
                     DsCrud.closeModal();
@@ -402,7 +402,7 @@ $(() => {
                     material_id: fd.get('material_id'),
                     cantidad: parseFloat(fd.get('cantidad'))
                 };
-                DsCrud.api('api/artesano_consumo.php', 'POST', payload, () => {
+                DsCrud.api('api/produccion/artesano_consumo.php', 'POST', payload, () => {
                     DsCrud.toast('Consumo registrado', 'success');
                     DsCrud.closeModal();
                 }, (e) => {
@@ -482,7 +482,7 @@ $(() => {
                     calidad_id: fd.get('calidad_id') || null,
                     observaciones: fd.get('observaciones') || null
                 };
-                DsCrud.api('api/artesano_terminada.php', 'POST', payload, () => {
+                DsCrud.api('api/produccion/artesano_terminada.php', 'POST', payload, () => {
                     DsCrud.toast('Pieza terminada registrada', 'success');
                     ordenesTable.ajax.reload();
                     DsCrud.closeModal();
@@ -661,7 +661,7 @@ $(() => {
             openLegacyModal('Cambiar estado - Orden #' + ordenId, body, function(overlay, close) {
                 var data = getFormData(overlay);
                 data.id = ordenId;
-                DsCrud.apiLegacy('api/artesano_ordenes.php', 'PATCH', data, function() {
+                DsCrud.apiLegacy('api/produccion/artesano_ordenes.php', 'PATCH', data, function() {
                     alert('Estado actualizado');
                     close();
                     location.reload();
@@ -688,7 +688,7 @@ $(() => {
                 var data = getFormData(overlay);
                 data.orden_id = ordenId;
                 data.cantidad = parseFloat(data.cantidad);
-                DsCrud.apiLegacy('api/artesano_consumo.php', 'POST', data, function() {
+                DsCrud.apiLegacy('api/produccion/artesano_consumo.php', 'POST', data, function() {
                     alert('Consumo registrado');
                     close();
                 }, function(e) {
@@ -708,7 +708,7 @@ $(() => {
                 data.orden_id = ordenId;
                 data.peso_final = parseFloat(data.peso_final);
                 if (data.tiempo_real) data.tiempo_real = parseFloat(data.tiempo_real);
-                DsCrud.apiLegacy('api/artesano_terminada.php', 'POST', data, function() {
+                DsCrud.apiLegacy('api/produccion/artesano_terminada.php', 'POST', data, function() {
                     alert('Pieza registrada');
                     close();
                     location.reload();

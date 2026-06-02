@@ -25,8 +25,8 @@ $(() => {
 
     // Cargar opciones y proveedores en paralelo
     Promise.all([
-        axios.get('api/opciones.php?tipo=tipos_oro'),
-        axios.get('api/proveedores.php?limit=500')
+        axios.get('api/catalogos/opciones.php?tipo=tipos_oro'),
+        axios.get('api/catalogos/proveedores.php?limit=500')
     ]).then(([resOpciones, resProv]) => {
         oroTipoOptions = resOpciones.data.DATOS || [{
             value: '10k',
@@ -135,7 +135,7 @@ $(() => {
                 fd.forEach((v, k) => {
                     payload[k] = v;
                 });
-                DsCrud.api('api/inventario_oro.php', 'POST', payload, () => {
+                DsCrud.api('api/inventario/oro.php', 'POST', payload, () => {
                     DsCrud.toast('Oro creado', 'success');
                     oroTable.ajax.reload();
                     DsCrud.closeModal();
@@ -147,7 +147,7 @@ $(() => {
     };
 
     const openOroEdit = (row) => {
-        DsCrud.api('api/inventario_oro.php?id=' + row.id, 'GET', null, (res) => {
+        DsCrud.api('api/inventario/oro.php?id=' + row.id, 'GET', null, (res) => {
             const d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
             DsCrud.openModal({
                 title: 'Editar Oro #' + d.id,
@@ -163,7 +163,7 @@ $(() => {
                     fd.forEach((v, k) => {
                         payload[k] = v;
                     });
-                    DsCrud.api('api/inventario_oro.php', 'PATCH', payload, () => {
+                    DsCrud.api('api/inventario/oro.php', 'PATCH', payload, () => {
                         DsCrud.toast('Oro actualizado', 'success');
                         oroTable.ajax.reload();
                         DsCrud.closeModal();
@@ -177,7 +177,7 @@ $(() => {
 
     const openOroDelete = (row) => {
         DsCrud.confirm('Eliminar registro de oro #' + row.id + '?', () => {
-            DsCrud.api('api/inventario_oro.php', 'DELETE', {
+            DsCrud.api('api/inventario/oro.php', 'DELETE', {
                 id: row.id
             }, () => {
                 DsCrud.toast('Oro eliminado', 'success');
@@ -225,7 +225,7 @@ $(() => {
     };
 
     const openOroCompra = () => {
-        axios.get('api/inventario_oro.php?limit=500').then((res) => {
+        axios.get('api/inventario/oro.php?limit=500').then((res) => {
             const items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
             if (!items.length) {
                 DsCrud.toast('No hay inventario de oro disponible', 'warning');
@@ -256,7 +256,7 @@ $(() => {
                     if (payload.fecha) {
                         payload.fecha = payload.fecha.replace('T', ' ');
                     }
-                    DsCrud.api('api/compras.php', 'POST', payload, () => {
+                    DsCrud.api('api/produccion/compras.php', 'POST', payload, () => {
                         DsCrud.toast('Compra registrada', 'success');
                         oroTable.ajax.reload();
                         DsCrud.closeModal();
@@ -272,7 +272,7 @@ $(() => {
 
     oroTable = $('#oro-table').DataTable({
         ajax: {
-            url: 'api/inventario_oro.php',
+            url: 'api/inventario/oro.php',
             data: (d) => {
                 d.limit = 500;
                 d.offset = 0;

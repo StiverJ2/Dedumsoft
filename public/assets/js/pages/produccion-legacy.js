@@ -94,7 +94,7 @@
                     observaciones: observaciones ? observaciones : null
                 };
 
-                DsCrud.apiLegacy('api/ordenes.php', 'POST', payload, function () {
+                DsCrud.apiLegacy('api/produccion/ordenes.php', 'POST', payload, function () {
                     DsCrud.toast('Orden creada', 'success');
                     DsCrud.closeModal();
                     location.reload();
@@ -122,7 +122,7 @@
                 if (!DsCrud.validateForm(modal)) return;
                 var data = DsCrud.getFormData(modal);
                 data.id = ordenId;
-                DsCrud.api('api/ordenes.php', 'PATCH', data, function () {
+                DsCrud.api('api/produccion/ordenes.php', 'PATCH', data, function () {
                     DsCrud.toast('Orden actualizada', 'success');
                     DsCrud.closeModal();
                     location.reload();

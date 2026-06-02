@@ -77,7 +77,7 @@
             onSave: function (modal) {
                 if (!DsCrud.validateForm(modal)) return;
                 var data = DsCrud.getFormData(modal);
-                DsCrud.apiLegacy('api/inventario_oro.php', 'POST', data, function () {
+                DsCrud.apiLegacy('api/inventario/oro.php', 'POST', data, function () {
                     DsCrud.toast('Oro creado', 'success');
                     DsCrud.closeModal();
                     location.reload();
@@ -103,7 +103,7 @@
                 if (data.fecha) {
                     data.fecha = data.fecha.replace('T', ' ');
                 }
-                DsCrud.apiLegacy('api/compras.php', 'POST', data, function () {
+                DsCrud.apiLegacy('api/produccion/compras.php', 'POST', data, function () {
                     DsCrud.toast('Compra registrada', 'success');
                     DsCrud.closeModal();
                     location.reload();
@@ -116,7 +116,7 @@
 
     DsCrud.initLegacyTable('oro-table', {
         onEdit: function (id) {
-            DsCrud.apiLegacy('api/inventario_oro.php?id=' + id, 'GET', null, function (res) {
+            DsCrud.apiLegacy('api/inventario/oro.php?id=' + id, 'GET', null, function (res) {
                 var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                 DsCrud.openModal({
                     title: 'Editar Oro #' + id,
@@ -125,7 +125,7 @@
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
                         data.id = id;
-                        DsCrud.apiLegacy('api/inventario_oro.php', 'PATCH', data,
+                        DsCrud.apiLegacy('api/inventario/oro.php', 'PATCH', data,
                             function () {
                                 DsCrud.toast('Oro actualizado', 'success');
                                 DsCrud.closeModal();
@@ -142,7 +142,7 @@
         },
         onDelete: function (id) {
             DsCrud.confirm('Eliminar oro #' + id + '?', function () {
-                DsCrud.apiLegacy('api/inventario_oro.php', 'DELETE', {
+                DsCrud.apiLegacy('api/inventario/oro.php', 'DELETE', {
                     id: id
                 }, function () {
                     DsCrud.toast('Oro eliminado', 'success');

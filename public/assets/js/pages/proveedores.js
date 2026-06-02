@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========================================================================
 
     try {
-        const response = await axios.get('api/opciones.php?tipo=tipos_proveedor');
+        const response = await axios.get('api/catalogos/opciones.php?tipo=tipos_proveedor');
         tipoOptions = response.data.DATOS || [];
     } catch (error) {
         console.error('Error cargando opciones:', error);
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const fd = new FormData(form);
                 const payload = Object.fromEntries(fd);
-                DsCrud.api('api/proveedores.php', 'POST', payload, (res) => {
+                DsCrud.api('api/catalogos/proveedores.php', 'POST', payload, (res) => {
                     DsCrud.toast('Proveedor creado', 'success');
                     proveedoresTable.ajax.reload();
                     DsCrud.closeModal();
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const openEditModal = (row) => {
-        DsCrud.api('api/proveedores.php?id=' + row.id, 'GET', null, (res) => {
+        DsCrud.api('api/catalogos/proveedores.php?id=' + row.id, 'GET', null, (res) => {
             const prov = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
             DsCrud.openModal({
                 title: 'Editar Proveedor #' + prov.id,
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         id: prov.id,
                         ...Object.fromEntries(fd)
                     };
-                    DsCrud.api('api/proveedores.php', 'PATCH', payload, (res) => {
+                    DsCrud.api('api/catalogos/proveedores.php', 'PATCH', payload, (res) => {
                         DsCrud.toast('Proveedor actualizado', 'success');
                         proveedoresTable.ajax.reload();
                         DsCrud.closeModal();
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const openDeleteConfirm = (row) => {
         DsCrud.confirm('¿Eliminar proveedor "' + row.nombre + '"?', () => {
-            DsCrud.api('api/proveedores.php', 'DELETE', {
+            DsCrud.api('api/catalogos/proveedores.php', 'DELETE', {
                 id: row.id
             }, (res) => {
                 DsCrud.toast('Proveedor eliminado', 'success');
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     proveedoresTable = $('#proveedores-table').DataTable({
         ajax: {
-            url: 'api/proveedores.php',
+            url: 'api/catalogos/proveedores.php',
             data: (d) => {
                 d.limit = 500;
                 d.offset = 0;

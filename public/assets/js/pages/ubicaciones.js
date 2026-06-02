@@ -87,7 +87,7 @@ const openCreateModal = () => {
             fd.forEach((value, key) => {
                 payload[key] = value;
             });
-            DsCrud.api('api/ubicaciones.php', 'POST', payload, (success, resp) => {
+            DsCrud.api('api/catalogos/ubicaciones.php', 'POST', payload, (success, resp) => {
                 if (success) {
                     DsCrud.toast('Ubicación creada');
                     reloadTable();
@@ -116,7 +116,7 @@ const openEditModal = (row) => {
                 id: row.id,
                 ...Object.fromEntries(fd)
             };
-            DsCrud.api('api/ubicaciones.php', 'PATCH', payload, (success, resp) => {
+            DsCrud.api('api/catalogos/ubicaciones.php', 'PATCH', payload, (success, resp) => {
                 if (success) {
                     DsCrud.toast('Ubicación actualizada');
                     reloadTable();
@@ -136,7 +136,7 @@ const openDeleteConfirm = (row) => {
         warning: 'Esta acción desactivará la ubicación.',
         confirmText: 'Eliminar',
         onConfirm: () => {
-            DsCrud.api('api/ubicaciones.php', 'DELETE', {
+            DsCrud.api('api/catalogos/ubicaciones.php', 'DELETE', {
                 id: row.id
             }, (success, resp) => {
                 if (success) {
@@ -153,7 +153,7 @@ const openDeleteConfirm = (row) => {
 document.addEventListener('DOMContentLoaded', async () => {
     // Cargar opciones desde la API
     try {
-        const response = await axios.get('api/opciones.php?tipo=areas');
+        const response = await axios.get('api/catalogos/opciones.php?tipo=areas');
         areaOptions = response.data.DATOS || [];
     } catch (error) {
         console.error('Error cargando opciones:', error);
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     ubicacionesTable = $('#ubicaciones-table').DataTable({
         ajax: {
-            url: 'api/ubicaciones.php',
+            url: 'api/catalogos/ubicaciones.php',
             data: (d) => {
                 d.limit = 500;
                 d.offset = 0;

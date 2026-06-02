@@ -59,7 +59,7 @@
             onSave: function (modal) {
                 if (!DsCrud.validateForm(modal)) return;
                 var data = DsCrud.getFormData(modal);
-                DsCrud.apiLegacy('api/proveedores.php', 'POST', data, function () {
+                DsCrud.apiLegacy('api/catalogos/proveedores.php', 'POST', data, function () {
                     DsCrud.toast('Proveedor creado', 'success');
                     DsCrud.closeModal();
                     location.reload();
@@ -72,7 +72,7 @@
 
     DsCrud.initLegacyTable('proveedores-table', {
         onEdit: function (id) {
-            DsCrud.apiLegacy('api/proveedores.php?id=' + id, 'GET', null, function (res) {
+            DsCrud.apiLegacy('api/catalogos/proveedores.php?id=' + id, 'GET', null, function (res) {
                 var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                 DsCrud.openModal({
                     title: 'Editar Proveedor #' + id,
@@ -81,7 +81,7 @@
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
                         data.id = id;
-                        DsCrud.apiLegacy('api/proveedores.php', 'PATCH', data,
+                        DsCrud.apiLegacy('api/catalogos/proveedores.php', 'PATCH', data,
                             function () {
                                 DsCrud.toast('Proveedor actualizado', 'success');
                                 DsCrud.closeModal();
@@ -98,7 +98,7 @@
         },
         onDelete: function (id) {
             DsCrud.confirm('¿Eliminar proveedor #' + id + '?', function () {
-                DsCrud.apiLegacy('api/proveedores.php', 'DELETE', {
+                DsCrud.apiLegacy('api/catalogos/proveedores.php', 'DELETE', {
                     id: id
                 }, function () {
                     DsCrud.toast('Proveedor eliminado', 'success');

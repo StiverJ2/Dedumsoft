@@ -67,10 +67,10 @@ $(() => {
 
     // Cargar todas las opciones en paralelo
     Promise.all([
-        axios.get('api/opciones.php?tipo=estados_maquinaria'),
-        axios.get('api/proveedores.php?limit=500'),
-        axios.get('api/ubicaciones.php?limit=500'),
-        axios.get('api/tipos_maquinaria.php')
+        axios.get('api/catalogos/opciones.php?tipo=estados_maquinaria'),
+        axios.get('api/catalogos/proveedores.php?limit=500'),
+        axios.get('api/catalogos/ubicaciones.php?limit=500'),
+        axios.get('api/inventario/tipos_maquinaria.php')
     ]).then(([resEstados, resProv, resUbi, resTipos]) => {
         maqEstadoOptions = (resEstados.data.DATOS || []).map(e => ({
             value: e.value,
@@ -187,7 +187,7 @@ $(() => {
                 const registrarCompra = payload.registrar_compra === 'on';
                 delete payload.registrar_compra;
 
-                DsCrud.api('api/inventario_maquinaria.php', 'POST', payload, (success, resp) => {
+                DsCrud.api('api/inventario/maquinaria.php', 'POST', payload, (success, resp) => {
                     if (!registrarCompra) {
                         DsCrud.toast('Maquinaria creada', 'success');
                         maqTable.ajax.reload();
@@ -199,7 +199,7 @@ $(() => {
                         item_id: (resp.DATOS && resp.DATOS.id ? resp.DATOS.id : resp.ID),
                         cantidad: 1
                     };
-                    DsCrud.api('api/compras.php', 'POST', compraPayload, () => {
+                    DsCrud.api('api/produccion/compras.php', 'POST', compraPayload, () => {
                         DsCrud.toast('Maquinaria creada y compra registrada',
                             'success');
                         maqTable.ajax.reload();
@@ -219,7 +219,7 @@ $(() => {
     };
 
     const openMaqEdit = (row) => {
-        DsCrud.api('api/inventario_maquinaria.php?id=' + row.id, 'GET', null, (res) => {
+        DsCrud.api('api/inventario/maquinaria.php?id=' + row.id, 'GET', null, (res) => {
             const d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : row;
             DsCrud.openModal({
                 title: 'Editar Maquinaria #' + d.id,
@@ -235,7 +235,7 @@ $(() => {
                     fd.forEach((v, k) => {
                         payload[k] = v;
                     });
-                    DsCrud.api('api/inventario_maquinaria.php', 'PATCH', payload,
+                    DsCrud.api('api/inventario/maquinaria.php', 'PATCH', payload,
                         () => {
                             DsCrud.toast('Maquinaria actualizada', 'success');
                             maqTable.ajax.reload();
@@ -251,7 +251,7 @@ $(() => {
 
     const openMaqDelete = (row) => {
         DsCrud.confirm('Eliminar maquinaria "' + row.nombre + '"?', () => {
-            DsCrud.api('api/inventario_maquinaria.php', 'DELETE', {
+            DsCrud.api('api/inventario/maquinaria.php', 'DELETE', {
                 id: row.id
             }, () => {
                 DsCrud.toast('Maquinaria eliminada', 'success');
@@ -299,7 +299,7 @@ $(() => {
     };
 
     const openMaqCompra = () => {
-        axios.get('api/inventario_maquinaria.php?limit=500').then((res) => {
+        axios.get('api/inventario/maquinaria.php?limit=500').then((res) => {
             const items = (res.data && res.data.DATOS) ? res.data.DATOS : [];
             if (!items.length) {
                 DsCrud.toast('No hay maquinaria disponible', 'warning');
@@ -335,7 +335,7 @@ $(() => {
                     if (payload.fecha) {
                         payload.fecha = payload.fecha.replace('T', ' ');
                     }
-                    DsCrud.api('api/compras.php', 'POST', payload, () => {
+                    DsCrud.api('api/produccion/compras.php', 'POST', payload, () => {
                         DsCrud.toast('Compra registrada', 'success');
                         maqTable.ajax.reload();
                         DsCrud.closeModal();
@@ -352,7 +352,7 @@ $(() => {
     const initMaqTable = () => {
         maqTable = $('#maq-table').DataTable({
             ajax: {
-                url: 'api/inventario_maquinaria.php',
+                url: 'api/inventario/maquinaria.php',
                 data: (d) => {
                     d.limit = 500;
                     d.offset = 0;

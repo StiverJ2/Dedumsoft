@@ -50,7 +50,7 @@
             onSave: function (modal) {
                 if (!DsCrud.validateForm(modal)) return;
                 var data = DsCrud.getFormData(modal);
-                DsCrud.apiLegacy('api/ubicaciones.php', 'POST', data, function () {
+                DsCrud.apiLegacy('api/catalogos/ubicaciones.php', 'POST', data, function () {
                     DsCrud.toast('Ubicación creada', 'success');
                     DsCrud.closeModal();
                     location.reload();
@@ -63,7 +63,7 @@
 
     DsCrud.initLegacyTable('ubicaciones-table', {
         onEdit: function (id) {
-            DsCrud.apiLegacy('api/ubicaciones.php?id=' + id, 'GET', null, function (res) {
+            DsCrud.apiLegacy('api/catalogos/ubicaciones.php?id=' + id, 'GET', null, function (res) {
                 var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                 DsCrud.openModal({
                     title: 'Editar Ubicación #' + id,
@@ -74,7 +74,7 @@
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
                         data.id = id;
-                        DsCrud.apiLegacy('api/ubicaciones.php', 'PATCH', data,
+                        DsCrud.apiLegacy('api/catalogos/ubicaciones.php', 'PATCH', data,
                             function () {
                                 DsCrud.toast('Ubicación actualizada',
                                     'success');
@@ -92,7 +92,7 @@
         },
         onDelete: function (id) {
             DsCrud.confirm('¿Eliminar ubicación #' + id + '?', function () {
-                DsCrud.apiLegacy('api/ubicaciones.php', 'DELETE', {
+                DsCrud.apiLegacy('api/catalogos/ubicaciones.php', 'DELETE', {
                     id: id
                 }, function () {
                     DsCrud.toast('Ubicación eliminada', 'success');

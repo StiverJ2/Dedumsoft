@@ -37,7 +37,7 @@ $(() => {
         }
     };
 
-    axios.get('api/opciones.php?tipo=artesanos').then((res) => {
+    axios.get('api/catalogos/opciones.php?tipo=artesanos').then((res) => {
         artesanosCache = (res.data.DATOS || []).map((a) => {
             let label = a.label || '';
             if (!label) {
@@ -56,7 +56,7 @@ $(() => {
         artesanosCache = [];
     });
 
-    axios.get('api/opciones.php?tipo=productos').then((res) => {
+    axios.get('api/catalogos/opciones.php?tipo=productos').then((res) => {
         productosCache = (res.data.DATOS || []).map((p) => {
             return {
                 value: p.value || p.id,
@@ -67,7 +67,7 @@ $(() => {
         productosCache = [];
     });
 
-    axios.get('api/opciones.php?tipo=prioridades').then((res) => {
+    axios.get('api/catalogos/opciones.php?tipo=prioridades').then((res) => {
         prioridadesCache = (res.data.DATOS || []).map((p) => {
             return {
                 value: p.value || p.id,
@@ -80,7 +80,7 @@ $(() => {
 
     ordenesTable = $('#ordenes-table').DataTable({
         ajax: {
-            url: 'api/ordenes.php',
+            url: 'api/produccion/ordenes.php',
             data: (d) => {
                 d.limit = 100;
                 d.offset = 0;
@@ -230,7 +230,7 @@ $(() => {
                     observaciones: observaciones ? observaciones : null
                 };
 
-                DsCrud.api('api/ordenes.php', 'POST', payload, () => {
+                DsCrud.api('api/produccion/ordenes.php', 'POST', payload, () => {
                     DsCrud.toast('Orden creada', 'success');
                     ordenesTable.ajax.reload();
                     DsCrud.closeModal();
@@ -271,7 +271,7 @@ $(() => {
                     id: row.id,
                     artesano_id: fd.get('artesano_id')
                 };
-                DsCrud.api('api/ordenes.php', 'PATCH', payload, () => {
+                DsCrud.api('api/produccion/ordenes.php', 'PATCH', payload, () => {
                     DsCrud.toast('Orden actualizada', 'success');
                     ordenesTable.ajax.reload();
                     DsCrud.closeModal();

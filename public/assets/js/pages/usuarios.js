@@ -186,7 +186,7 @@ const openCreateModal = () => {
 $(() => {
     usuariosTable = $('#usuarios-table').DataTable({
         ajax: {
-            url: 'api/reportes_usuarios.php',
+            url: 'api/reportes/reportes_usuarios.php',
             dataSrc: 'DATOS'
         },
         columns: [

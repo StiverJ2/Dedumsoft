@@ -98,7 +98,7 @@
                 var registrarCompra = data.registrar_compra === true;
                 delete data.registrar_compra;
 
-                DsCrud.apiLegacy('api/inventario_maquinaria.php', 'POST', data, function(res) {
+                DsCrud.apiLegacy('api/inventario/maquinaria.php', 'POST', data, function(res) {
                     if (!registrarCompra) {
                         DsCrud.toast('Maquinaria creada', 'success');
                         DsCrud.closeModal();
@@ -111,7 +111,7 @@
                             .ID),
                         cantidad: 1
                     };
-                    DsCrud.apiLegacy('api/compras.php', 'POST', compraPayload,
+                    DsCrud.apiLegacy('api/produccion/compras.php', 'POST', compraPayload,
                     function() {
                         DsCrud.toast('Maquinaria creada y compra registrada',
                             'success');
@@ -146,7 +146,7 @@
                 if (data.fecha) {
                     data.fecha = data.fecha.replace('T', ' ');
                 }
-                DsCrud.apiLegacy('api/compras.php', 'POST', data, function() {
+                DsCrud.apiLegacy('api/produccion/compras.php', 'POST', data, function() {
                     DsCrud.toast('Compra registrada', 'success');
                     DsCrud.closeModal();
                     location.reload();
@@ -159,7 +159,7 @@
 
     DsCrud.initLegacyTable('maq-table', {
         onEdit: function(id) {
-            DsCrud.apiLegacy('api/inventario_maquinaria.php?id=' + id, 'GET', null, function(res) {
+            DsCrud.apiLegacy('api/inventario/maquinaria.php?id=' + id, 'GET', null, function(res) {
                 var d = res.DATOS && res.DATOS[0] ? res.DATOS[0] : {};
                 DsCrud.openModal({
                     title: 'Editar Maquinaria #' + id,
@@ -169,7 +169,7 @@
                         if (!DsCrud.validateForm(modal)) return;
                         var data = DsCrud.getFormData(modal);
                         data.id = id;
-                        DsCrud.apiLegacy('api/inventario_maquinaria.php', 'PATCH',
+                        DsCrud.apiLegacy('api/inventario/maquinaria.php', 'PATCH',
                             data,
                             function() {
                                 DsCrud.toast('Maquinaria actualizada',
@@ -188,7 +188,7 @@
         },
         onDelete: function(id) {
             DsCrud.confirm('Eliminar maquinaria #' + id + '?', function() {
-                DsCrud.apiLegacy('api/inventario_maquinaria.php', 'DELETE', {
+                DsCrud.apiLegacy('api/inventario/maquinaria.php', 'DELETE', {
                     id: id
                 }, function() {
                     DsCrud.toast('Maquinaria eliminada', 'success');
